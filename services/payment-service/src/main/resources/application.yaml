@@ -1,0 +1,30 @@
+server:
+  port: 5009
+
+spring:
+  application:
+    name: payment-service
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL}
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_URL}
+
+razorpay:
+  api:
+    key: ${RAZORPAY_API_KEY}
+    secret: ${RAZORPAY_API_SECRET}
+  callback:
+    base-url: ${RAZORPAY_CALLBACK_BASE_URL}
+
+stripe:
+  api:
+    key: ${STRIPE_API_KEY}
+
+

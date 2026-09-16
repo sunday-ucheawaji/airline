@@ -1,0 +1,18 @@
+server:
+  port: 5007
+
+spring:
+  application:
+    name: ancillary-service
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL}
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+
+
+

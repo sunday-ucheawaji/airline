@@ -1,0 +1,62 @@
+server:
+  port: 8094
+
+spring:
+  application:
+    name: notification-service
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL}
+
+  # ── Kafka Consumer ──────────────────────────────────────────────────────────
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_URL}
+    consumer:
+      group-id: notification-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.sunday.common_lib.event"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.sunday.common_lib.event.BookingConfirmedEvent
+
+  # ── Email (Gmail SMTP) ──────────────────────────────────────────────────────
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_APP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        debug: false
+
+  # ── Thymeleaf ───────────────────────────────────────────────────────────────
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: ${SPRING_THYMELEAF_CACHE}   # set to true in production
+
+# ── Twilio SMS ─────────────────────────────────────────────────────────────────
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID}
+  auth-token: ${TWILIO_AUTH_TOKEN}
+  from-number: ${TWILIO_FROM_NUMBER}
+  enabled: ${TWILIO_ENABLED}
+
+# ── Notification Settings ──────────────────────────────────────────────────────
+notification:
+  from-email: ${MAIL_FROM}
+  from-name: ${MAIL_FROM_NAME}
+  support-email: ${SUPPORT_EMAIL}
+  support-phone: ${SUPPORT_PHONE}
+  checkin-url: ${CHECKIN_URL}
+  manage-booking-url: ${MANAGE_BOOKING_URL}
+

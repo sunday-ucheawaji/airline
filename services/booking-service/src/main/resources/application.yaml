@@ -1,0 +1,29 @@
+server:
+  port: 5008
+
+spring:
+  application:
+    name: booking-service
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL}
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_URL}
+    consumer:
+      group-id: booking-service-group
+#      auto-offset-reset: earliest
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+#      properties:
+#        spring.json.trusted.packages: com.zosh.common_lib.event
+
+
+
+
+
