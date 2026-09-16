@@ -12,3 +12,6 @@ spring:
       host: ${SPRING_DATA_REDIS_HOST}
       port: ${SPRING_DATA_REDIS_PORT}
       timeout: 2000ms
+
+jwt:
+  secret: ${JWT_SECRET:***REMOVED***}

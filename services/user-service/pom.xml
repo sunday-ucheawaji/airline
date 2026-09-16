@@ -110,6 +110,25 @@
         </dependency>
 
         <!--
+            Flyway: versioned SQL migrations, applied automatically on startup.
+            In Spring Boot 4, FlywayAutoConfiguration was split out of spring-boot-autoconfigure
+            into its own module (spring-boot-flyway) — flyway-core/flyway-mysql alone are not
+            enough to trigger auto-configuration, that module must be an explicit dependency too.
+        -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
+
+        <!--
             Actuator: Exposes health, metrics, and info endpoints.
             /actuator/health → used by Eureka for health checks
             /actuator/info   → service metadata

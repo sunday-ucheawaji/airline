@@ -1,6 +1,5 @@
 package com.sunday.services.service.impl;
 
-import com.sunday.common_lib.enums.UserRole;
 import com.sunday.services.model.User;
 import com.sunday.services.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,9 +28,9 @@ public class DataInitializationComponent implements CommandLineRunner {
             User adminUser = new User();
 
             adminUser.setPassword(passwordEncoder.encode("codewithzosh"));
-            adminUser.setFullName("zosh");
+            adminUser.setFirstName("Zosh");
+            adminUser.setLastName("Admin");
             adminUser.setEmail(adminUsername);
-            adminUser.setRole(UserRole.ROLE_SYSTEM_ADMIN);
 
             User admin=userRepository.save(adminUser);
         }

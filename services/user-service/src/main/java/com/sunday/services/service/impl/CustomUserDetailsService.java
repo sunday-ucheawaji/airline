@@ -1,10 +1,10 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.model.User;
 import com.sunday.services.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -29,12 +29,10 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email);
 
         if (user == null) {
-            throw new UsernameNotFoundException("User not found with email: " + email);
+            throw new UsernameNotFoundException(String.format(ErrorMessageUtil.USER_NOT_FOUND_BY_EMAIL, email));
         }
 
-        GrantedAuthority authority = new SimpleGrantedAuthority(user.getRole().toString());
-        Collection<GrantedAuthority> authorities = Collections
-                .singletonList(authority);
+        Collection<GrantedAuthority> authorities = Collections.emptyList();
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(), user.getPassword(), authorities

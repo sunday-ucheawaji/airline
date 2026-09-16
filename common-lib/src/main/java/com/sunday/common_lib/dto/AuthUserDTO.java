@@ -7,15 +7,13 @@ import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
-public class UserDTO {
+public class AuthUserDTO {
     private Long id;
     private String email;
-    private String password;
     private String firstName;
     private String lastName;
     private String middleName;
     private String phoneNumber;
     private Boolean emailVerified;
-    private String username;
     private LocalDateTime lastLogin;
 }

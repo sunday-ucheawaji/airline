@@ -1,7 +1,7 @@
 package com.sunday.common_lib.payload.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.sunday.common_lib.dto.UserDTO;
+import com.sunday.common_lib.dto.AuthUserDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,7 +12,8 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AuthResponse {
     private String jwt;
+    private String refreshToken;
     private String message;
     private String title;
-    private UserDTO user;
+    private AuthUserDTO user;
 }

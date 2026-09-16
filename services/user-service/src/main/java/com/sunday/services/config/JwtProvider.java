@@ -3,6 +3,7 @@ package com.sunday.services.config;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
@@ -16,8 +17,14 @@ import java.util.Set;
 @Service
 public class JwtProvider {
 
-    private final SecretKey key = Keys.hmacShaKeyFor(
-            JwtConstant.SECRET_KEY.getBytes());
+    private final SecretKey key;
+
+    @Value("${jwt.access-token-ttl-minutes}")
+    private long accessTokenTtlMinutes;
+
+    public JwtProvider(@Value("${jwt.secret}") String secret) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    }
 
     public String generateToken(Authentication auth, Long userId) {
         Collection<? extends GrantedAuthority> authorities = auth.getAuthorities();
@@ -25,7 +32,7 @@ public class JwtProvider {
 
         return Jwts.builder()
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 86400000)) // 24h
+                .expiration(new Date(System.currentTimeMillis() + accessTokenTtlMinutes * 60 * 1000))
                 .claim("email", auth.getName())
                 .claim("authorities", roles)
                 .claim("userId", userId)
