@@ -1,7 +1,6 @@
 package com.sunday.services.controller;
 
 import com.sunday.common_lib.dto.AuthUserDTO;
-import com.sunday.common_lib.exception.UserException;
 import com.sunday.services.mapper.UserMapper;
 import com.sunday.services.model.User;
 import com.sunday.services.service.UserService;
@@ -19,20 +18,20 @@ public class UserController {
 
     @GetMapping("/api/users/profile")
     public ResponseEntity<AuthUserDTO> getUserProfile(
-            @RequestHeader("X-User-Email") String email) throws UserException {
+            @RequestHeader("X-User-Email") String email) {
         User user = userService.getUserByEmail(email);
         return ResponseEntity.ok(UserMapper.toAuthUserDTO(user));
     }
 
     @GetMapping("/api/users/{userId}")
     public ResponseEntity<AuthUserDTO> getUserById(
-            @PathVariable Long userId) throws UserException {
+            @PathVariable Long userId) {
         User user = userService.getUserById(userId);
         return ResponseEntity.ok(UserMapper.toAuthUserDTO(user));
     }
 
     @GetMapping("/api/users")
-    public ResponseEntity<List<AuthUserDTO>> getUsers() throws UserException {
+    public ResponseEntity<List<AuthUserDTO>> getUsers() {
         List<User> users = userService.getUsers();
         return ResponseEntity.ok(UserMapper.toAuthUserDTOList(users));
     }

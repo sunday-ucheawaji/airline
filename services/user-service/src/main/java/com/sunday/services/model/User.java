@@ -2,9 +2,11 @@ package com.sunday.services.model;
 
 
 import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.enums.UserStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -13,7 +15,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -34,6 +36,7 @@ public class User {
 
     private String password;
 
+    @EqualsAndHashCode.Include
     @Column(nullable = false, unique = true)
     @NotBlank(message = ErrorMessageUtil.EMAIL_MANDATORY)
     @Email(message = ErrorMessageUtil.EMAIL_INVALID)
@@ -51,6 +54,16 @@ public class User {
 
     @Column(nullable = false)
     private Boolean emailVerified = false;
+
+    @Column(nullable = false)
+    @NotNull(message = ErrorMessageUtil.STATUS_MANDATORY)
+    @Enumerated(EnumType.STRING)
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @Column(nullable = false)
+    private Integer failedLoginAttempts = 0;
+
+    private LocalDateTime lockedUntil;
 
     private LocalDateTime lastLogin;
 

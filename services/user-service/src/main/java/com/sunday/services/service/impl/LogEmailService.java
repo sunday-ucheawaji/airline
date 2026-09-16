@@ -14,6 +14,9 @@ public class LogEmailService implements EmailService {
 
     @Override
     public void sendVerificationEmail(String toEmail, String firstName, String rawToken) {
-        log.info("Verification email for {} <{}> - verification token: {}", firstName, toEmail, rawToken);
+        log.info("Verification email queued for {} <{}>", firstName, toEmail);
+        // DEV ONLY: the raw token is only ever logged here because there's no real email
+        // provider wired in yet. Do not let this survive into a build with real delivery.
+        log.debug("DEV ONLY - verification token for {}: {}", toEmail, rawToken);
     }
 }

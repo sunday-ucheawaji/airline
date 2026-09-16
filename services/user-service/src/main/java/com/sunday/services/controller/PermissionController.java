@@ -2,7 +2,6 @@ package com.sunday.services.controller;
 
 import com.sunday.common_lib.dto.PermissionDTO;
 import com.sunday.common_lib.dto.RoleDTO;
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.PermissionRequest;
 import com.sunday.services.mapper.PermissionMapper;
 import com.sunday.services.mapper.RoleMapper;
@@ -19,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -32,7 +32,8 @@ public class PermissionController {
     public ResponseEntity<PermissionDTO> createPermission(
             @Valid @RequestBody PermissionRequest request) {
         Permission permission = permissionService.createPermission(request);
-        return ResponseEntity.ok(PermissionMapper.toDTO(permission));
+        PermissionDTO dto = PermissionMapper.toDTO(permission);
+        return ResponseEntity.created(URI.create("/api/permissions/" + dto.getId())).body(dto);
     }
 
     @GetMapping
@@ -43,7 +44,7 @@ public class PermissionController {
 
     @GetMapping("/{permissionId}/roles")
     public ResponseEntity<List<RoleDTO>> getRolesForPermission(
-            @PathVariable Long permissionId) throws ResourceNotFoundException {
+            @PathVariable Long permissionId) {
         List<Role> roles = permissionService.getRolesForPermission(permissionId);
         return ResponseEntity.ok(RoleMapper.toDTOList(roles));
     }

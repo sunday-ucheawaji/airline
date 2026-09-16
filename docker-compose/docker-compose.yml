@@ -327,6 +327,7 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://service-registry:8761/eureka/"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY}"
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
     restart: unless-stopped
     networks:
@@ -358,6 +359,12 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://service-registry:8761/eureka/"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY}"
+      ACCESS_TOKEN_TTL_MINUTES: 15
+      VERIFICATION_TOKEN_TTL_HOURS: 24
+      REFRESH_TOKEN_TTL_DAYS: 30
+      MAX_FAILED_LOGIN_ATTEMPTS: 5
+      ACCOUNT_LOCKOUT_MINUTES: 15
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
     restart: unless-stopped
     networks:

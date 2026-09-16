@@ -9,10 +9,12 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class JwtProvider {
@@ -23,7 +25,7 @@ public class JwtProvider {
     private long accessTokenTtlMinutes;
 
     public JwtProvider(@Value("${jwt.secret}") String secret) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(Authentication auth, Long userId) {
@@ -31,6 +33,8 @@ public class JwtProvider {
         String roles = populateAuthorities(authorities);
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
+                .subject(auth.getName())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenTtlMinutes * 60 * 1000))
                 .claim("email", auth.getName())

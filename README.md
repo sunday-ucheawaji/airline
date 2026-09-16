@@ -529,8 +529,8 @@ RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
 # Payment — Stripe
 STRIPE_API_KEY=***REMOVED***
 
-# JWT
-JWT_SECRET=your-256-bit-secret-key
+# JWT — required by both api-gateway and user-service; they must match, no default is baked in
+JWT_SECRET_KEY=your-256-bit-secret-key
 ```
 
 ---

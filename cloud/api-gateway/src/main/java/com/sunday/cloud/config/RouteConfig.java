@@ -170,7 +170,10 @@ public class RouteConfig {
 
                 .route("user-service-routes", r -> r
 
-                        .path("/api/users/**")
+                        .path("/api/users/**",
+                                "/api/permissions/**",
+                                "/api/permissions/**"
+                            )
 
                         .filters(f -> f
                                 .filter(jwtAuthFilter)
@@ -186,7 +189,6 @@ public class RouteConfig {
 
                         .uri("lb://user-service")
                 )
-
 
                 // ==================================================
                 // AIRLINE CORE

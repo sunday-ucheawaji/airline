@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
     name = "role_permissions",
     uniqueConstraints = @UniqueConstraint(columnNames = {"role_id", "permission_id"})
 )
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 public class RolePermission {
 
     @Id
+    @EqualsAndHashCode.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

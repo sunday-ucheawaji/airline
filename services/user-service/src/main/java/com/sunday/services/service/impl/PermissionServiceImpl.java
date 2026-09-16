@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.PermissionRequest;
 import com.sunday.common_lib.util.ErrorMessageUtil;
@@ -11,6 +12,7 @@ import com.sunday.services.repository.RolePermissionRepository;
 import com.sunday.services.service.PermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,7 +32,7 @@ public class PermissionServiceImpl implements PermissionService {
     @Override
     public Permission createPermission(PermissionRequest request) {
         if (permissionRepository.findByName(request.getName()) != null) {
-            throw new IllegalArgumentException(String.format(ErrorMessageUtil.PERMISSION_ALREADY_EXISTS, request.getName()));
+            throw new OperationNotPermittedException(String.format(ErrorMessageUtil.PERMISSION_ALREADY_EXISTS, request.getName()));
         }
 
         Permission permission = new Permission();
@@ -41,7 +43,8 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     @Override
-    public List<Role> getRolesForPermission(Long permissionId) throws ResourceNotFoundException {
+    @Transactional(readOnly = true)
+    public List<Role> getRolesForPermission(Long permissionId) {
         if (!permissionRepository.existsById(permissionId)) {
             throw new ResourceNotFoundException(String.format(ErrorMessageUtil.PERMISSION_NOT_FOUND_BY_ID, permissionId));
         }

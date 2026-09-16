@@ -2,7 +2,6 @@ package com.sunday.services.controller;
 
 import com.sunday.common_lib.dto.PermissionDTO;
 import com.sunday.common_lib.dto.RoleDTO;
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AssignPermissionsRequest;
 import com.sunday.common_lib.payload.request.RoleRequest;
 import com.sunday.services.mapper.PermissionMapper;
@@ -21,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -34,25 +34,26 @@ public class RoleController {
     public ResponseEntity<RoleDTO> createRole(
             @Valid @RequestBody RoleRequest request) {
         Role role = roleService.createRole(request);
-        return ResponseEntity.ok(RoleMapper.toDTO(role));
+        RoleDTO dto = RoleMapper.toDTO(role);
+        return ResponseEntity.created(URI.create("/api/roles/" + dto.getId())).body(dto);
     }
 
     @GetMapping
-    public ResponseEntity<List<RoleDTO>> getRoles() throws ResourceNotFoundException {
+    public ResponseEntity<List<RoleDTO>> getRoles() {
         List<Role> roles = roleService.getRoles();
         return ResponseEntity.ok(RoleMapper.toDTOList(roles));
     }
 
     @GetMapping("/{roleId}")
     public ResponseEntity<RoleDTO> getRoleById(
-            @PathVariable Long roleId) throws ResourceNotFoundException {
+            @PathVariable Long roleId) {
         Role role = roleService.getRoleById(roleId);
         return ResponseEntity.ok(RoleMapper.toDTO(role));
     }
 
     @GetMapping("/{roleId}/permissions")
     public ResponseEntity<List<PermissionDTO>> getRolePermissions(
-            @PathVariable Long roleId) throws ResourceNotFoundException {
+            @PathVariable Long roleId) {
         List<Permission> permissions = roleService.getPermissionsForRole(roleId);
         return ResponseEntity.ok(PermissionMapper.toDTOList(permissions));
     }
@@ -60,7 +61,7 @@ public class RoleController {
     @PostMapping("/{roleId}/permissions")
     public ResponseEntity<List<PermissionDTO>> assignPermissionsToRole(
             @PathVariable Long roleId,
-            @Valid @RequestBody AssignPermissionsRequest request) throws ResourceNotFoundException {
+            @Valid @RequestBody AssignPermissionsRequest request) {
         List<Permission> permissions = roleService.assignPermissionsToRole(roleId, request);
         return ResponseEntity.ok(PermissionMapper.toDTOList(permissions));
     }
@@ -68,7 +69,7 @@ public class RoleController {
     @DeleteMapping("/{roleId}/permissions/{permissionId}")
     public ResponseEntity<Void> unassignPermissionFromRole(
             @PathVariable Long roleId,
-            @PathVariable Long permissionId) throws ResourceNotFoundException {
+            @PathVariable Long permissionId) {
         roleService.unassignPermissionFromRole(roleId, permissionId);
         return ResponseEntity.noContent().build();
     }

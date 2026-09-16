@@ -5,6 +5,7 @@ import com.sunday.common_lib.payload.request.RegisterRequest;
 import com.sunday.common_lib.payload.response.AuthResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.config.JwtProvider;
+import com.sunday.services.enums.UserStatus;
 import com.sunday.services.mapper.UserMapper;
 import com.sunday.services.model.EmailVerificationToken;
 import com.sunday.services.model.RefreshToken;
@@ -17,10 +18,11 @@ import com.sunday.services.service.EmailService;
 import com.sunday.services.util.TokenHasher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,11 +35,25 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
+    /**
+     * A well-formed, publicly-known example bcrypt hash (bcrypt's own reference test vector,
+     * the hash of "secret" at cost 10) used only as a timing-equalization target for logins
+     * against an email that doesn't exist — it never matches a real password.
+     */
+    private static final String DUMMY_PASSWORD_HASH =
+            "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+
     @Value("${auth.verification-token-ttl-hours}")
     private long verificationTokenTtlHours;
 
     @Value("${auth.refresh-token-ttl-days}")
     private long refreshTokenTtlDays;
+
+    @Value("${auth.max-failed-login-attempts}")
+    private int maxFailedLoginAttempts;
+
+    @Value("${auth.account-lockout-minutes}")
+    private long accountLockoutMinutes;
 
     private final UserRepository userRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
@@ -53,65 +69,88 @@ public class AuthServiceImpl implements AuthService {
         2. Encode password using BCrypt
         3. Save user in database
         4. Generate an email verification token and send it
-        5. Generate access + refresh tokens
-        6. Return tokens and user information
+        5. Return user information (no tokens — the account must be verified before login)
     */
     @Override
     @Transactional
-    public AuthResponse signup(RegisterRequest req) throws UserException {
-        User existingUser = userRepository.findByEmail(req.getEmail());
+    public AuthResponse signup(RegisterRequest req) {
+        String email = normalizeEmail(req.getEmail());
+
+        User existingUser = userRepository.findByEmail(email);
         if (existingUser != null) {
             throw new UserException(ErrorMessageUtil.EMAIL_ALREADY_REGISTERED);
         }
 
         User createdUser = new User();
-        createdUser.setEmail(req.getEmail());
+        createdUser.setEmail(email);
         createdUser.setPassword(passwordEncoder.encode(req.getPassword()));
         createdUser.setFirstName(req.getFirstName());
         createdUser.setLastName(req.getLastName());
         createdUser.setMiddleName(req.getMiddleName());
         createdUser.setPhoneNumber(req.getPhoneNumber());
-        createdUser.setLastLogin(LocalDateTime.now());
 
-        User savedUser = userRepository.save(createdUser);
+        User savedUser;
+        try {
+            savedUser = userRepository.save(createdUser);
+        } catch (DataIntegrityViolationException e) {
+            // Loser of a concurrent signup race on the same email.
+            throw new UserException(ErrorMessageUtil.EMAIL_ALREADY_REGISTERED);
+        }
 
         issueVerificationToken(savedUser);
 
-        Authentication authentication
-                = new UsernamePasswordAuthenticationToken(
-                savedUser.getEmail(), savedUser.getPassword()
-        );
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtProvider.generateToken(authentication, savedUser.getId());
-        String refreshToken = issueRefreshToken(savedUser);
-
         AuthResponse response = new AuthResponse();
         response.setTitle("Welcome " + savedUser.getFirstName() + " " + savedUser.getLastName());
-        response.setMessage("Registration successful. Please check your email to verify your account.");
+        response.setMessage("Registration successful. Please check your email to verify your account before logging in.");
         response.setUser(UserMapper.toAuthUserDTO(savedUser));
-        response.setJwt(jwt);
-        response.setRefreshToken(refreshToken);
         return response;
     }
 
     /*
     Steps:
-        1. Load user by email
-        2. Compare password with BCrypt
-        3. Update `lastLogin` time
-        4. Generate access + refresh tokens
+        1. Reject if the account is locked/suspended
+        2. Verify credentials (tracking failed attempts, locking after too many)
+        3. Reject if the email hasn't been verified
+        4. Update `lastLogin`, generate access + refresh tokens
         5. Return tokens and user information
+
+    noRollbackFor is required here for the same reason as refresh(): the catch block
+    below writes the incremented failed-attempt count (and possibly a lockout) via
+    registerFailedLogin(), then rethrows to reject the request. Without this, that
+    write is rolled back along with the exception and lockout can never trigger.
     */
     @Override
-    @Transactional
-    public AuthResponse login(String email, String password) throws UserException {
-        Authentication authentication = authenticate(email, password);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
+    @Transactional(noRollbackFor = UserException.class)
+    public AuthResponse login(String rawEmail, String password, String userAgent, String ipAddress) {
+        String email = normalizeEmail(rawEmail);
         User user = userRepository.findByEmail(email);
-        String token = jwtProvider.generateToken(authentication, user.getId());
-        String refreshToken = issueRefreshToken(user);
 
+        if (user != null && user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
+            throw new UserException(ErrorMessageUtil.ACCOUNT_LOCKED);
+        }
+        if (user != null && user.getStatus() != UserStatus.ACTIVE) {
+            throw new UserException(ErrorMessageUtil.ACCOUNT_NOT_ACTIVE);
+        }
+
+        Authentication authentication;
+        try {
+            authentication = authenticate(email, password);
+        } catch (UserException e) {
+            if (user != null) {
+                registerFailedLogin(user);
+            }
+            throw e;
+        }
+
+        if (Boolean.FALSE.equals(user.getEmailVerified())) {
+            throw new UserException(ErrorMessageUtil.EMAIL_NOT_VERIFIED);
+        }
+
+        String token = jwtProvider.generateToken(authentication, user.getId());
+        String refreshToken = issueRefreshToken(user, userAgent, ipAddress);
+
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -126,7 +165,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void verifyEmail(String token) throws UserException {
+    public void verifyEmail(String token) {
         String tokenHash = TokenHasher.sha256Hex(token);
 
         EmailVerificationToken verificationToken = emailVerificationTokenRepository
@@ -150,7 +189,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void resendVerification(String email) {
+    @Transactional
+    public void resendVerification(String rawEmail) {
+        String email = normalizeEmail(rawEmail);
         User user = userRepository.findByEmail(email);
         if (user == null || Boolean.TRUE.equals(user.getEmailVerified())) {
             return;
@@ -164,12 +205,17 @@ public class AuthServiceImpl implements AuthService {
         1. Hash the submitted refresh token and look it up
         2. If it was already revoked, treat this as token reuse/theft and kill every
            active session for that user, then reject
-        3. If it's expired, reject
+        3. If it's expired, or the account is locked/suspended/unverified, reject
         4. Rotate: revoke the presented token, issue a brand-new access + refresh pair
+
+    noRollbackFor is required here: the reuse-detection branch performs the mass
+    revocation *then* throws to reject the request, and the revocation must commit
+    even though the request itself fails — otherwise the only stolen-token defense
+    silently no-ops (every other throw site in this method runs before any write).
     */
     @Override
-    @Transactional
-    public AuthResponse refresh(String rawRefreshToken) throws UserException {
+    @Transactional(noRollbackFor = UserException.class)
+    public AuthResponse refresh(String rawRefreshToken, String userAgent, String ipAddress) {
         String tokenHash = TokenHasher.sha256Hex(rawRefreshToken);
 
         RefreshToken existingToken = refreshTokenRepository.findByTokenHash(tokenHash)
@@ -186,6 +232,16 @@ public class AuthServiceImpl implements AuthService {
             throw new UserException(ErrorMessageUtil.REFRESH_TOKEN_EXPIRED);
         }
 
+        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
+            throw new UserException(ErrorMessageUtil.ACCOUNT_LOCKED);
+        }
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new UserException(ErrorMessageUtil.ACCOUNT_NOT_ACTIVE);
+        }
+        if (Boolean.FALSE.equals(user.getEmailVerified())) {
+            throw new UserException(ErrorMessageUtil.EMAIL_NOT_VERIFIED);
+        }
+
         LocalDateTime now = LocalDateTime.now();
         existingToken.setRevokedAt(now);
         existingToken.setLastUsedAt(now);
@@ -194,7 +250,7 @@ public class AuthServiceImpl implements AuthService {
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 user.getEmail(), null, Collections.emptyList());
         String newJwt = jwtProvider.generateToken(authentication, user.getId());
-        String newRefreshToken = issueRefreshToken(user);
+        String newRefreshToken = issueRefreshToken(user, userAgent, ipAddress);
 
         AuthResponse response = new AuthResponse();
         response.setMessage("Token refreshed");
@@ -216,6 +272,16 @@ public class AuthServiceImpl implements AuthService {
         });
     }
 
+    private void registerFailedLogin(User user) {
+        int attempts = user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts();
+        attempts++;
+        user.setFailedLoginAttempts(attempts);
+        if (attempts >= maxFailedLoginAttempts) {
+            user.setLockedUntil(LocalDateTime.now().plusMinutes(accountLockoutMinutes));
+        }
+        userRepository.save(user);
+    }
+
     private void revokeAllActiveTokensForUser(Long userId) {
         List<RefreshToken> activeTokens = refreshTokenRepository.findByUserIdAndRevokedAtIsNull(userId);
         LocalDateTime now = LocalDateTime.now();
@@ -225,40 +291,59 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.saveAll(activeTokens);
     }
 
-    private String issueRefreshToken(User user) {
+    private String issueRefreshToken(User user, String userAgent, String ipAddress) {
         String rawToken = TokenHasher.generateRawToken();
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUser(user);
         refreshToken.setTokenHash(TokenHasher.sha256Hex(rawToken));
         refreshToken.setExpiresAt(LocalDateTime.now().plusDays(refreshTokenTtlDays));
+        refreshToken.setUserAgent(userAgent);
+        refreshToken.setIpAddress(ipAddress);
         refreshTokenRepository.save(refreshToken);
 
         return rawToken;
     }
 
     private void issueVerificationToken(User user) {
+        // Invalidate any still-outstanding tokens first so at most one is ever live.
+        List<EmailVerificationToken> outstanding =
+                emailVerificationTokenRepository.findByUserIdAndUsedAtIsNull(user.getId());
+        LocalDateTime now = LocalDateTime.now();
+        for (EmailVerificationToken old : outstanding) {
+            old.setUsedAt(now);
+        }
+        emailVerificationTokenRepository.saveAll(outstanding);
+
         String rawToken = TokenHasher.generateRawToken();
 
         EmailVerificationToken verificationToken = new EmailVerificationToken();
         verificationToken.setUser(user);
         verificationToken.setTokenHash(TokenHasher.sha256Hex(rawToken));
-        verificationToken.setExpiresAt(LocalDateTime.now().plusHours(verificationTokenTtlHours));
+        verificationToken.setExpiresAt(now.plusHours(verificationTokenTtlHours));
         emailVerificationTokenRepository.save(verificationToken);
 
         emailService.sendVerificationEmail(user.getEmail(), user.getFirstName(), rawToken);
     }
 
     private Authentication authenticate(String email, String password) throws UserException {
-        UserDetails userDetails = customUserDetailsService
-                .loadUserByUsername(email);
-        if (userDetails == null) {
-            throw new UserException(String.format(ErrorMessageUtil.USER_NOT_FOUND_BY_EMAIL, email));
+        UserDetails userDetails;
+        try {
+            userDetails = customUserDetailsService.loadUserByUsername(email);
+        } catch (UsernameNotFoundException e) {
+            // Equalize timing with the "user found, wrong password" path below so the
+            // response time doesn't leak whether the email is registered.
+            passwordEncoder.matches(password, DUMMY_PASSWORD_HASH);
+            throw new UserException(ErrorMessageUtil.INVALID_CREDENTIALS);
         }
         if (!passwordEncoder.matches(password, userDetails.getPassword())) {
-            throw new UserException(ErrorMessageUtil.INVALID_PASSWORD);
+            throw new UserException(ErrorMessageUtil.INVALID_CREDENTIALS);
         }
         return new UsernamePasswordAuthenticationToken(
                 email, null, userDetails.getAuthorities());
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
     }
 }

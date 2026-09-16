@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AssignPermissionsRequest;
 import com.sunday.common_lib.payload.request.RoleRequest;
@@ -27,12 +28,12 @@ public class RoleServiceImpl implements RoleService {
     private final RolePermissionRepository rolePermissionRepository;
 
     @Override
-    public List<Role> getRoles() throws ResourceNotFoundException {
+    public List<Role> getRoles() {
         return roleRepository.findAll();
     }
 
     @Override
-    public Role getRoleById(Long id) throws ResourceNotFoundException {
+    public Role getRoleById(Long id) {
         return roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.ROLE_NOT_FOUND_BY_ID, id)));
     }
@@ -40,7 +41,7 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public Role createRole(RoleRequest request) {
         if (roleRepository.findByName(request.getName()) != null) {
-            throw new IllegalArgumentException(String.format(ErrorMessageUtil.ROLE_ALREADY_EXISTS, request.getName()));
+            throw new OperationNotPermittedException(String.format(ErrorMessageUtil.ROLE_ALREADY_EXISTS, request.getName()));
         }
 
         Role role = new Role();
@@ -51,7 +52,8 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public List<Permission> getPermissionsForRole(Long roleId) throws ResourceNotFoundException {
+    @Transactional(readOnly = true)
+    public List<Permission> getPermissionsForRole(Long roleId) {
         getRoleById(roleId);
 
         return rolePermissionRepository.findByRoleId(roleId).stream()
@@ -61,7 +63,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     @Transactional
-    public List<Permission> assignPermissionsToRole(Long roleId, AssignPermissionsRequest request) throws ResourceNotFoundException {
+    public List<Permission> assignPermissionsToRole(Long roleId, AssignPermissionsRequest request) {
         Role role = getRoleById(roleId);
 
         for (Long permissionId : request.getPermissionIds()) {
@@ -80,7 +82,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public void unassignPermissionFromRole(Long roleId, Long permissionId) throws ResourceNotFoundException {
+    public void unassignPermissionFromRole(Long roleId, Long permissionId) {
         getRoleById(roleId);
 
         RolePermission rolePermission = rolePermissionRepository

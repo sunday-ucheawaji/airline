@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "email_verification_tokens")
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -27,6 +27,7 @@ public class EmailVerificationToken {
     @NotNull(message = ErrorMessageUtil.USER_MANDATORY)
     private User user;
 
+    @EqualsAndHashCode.Include
     @Column(nullable = false, unique = true)
     @NotBlank(message = ErrorMessageUtil.TOKEN_HASH_MANDATORY)
     private String tokenHash;

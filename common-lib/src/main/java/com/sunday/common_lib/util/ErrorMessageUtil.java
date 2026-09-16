@@ -17,7 +17,10 @@ public class ErrorMessageUtil {
     public static final String USER_NOT_FOUND_BY_EMAIL = "User not found with email: %s";
     public static final String USER_NOT_FOUND_BY_ID = "User not found with id: %s";
     public static final String EMAIL_ALREADY_REGISTERED = "Email already registered";
-    public static final String INVALID_PASSWORD = "Invalid password";
+    public static final String INVALID_CREDENTIALS = "Invalid email or password";
+    public static final String EMAIL_NOT_VERIFIED = "Please verify your email before logging in";
+    public static final String ACCOUNT_LOCKED = "Account is temporarily locked due to repeated failed login attempts. Try again later.";
+    public static final String ACCOUNT_NOT_ACTIVE = "Account is not active";
 
     // ---------- Email verification ----------
     public static final String INVALID_VERIFICATION_TOKEN = "Invalid verification token";

@@ -16,6 +16,8 @@ spring:
 auth:
   verification-token-ttl-hours: ${VERIFICATION_TOKEN_TTL_HOURS}
   refresh-token-ttl-days: ${REFRESH_TOKEN_TTL_DAYS}
+  max-failed-login-attempts: ${MAX_FAILED_LOGIN_ATTEMPTS}
+  account-lockout-minutes: ${ACCOUNT_LOCKOUT_MINUTES}
 
 jwt:
   secret: ${JWT_SECRET_KEY}
