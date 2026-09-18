@@ -14,4 +14,7 @@ public interface RoleService {
     List<Permission> getPermissionsForRole(Long roleId);
     List<Permission> assignPermissionsToRole(Long roleId, AssignPermissionsRequest request);
     void unassignPermissionFromRole(Long roleId, Long permissionId);
+    List<Role> getPlatformRolesForUser(Long userId);
+    void assignPlatformRoleToUser(Long roleId, Long userId);
+    void unassignPlatformRoleFromUser(Long roleId, Long userId);
 }

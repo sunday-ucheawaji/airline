@@ -452,6 +452,32 @@ this doc's Flyway plan (section 23) called for were never written, so the
 via `POST /api/roles` if/when needed. Full CRUD exists (`GET/POST /api/roles`,
 `GET /api/roles/{roleId}`), beyond this section's original read-only scope.
 
+**Update (2026-09-18) — role scope, and only 3 of the 5 roles built**: `Role`
+gained a `scope` field (`PLATFORM`/`AIRLINE`, migration `V8`, default
+`AIRLINE`), to resolve a gap this doc didn't originally address: reviewing
+onboarding applications (section 13 step 7, section 20: *"Restrict onboarding
+review to authorized GDS administrators"*) needs a **platform-level** role
+that exists *before* any airline (and therefore any `AirlineMembership`) does
+— the doc's `OWNER`/`ADMIN`/`OPERATIONS_MANAGER`/`BOOKING_AGENT`/`VIEWER` are
+all `AIRLINE`-scoped by contrast, meant to be granted via `AirlineMembership`
+once it exists. A `GDS_ADMIN` (`PLATFORM`-scoped) role has been created for
+this, with its own direct-grant mechanism (`UserPlatformRole`, migration
+`V9`, `POST/DELETE /api/roles/{roleId}/users/{userId}`, `GET /api/users/
+{userId}/roles`) since there's no membership to hang a platform role off of.
+That endpoint rejects `AIRLINE`-scoped roles (`403`) — they must go through
+`AirlineMembership` once that's built, not this shortcut.
+
+Only `OWNER`, `ADMIN`, `VIEWER` were actually created — `OPERATIONS_MANAGER`
+and `BOOKING_AGENT` name capabilities (flight ops, booking) this phase
+explicitly excludes (section 1), so there's nothing for them to govern yet;
+add them later alongside those capabilities. `ADMIN` and `OWNER` are not
+identical: `OWNER` has one exclusive permission (`MEMBER_REMOVE`, see section
+6.3's updated permission list) so the distinction is real, not just nominal.
+
+A real seed set (not Flyway, not throwaway test data) now exists in the dev
+DB: `GDS_ADMIN`/`OWNER`/`ADMIN`/`VIEWER` plus the permission set in section
+6.3's update, wired together exactly as the table there shows.
+
 ### Design Notes
 
 Roles are defined globally in the User Service but applied to users
@@ -509,6 +535,22 @@ ONBOARDING_REVIEW
 `roles` above, the table starts empty. Full CRUD exists (`GET/POST
 /api/permissions`, `GET /api/permissions/{permissionId}/roles`), beyond
 this section's original read-only scope.
+
+**Update (2026-09-18) — granular permission set actually created**, replacing
+`MEMBER_UPDATE` with two finer-grained permissions and dropping `USER_UPDATE`
+(no capability anywhere in the design flows needs it, and self-profile-edit
+isn't even built — see section 7's `PATCH /users/me` note). Actual set:
+`ONBOARDING_READ`, `ONBOARDING_REVIEW` (`PLATFORM`-scoped, `GDS_ADMIN` only —
+see section 6.2's update), `AIRLINE_READ`, `AIRLINE_UPDATE`, `MEMBER_READ`,
+`MEMBER_INVITE`, `MEMBER_UPDATE_ROLE`, `MEMBER_UPDATE_STATUS`, `MEMBER_REMOVE`,
+`USER_READ` (`AIRLINE`-scoped). Role → permission mapping actually created:
+
+| Role | Permissions |
+|---|---|
+| `GDS_ADMIN` | `ONBOARDING_READ`, `ONBOARDING_REVIEW` |
+| `VIEWER` | `AIRLINE_READ`, `MEMBER_READ`, `USER_READ` |
+| `ADMIN` | `AIRLINE_READ`, `AIRLINE_UPDATE`, `MEMBER_READ`, `MEMBER_INVITE`, `MEMBER_UPDATE_ROLE`, `MEMBER_UPDATE_STATUS`, `USER_READ` |
+| `OWNER` | everything `ADMIN` has, plus `MEMBER_REMOVE` |
 
 ### Design Notes
 

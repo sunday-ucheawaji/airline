@@ -16,6 +16,7 @@ public class RoleMapper {
         dto.setName(role.getName());
         dto.setDescription(role.getDescription());
         dto.setStatus(role.getStatus() != null ? role.getStatus().name() : null);
+        dto.setScope(role.getScope() != null ? role.getScope().name() : null);
         return dto;
     }
 

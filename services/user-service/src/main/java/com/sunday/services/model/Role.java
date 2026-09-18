@@ -1,6 +1,7 @@
 package com.sunday.services.model;
 
 import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.enums.RoleScope;
 import com.sunday.services.enums.RoleStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -35,6 +36,11 @@ public class Role {
     @NotNull(message = ErrorMessageUtil.STATUS_MANDATORY)
     @Enumerated(EnumType.STRING)
     private RoleStatus status = RoleStatus.ACTIVE;
+
+    @Column(nullable = false)
+    @NotNull(message = ErrorMessageUtil.SCOPE_MANDATORY)
+    @Enumerated(EnumType.STRING)
+    private RoleScope scope = RoleScope.AIRLINE;
 
     @Column(nullable = false, updatable = false)
     @CreationTimestamp

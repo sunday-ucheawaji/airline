@@ -5,12 +5,17 @@ import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AssignPermissionsRequest;
 import com.sunday.common_lib.payload.request.RoleRequest;
 import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.enums.RoleScope;
 import com.sunday.services.model.Permission;
 import com.sunday.services.model.Role;
 import com.sunday.services.model.RolePermission;
+import com.sunday.services.model.User;
+import com.sunday.services.model.UserPlatformRole;
 import com.sunday.services.repository.PermissionRepository;
 import com.sunday.services.repository.RolePermissionRepository;
 import com.sunday.services.repository.RoleRepository;
+import com.sunday.services.repository.UserPlatformRoleRepository;
+import com.sunday.services.repository.UserRepository;
 import com.sunday.services.service.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +31,8 @@ public class RoleServiceImpl implements RoleService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final UserRepository userRepository;
+    private final UserPlatformRoleRepository userPlatformRoleRepository;
 
     @Override
     public List<Role> getRoles() {
@@ -47,6 +54,7 @@ public class RoleServiceImpl implements RoleService {
         Role role = new Role();
         role.setName(request.getName());
         role.setDescription(request.getDescription());
+        role.setScope(request.getScope() != null ? RoleScope.valueOf(request.getScope()) : RoleScope.AIRLINE);
 
         return roleRepository.save(role);
     }
@@ -91,5 +99,50 @@ public class RoleServiceImpl implements RoleService {
                         String.format(ErrorMessageUtil.PERMISSION_NOT_ASSIGNED_TO_ROLE, permissionId, roleId)));
 
         rolePermissionRepository.delete(rolePermission);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Role> getPlatformRolesForUser(Long userId) {
+        getUserOrThrow(userId);
+
+        return userPlatformRoleRepository.findByUserId(userId).stream()
+                .map(UserPlatformRole::getRole)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void assignPlatformRoleToUser(Long roleId, Long userId) {
+        Role role = getRoleById(roleId);
+        if (role.getScope() != RoleScope.PLATFORM) {
+            throw new OperationNotPermittedException(String.format(ErrorMessageUtil.ROLE_NOT_PLATFORM_SCOPED, role.getName()));
+        }
+
+        User user = getUserOrThrow(userId);
+
+        if (!userPlatformRoleRepository.existsByUserIdAndRoleId(userId, roleId)) {
+            UserPlatformRole grant = new UserPlatformRole();
+            grant.setUser(user);
+            grant.setRole(role);
+            userPlatformRoleRepository.save(grant);
+        }
+    }
+
+    @Override
+    public void unassignPlatformRoleFromUser(Long roleId, Long userId) {
+        getRoleById(roleId);
+        getUserOrThrow(userId);
+
+        UserPlatformRole grant = userPlatformRoleRepository
+                .findByUserIdAndRoleId(userId, roleId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(ErrorMessageUtil.PLATFORM_ROLE_NOT_ASSIGNED_TO_USER, roleId, userId)));
+
+        userPlatformRoleRepository.delete(grant);
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.USER_NOT_FOUND_BY_ID, userId)));
     }
 }

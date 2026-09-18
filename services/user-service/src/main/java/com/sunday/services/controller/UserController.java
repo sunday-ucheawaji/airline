@@ -1,8 +1,12 @@
 package com.sunday.services.controller;
 
 import com.sunday.common_lib.dto.AuthUserDTO;
+import com.sunday.common_lib.dto.RoleDTO;
+import com.sunday.services.mapper.RoleMapper;
 import com.sunday.services.mapper.UserMapper;
+import com.sunday.services.model.Role;
 import com.sunday.services.model.User;
+import com.sunday.services.service.RoleService;
 import com.sunday.services.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +19,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final RoleService roleService;
 
     @GetMapping("/api/users/profile")
     public ResponseEntity<AuthUserDTO> getUserProfile(
@@ -34,5 +39,12 @@ public class UserController {
     public ResponseEntity<List<AuthUserDTO>> getUsers() {
         List<User> users = userService.getUsers();
         return ResponseEntity.ok(UserMapper.toAuthUserDTOList(users));
+    }
+
+    @GetMapping("/api/users/{userId}/roles")
+    public ResponseEntity<List<RoleDTO>> getPlatformRolesForUser(
+            @PathVariable Long userId) {
+        List<Role> roles = roleService.getPlatformRolesForUser(userId);
+        return ResponseEntity.ok(RoleMapper.toDTOList(roles));
     }
 }

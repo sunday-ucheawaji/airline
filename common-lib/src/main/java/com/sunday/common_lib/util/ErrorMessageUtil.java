@@ -39,6 +39,9 @@ public class ErrorMessageUtil {
     public static final String PERMISSION_NOT_FOUND_BY_ID = "Permission not found with id: %s";
     public static final String PERMISSION_ALREADY_EXISTS = "Permission with name %s already exists";
     public static final String PERMISSION_NOT_ASSIGNED_TO_ROLE = "Permission %s is not assigned to role %s";
+    public static final String ROLE_NOT_PLATFORM_SCOPED =
+            "Role %s is airline-scoped and cannot be assigned directly to a user; airline-scoped roles are granted through airline membership";
+    public static final String PLATFORM_ROLE_NOT_ASSIGNED_TO_USER = "Role %s is not assigned to user %s";
 
     // ---------- Bean validation: fields ----------
     public static final String FIRST_NAME_MANDATORY = "firstName is mandatory";
@@ -47,6 +50,8 @@ public class ErrorMessageUtil {
     public static final String EMAIL_INVALID = "Email should be valid";
     public static final String NAME_MANDATORY = "name is mandatory";
     public static final String STATUS_MANDATORY = "status is mandatory";
+    public static final String SCOPE_MANDATORY = "scope is mandatory";
+    public static final String ROLE_SCOPE_INVALID = "scope must be PLATFORM or AIRLINE";
     public static final String ROLE_MANDATORY = "role is mandatory";
     public static final String PERMISSION_MANDATORY = "permission is mandatory";
     public static final String USER_MANDATORY = "user is mandatory";

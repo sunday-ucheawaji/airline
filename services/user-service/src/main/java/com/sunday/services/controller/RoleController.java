@@ -73,4 +73,20 @@ public class RoleController {
         roleService.unassignPermissionFromRole(roleId, permissionId);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{roleId}/users/{userId}")
+    public ResponseEntity<Void> assignPlatformRoleToUser(
+            @PathVariable Long roleId,
+            @PathVariable Long userId) {
+        roleService.assignPlatformRoleToUser(roleId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{roleId}/users/{userId}")
+    public ResponseEntity<Void> unassignPlatformRoleFromUser(
+            @PathVariable Long roleId,
+            @PathVariable Long userId) {
+        roleService.unassignPlatformRoleFromUser(roleId, userId);
+        return ResponseEntity.noContent().build();
+    }
 }
