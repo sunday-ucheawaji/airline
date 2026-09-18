@@ -35,11 +35,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    /**
-     * A well-formed, publicly-known example bcrypt hash (bcrypt's own reference test vector,
-     * the hash of "secret" at cost 10) used only as a timing-equalization target for logins
-     * against an email that doesn't exist — it never matches a real password.
-     */
     private static final String DUMMY_PASSWORD_HASH =
             "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
@@ -63,14 +58,7 @@ public class AuthServiceImpl implements AuthService {
     private final CustomUserDetailsService customUserDetailsService;
     private final EmailService emailService;
 
-    /*
-    Steps:
-        1. Check if email already exists
-        2. Encode password using BCrypt
-        3. Save user in database
-        4. Generate an email verification token and send it
-        5. Return user information (no tokens — the account must be verified before login)
-    */
+
     @Override
     @Transactional
     public AuthResponse signup(RegisterRequest req) {
@@ -106,19 +94,6 @@ public class AuthServiceImpl implements AuthService {
         return response;
     }
 
-    /*
-    Steps:
-        1. Reject if the account is locked/suspended
-        2. Verify credentials (tracking failed attempts, locking after too many)
-        3. Reject if the email hasn't been verified
-        4. Update `lastLogin`, generate access + refresh tokens
-        5. Return tokens and user information
-
-    noRollbackFor is required here for the same reason as refresh(): the catch block
-    below writes the incremented failed-attempt count (and possibly a lockout) via
-    registerFailedLogin(), then rethrows to reject the request. Without this, that
-    write is rolled back along with the exception and lockout can never trigger.
-    */
     @Override
     @Transactional(noRollbackFor = UserException.class)
     public AuthResponse login(String rawEmail, String password, String userAgent, String ipAddress) {
@@ -200,19 +175,6 @@ public class AuthServiceImpl implements AuthService {
         issueVerificationToken(user);
     }
 
-    /*
-    Steps:
-        1. Hash the submitted refresh token and look it up
-        2. If it was already revoked, treat this as token reuse/theft and kill every
-           active session for that user, then reject
-        3. If it's expired, or the account is locked/suspended/unverified, reject
-        4. Rotate: revoke the presented token, issue a brand-new access + refresh pair
-
-    noRollbackFor is required here: the reuse-detection branch performs the mass
-    revocation *then* throws to reject the request, and the revocation must commit
-    even though the request itself fails — otherwise the only stolen-token defense
-    silently no-ops (every other throw site in this method runs before any write).
-    */
     @Override
     @Transactional(noRollbackFor = UserException.class)
     public AuthResponse refresh(String rawRefreshToken, String userAgent, String ipAddress) {
@@ -306,7 +268,6 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private void issueVerificationToken(User user) {
-        // Invalidate any still-outstanding tokens first so at most one is ever live.
         List<EmailVerificationToken> outstanding =
                 emailVerificationTokenRepository.findByUserIdAndUsedAtIsNull(user.getId());
         LocalDateTime now = LocalDateTime.now();
@@ -331,8 +292,6 @@ public class AuthServiceImpl implements AuthService {
         try {
             userDetails = customUserDetailsService.loadUserByUsername(email);
         } catch (UsernameNotFoundException e) {
-            // Equalize timing with the "user found, wrong password" path below so the
-            // response time doesn't leak whether the email is registered.
             passwordEncoder.matches(password, DUMMY_PASSWORD_HASH);
             throw new UserException(ErrorMessageUtil.INVALID_CREDENTIALS);
         }

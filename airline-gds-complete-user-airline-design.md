@@ -37,6 +37,72 @@ onboarding, and authorization foundations are stable.
 
 ------------------------------------------------------------------------
 
+# 1a. Implementation Status (updated 2026-09-18)
+
+This document was written as a greenfield design. **`services/user-service` has
+since been built against it incrementally**, inside a larger pre-existing
+microservices repo (not greenfield) — see the repo-root `CLAUDE.md` for the
+full architectural context. The sections below are now annotated against what
+was actually shipped and manually end-to-end tested. **The Airline Service
+(section 10 onward) has not been started at all** — those sections remain
+purely aspirational.
+
+Headline divergences from this doc, all deliberate:
+
+-   **IDs are `Long` (MySQL `BIGINT AUTO_INCREMENT`), not `UUID`.** The repo
+    this service lives in already uses `Long` IDs everywhere (API gateway,
+    Feign clients across 9+ other services); switching one service to UUID
+    would have required touching all of them. Applies to every entity below.
+-   **Database is MySQL (`airline_user`), not PostgreSQL** — matches the rest
+    of the repo, one MySQL instance per service.
+-   **API paths are unversioned** (`/auth/*`, `/api/users/*`, `/api/roles/*`,
+    `/api/permissions/*`), not `/api/v1/*` — matches this repo's existing
+    convention, not this doc's.
+-   **`Role`/`Permission`/`RolePermission` exist and have full CRUD**, but are
+    an *unconsumed, additive* concept — nothing assigns them to a user yet,
+    because `AirlineMembership` (section 10.5) doesn't exist. There's also
+    **no seed data** — section 23's `V7`–`V9` seed migrations were never
+    written; the tables start empty and are populated only through the API.
+-   **Account lockout was added beyond this doc's scope**: `User` has
+    `status`, `failed_login_attempts`, `locked_until` (migration `V7`, not in
+    this doc's original Flyway plan). This is the implemented answer to this
+    doc's "rate-limit login attempts" requirement (section 20) — it's
+    per-account lockout, not IP-based rate limiting, and there is still no
+    rate limiting on verification-email resends.
+-   **Error responses have no `code` field** — section 19's suggested shape
+    (`VALIDATION_ERROR`, `DUPLICATE_RESOURCE`, etc.) was never implemented;
+    the shared `ErrorResponse` (in `common-lib`, used repo-wide) only has
+    `{timestamp, status, error, message, path}`.
+-   **`GET /api/v1/users/me` / `PATCH /api/v1/users/me` were never built.**
+    Instead there's `GET /api/users/profile` (via an `X-User-Email` header,
+    the repo's gateway-trust convention — see `CLAUDE.md`) and
+    `GET /api/users/{userId}`/`GET /api/users` (list-all — **not** in this
+    doc's original API list, and currently has **no authorization check at
+    all**, a known, deliberately deferred gap; the plan is to close it from
+    `api-gateway` once roles/permissions are wired through).
+-   **Role/Permission endpoints ended up as full CRUD, not read-only-and-
+    admin-restricted** as section 7 recommended: `POST /api/roles`,
+    `POST /api/roles/{roleId}/permissions` (assign), `DELETE .../permissions/
+    {permissionId}` (unassign), `POST /api/permissions` all exist, and — like
+    the `/api/users` gap above — carry no authorization check yet.
+-   **A transactionality lesson worth carrying into the Airline Service**:
+    `refresh()`'s reuse-detection revocation, and `login()`'s failed-attempt
+    tracking, both write a row and *then* throw to reject the request. Under
+    a bare `@Transactional`, Spring's default rollback-on-`RuntimeException`
+    silently undoes that write — the mass-revocation and the lockout counter
+    both shipped broken this way initially and were only caught by live
+    end-to-end testing (a DB check, not code review, found it). Both now use
+    `@Transactional(noRollbackFor = UserException.class)`. Anywhere the
+    Airline Service does "write a row, then throw to reject" (e.g. recording
+    a rejected onboarding review — section 8, step 7) needs the same pattern.
+-   **Everything else in sections 8 and 9 (registration/login flow) matches
+    this doc closely** — normalized email, password hashing, verification-
+    token issuance, account-status/lockout/email-verification checks before
+    issuing tokens, refresh-token rotation and hash-at-rest, `last_login`
+    update. See the field-level annotations in section 6 for exact naming.
+
+------------------------------------------------------------------------
+
 # 2. High-Level Business Concept
 
 A GDS acts as a platform between airlines and travel sellers or other
@@ -77,8 +143,10 @@ owner.
 
 ## Database
 
--   PostgreSQL
--   Flyway for database migrations
+-   PostgreSQL *(as originally designed; **User Service actually uses MySQL**,
+    matching the rest of this repo — see section 1a)*
+-   Flyway for database migrations *(implemented — `services/user-service/
+    src/main/resources/db/migration/`, V1–V7, no seed migrations)*
 
 ## Authentication
 
@@ -132,6 +200,11 @@ Responsibilities:
 The User Service does **not** own airline memberships because
 memberships are contextual to a specific airline.
 
+**As implemented**: everything above is done except "user profile
+management" is read-only — there's no way to update a user's own profile
+(name, phone, etc.) through the API yet, only `GET /api/users/profile`/
+`{userId}`/list. See section 7.
+
 ## 4.2 Airline Service
 
 The Airline Service owns airline organizations and their relationships
@@ -164,7 +237,11 @@ Suggested database name:
 user_db
 ```
 
-Tables:
+**As implemented**: database is `airline_user` (MySQL 8, `localhost:3306` in
+local dev), not `user_db`/PostgreSQL — matches the repo-wide one-MySQL-
+instance-per-service convention. See section 1a.
+
+Tables (all implemented, via Flyway V1–V6):
 
 -   `users`
 -   `roles`
@@ -172,6 +249,10 @@ Tables:
 -   `role_permissions`
 -   `email_verification_tokens`
 -   `refresh_tokens`
+
+Plus `flyway_schema_history` (Flyway's own bookkeeping table) and columns
+added by `V7` (`status`, `failed_login_attempts`, `locked_until` on `users`
+— account lockout, not in this doc's original scope, see section 1a).
 
 ## Airline Service Database
 
@@ -212,7 +293,48 @@ Represents a person who can log in to the GDS.
 A single user account can belong to multiple airlines and can have a
 different role in each airline.
 
-### Fields
+### Fields — as implemented
+
+`services/user-service/src/main/java/com/sunday/services/model/User.java`,
+migrations `V1__create_users.sql` + `V7__add_user_status_and_lockout.sql`.
+
+  ------------------------------------------------------------------------------------
+  Field                     Actual type              Notes
+  ------------------------- ------------------------ -----------------------------------
+  `id`                      `BIGINT` (Long, IDENTITY) not UUID — see section 1a
+
+  `email`                   `VARCHAR(255)`, unique    normalized (trimmed + lowercased)
+                                                       before every save/lookup
+
+  `password`                `VARCHAR(255)`            not renamed to `password_hash`;
+                                                       BCrypt hash
+
+  `first_name`,             `VARCHAR(100)`,           `middle_name` optional
+  `last_name`, `middle_name` `VARCHAR(100)`, nullable
+
+  `phone_number`            `VARCHAR(30)`, nullable
+
+  `status`                  `VARCHAR(20)`            enum `ACTIVE`/`SUSPENDED`/`LOCKED`
+                                                       (see note below — differs from the
+                                                       doc's suggested values)
+
+  `failed_login_attempts`   `INT`, default 0          not in original design; tracks
+                                                       consecutive bad-password attempts
+
+  `locked_until`            `DATETIME`, nullable      set when `failed_login_attempts`
+                                                       reaches `auth.max-failed-login-
+                                                       attempts` (config, default 5);
+                                                       cleared on successful login
+
+  `email_verified`          `BOOLEAN`, default false  **enforced as a login gate** — see
+                                                       section 1a; not a soft flag
+
+  `last_login`              `DATETIME`, nullable      not renamed to `last_login_at`
+
+  `created_at`, `updated_at` `DATETIME`               unchanged from design
+  ------------------------------------------------------------------------------------
+
+### Original (aspirational) fields
 
   --------------------------------------------------------------------------
   Field              Suggested Type                Required Description
@@ -260,6 +382,13 @@ ACTIVE
 SUSPENDED
 DISABLED
 ```
+
+**As implemented** (`com.sunday.services.enums.UserStatus`): `ACTIVE`,
+`SUSPENDED`, `LOCKED` — `LOCKED` replaces `DISABLED` and is set automatically
+by the account-lockout mechanism (not manually, unlike `SUSPENDED`); a
+locked account is distinct from one with a non-null `locked_until` — the
+lockout timer (`locked_until`) is what actually gates login, `status` is a
+separate, currently-manual field nothing sets to `LOCKED` automatically yet.
 
 ### Design Notes
 
@@ -316,6 +445,13 @@ BOOKING_AGENT
 VIEWER
 ```
 
+**As implemented**: `id` is `Long`, not UUID (as throughout — section 1a).
+**None of these initial roles are seeded** — the `V7`–`V9` seed migrations
+this doc's Flyway plan (section 23) called for were never written, so the
+`roles` table starts empty and these five values must be created manually
+via `POST /api/roles` if/when needed. Full CRUD exists (`GET/POST /api/roles`,
+`GET /api/roles/{roleId}`), beyond this section's original read-only scope.
+
 ### Design Notes
 
 Roles are defined globally in the User Service but applied to users
@@ -368,6 +504,11 @@ USER_UPDATE
 ONBOARDING_READ
 ONBOARDING_REVIEW
 ```
+
+**As implemented**: `id` is `Long`, not UUID. **Not seeded** — same as
+`roles` above, the table starts empty. Full CRUD exists (`GET/POST
+/api/permissions`, `GET /api/permissions/{permissionId}/roles`), beyond
+this section's original read-only scope.
 
 ### Design Notes
 
@@ -433,6 +574,16 @@ USER_UPDATE
 Role and permission data can initially be inserted using Flyway seed
 migrations.
 
+**As implemented**: `id` is `Long`. `role_id`/`permission_id` are real JPA
+`@ManyToOne` foreign keys (not "logical references" — `Role`, `Permission`,
+and `RolePermission` all live in the same `airline_user` database, so a
+physical FK applies here, unlike the genuinely cross-service `user_id`/
+`role_id` references the Airline Service will need). No seed data — see
+above. Full assign/unassign API exists: `POST /api/roles/{roleId}/
+permissions` (idempotent — re-assigning an already-assigned permission is a
+no-op, not an error) and `DELETE /api/roles/{roleId}/permissions/
+{permissionId}`.
+
 ------------------------------------------------------------------------
 
 ## 6.5 EmailVerificationToken
@@ -483,6 +634,28 @@ during registration.
 -   Do not reveal whether a specific email exists during resend
     requests.
 
+### As implemented
+
+`id`/`user_id` are `Long` (FK to `users`, `@ManyToOne`). Flow matches this
+section closely: raw token is two concatenated random UUIDs, hashed with
+plain SHA-256 (deterministic — needed for exact-match lookup by hash;
+contrast with BCrypt's salted password hashing, which can't be looked up
+this way) before storage; default TTL 24h (`auth.verification-token-ttl-
+hours`, configurable). **Resending invalidates any still-outstanding unused
+token first**, so at most one is ever live per user (not explicitly called
+for in this doc, added after a review flagged unlimited simultaneously-valid
+tokens as a gap). `resendVerification` returns an identical response
+regardless of whether the email exists, is unverified, or already verified
+— matches "do not reveal" above. **Not implemented**: rate-limiting resends
+(the "rate-limit" bullet above) — there's no throttle on how often
+`/auth/resend-verification` can be called for a given email today. Expired/
+used rows are purged by a daily scheduled job (`TokenCleanupScheduler`, not
+in this doc's original design), not left to accumulate forever.
+Endpoint is both `GET /auth/verify-email?token=...` (this doc's suggestion,
+kept for email-link compatibility) and `POST /auth/verify-email` (token in
+the request body — mitigates the token appearing in proxy/access logs and
+browser history that a GET query param invites).
+
 ------------------------------------------------------------------------
 
 ## 6.6 RefreshToken
@@ -523,9 +696,74 @@ device.
     detected.
 -   Do not log tokens.
 
+### As implemented
+
+`id`/`user_id` are `Long`. Same SHA-256-hash-at-rest scheme as the
+verification token above. Default TTL 30 days (`auth.refresh-token-ttl-
+days`, configurable). `user_agent`/`ip_address` **are** populated (extracted
+from the `User-Agent` header and `X-Forwarded-For`/remote-addr on each
+`login`/`refresh` call) — worth calling out since it'd be easy to add these
+columns and forget to actually fill them in, which is exactly what happened
+during initial implementation before a review caught it.
+
+**Reuse detection uses the blunt version of "revoke the entire token
+family"**: there's no token-family/chain concept — presenting an
+already-revoked refresh token revokes *every* currently-active refresh
+token for that user (simpler than family tracking, same practical effect
+for a single-device-compromise scenario). This is implemented as a
+write-then-throw operation inside `refresh()` and needs
+`@Transactional(noRollbackFor = UserException.class)` to actually persist
+the revocation — see section 1a's transactionality note; this exact bug
+shipped once and was only caught by live testing.
+
+Expired rows are purged by the same daily `TokenCleanupScheduler` mentioned
+above (not in this doc's original design).
+
 ------------------------------------------------------------------------
 
 # 7. User Service APIs
+
+## As implemented (actual paths — unversioned, not `/api/v1/*`; see section 1a)
+
+``` http
+POST   /auth/signup                                    (not "register")
+POST   /auth/login
+POST   /auth/refresh
+POST   /auth/logout
+GET    /auth/verify-email?token=...
+POST   /auth/verify-email                               (token in body — extra, not in original design)
+POST   /auth/resend-verification
+
+GET    /api/users/profile                                (X-User-Email header, not "/me")
+GET    /api/users/{userId}
+GET    /api/users                                         (list all — extra, not in original design)
+
+GET    /api/roles
+GET    /api/roles/{roleId}
+POST   /api/roles                                         (extra — original design was read-only)
+GET    /api/roles/{roleId}/permissions                    (extra)
+POST   /api/roles/{roleId}/permissions                    (assign — extra)
+DELETE /api/roles/{roleId}/permissions/{permissionId}     (unassign — extra)
+
+GET    /api/permissions
+POST   /api/permissions                                   (extra — original design was read-only)
+GET    /api/permissions/{permissionId}/roles              (extra)
+```
+
+**No `PATCH /api/users/me`-equivalent exists** — there is currently no way
+to update a user's own profile (name, phone number, etc.) through the API.
+
+**None of these endpoints have any authorization check** — `SecurityConfig`
+currently `permitAll()`s everything at this service, relying entirely on
+network-level trust (only the gateway should be able to reach it) rather
+than per-route checks. This is a known, deliberately deferred gap for
+`GET /api/users*` and all of `/api/roles*`/`/api/permissions*` — the design
+below's recommendation to restrict role/permission management to trusted
+admins has **not** been implemented. The plan is to close this from
+`api-gateway` as a single RBAC entry point once roles/permissions are wired
+through to `AirlineMembership` (which doesn't exist yet) — see `CLAUDE.md`.
+
+## Original design (aspirational, superseded by the above)
 
 ## Authentication APIs
 
@@ -597,6 +835,21 @@ administration rather than public endpoints.
 8.  The user can now log in, subject to account status and application
     rules.
 
+### As implemented
+
+Matches closely, with one hardening beyond this doc: **registration issues
+no tokens at all** (not even implicitly) — the response is just the created
+user's public fields plus a "check your email" message. Login is fully
+blocked (`EMAIL_NOT_VERIFIED`) until the token is verified; there's no
+"log in but with reduced capability" middle ground. Password minimum length
+is enforced (8 characters) via Jakarta Bean Validation on the request DTO,
+alongside the required-field/email-format checks this doc calls for.
+Duplicate-email is checked both up front (fast path) and via a
+`DataIntegrityViolationException` catch around the actual insert (closes
+the race where two concurrent signups for the same email both pass the
+up-front check) — confirmed with 5 concurrent requests for the same new
+email producing exactly one success and four clean rejections, never a 500.
+
 ## Transaction Boundary
 
 The creation of the user and verification-token record should occur in
@@ -637,6 +890,27 @@ Do not place every airline membership and permission into the JWT
 initially because memberships and roles can change frequently. Instead,
 resolve airline membership and permissions when processing
 airline-scoped requests.
+
+### As implemented
+
+Login flow matches this section's steps closely, including the ordering
+(locked/status checks happen *before* password verification — see the
+account-lockout note in section 1a about that revealing lock state to an
+unauthenticated caller, an accepted tradeoff). Account status now covers
+both `User.status` and the `locked_until` timestamp (section 6.1 — beyond
+this doc's original design). JWT claims implemented: `jti` (random UUID,
+for future per-token revocation — not currently used for anything, added
+speculatively), `sub` (=email), `iat`, `exp`, `email`, `authorities`
+(comma-joined granted authorities — **currently always empty**, since
+`User.role` was removed entirely, see `CLAUDE.md`), `userId`. Access tokens
+are short-lived (15 min default, `jwt.access-token-ttl-minutes`) precisely
+so the refresh-token flow in section 6.6 is meaningful, per this doc's own
+"short-lived access tokens" security requirement (section 20).
+Wrong-password and unknown-email both return the *identical* generic
+"Invalid email or password" (via a timing-equalized dummy-hash comparison
+on the not-found path) — this doc doesn't call this out explicitly, but it
+closes an account-enumeration oracle that an earlier implementation had
+(distinct error shapes/status codes for the two cases).
 
 ------------------------------------------------------------------------
 
@@ -1527,6 +1801,12 @@ Recommended constraints and indexes:
 -   Index refresh tokens by `token_hash`
 -   Index refresh tokens by `user_id`
 
+**As implemented**: all of the above are in place (V1–V6). `token_hash` is
+`UNIQUE` on both token tables (stronger than a plain index — matches the
+"used as the lookup key" access pattern). Not in this doc's original list,
+but added: `users.status`/`locked_until` are plain columns (V7, no index —
+fine at current scale, `findByEmail` remains the only login-path query).
+
 ## Airline Service
 
 Recommended constraints and indexes:
@@ -1660,6 +1940,20 @@ Do not expose:
 -   Internal database details
 -   Sensitive provider errors
 
+### As implemented
+
+The shared `ErrorResponse` (`common-lib`, used repo-wide, not user-service-
+specific) is `{timestamp, status, error, message, path}` — **no `code`
+field**, so the suggested `VALIDATION_ERROR`/`DUPLICATE_RESOURCE`/etc.
+machine-readable codes above were never added. Status codes in practice:
+`400` for validation and most auth/credential failures (including the
+"don't expose" list above — confirmed no stack traces or raw exception
+messages leak, a catch-all handler always substitutes a generic message for
+anything unhandled), `403` for duplicate-role/duplicate-permission creation
+(`OperationNotPermittedException`), `404` for not-found lookups. Adding a
+`code` field would be a `common-lib` change (affects every service that
+depends on it), not a `user-service`-local one.
+
 ------------------------------------------------------------------------
 
 # 20. Security Requirements
@@ -1673,6 +1967,20 @@ Do not expose:
 -   Verify email addresses.
 -   Rate-limit login attempts.
 -   Rate-limit verification email requests.
+
+### As implemented (User Service)
+
+BCrypt ✓. Short-lived (15 min) access tokens ✓. Refresh rotation ✓ (every
+`refresh()` call revokes the presented token and issues a new one).
+Revocation ✓ (explicit `/auth/logout`, plus automatic mass-revocation on
+detected refresh-token reuse). Email verification ✓, and — beyond this
+doc — actually enforced as a login gate (section 1a). **"Rate-limit login
+attempts" is implemented as per-account lockout** (`failed_login_attempts`/
+`locked_until`, default: lock for 15 min after 5 consecutive failures),
+**not IP-based rate limiting** — there's no throttle on distinct accounts
+being tried from one source. **"Rate-limit verification email requests" is
+not implemented at all** — `/auth/resend-verification` can be called
+without limit for any email.
 
 ## Authorization
 
@@ -1799,6 +2107,15 @@ V7__seed_roles.sql
 V8__seed_permissions.sql
 V9__seed_role_permissions.sql
 ```
+
+**As implemented**: `V1`–`V6` exist exactly as named above. `V7` is instead
+`V7__add_user_status_and_lockout.sql` (adds `status`/`failed_login_attempts`/
+`locked_until` to `users` — not in this doc's original plan). **`V7`–`V9`
+seed migrations (as originally numbered) were never written** — `roles`,
+`permissions`, and `role_permissions` all start empty; see section 6.2's
+implementation note. Every migration uses `CREATE TABLE IF NOT EXISTS`
+(idempotent — safe to re-run against a partially-migrated dev DB), which
+isn't a Flyway requirement but was adopted as a defensive habit here.
 
 ## Airline Service
 
@@ -2001,19 +2318,19 @@ The following scenario should work end-to-end:
 
 # 27. Recommended Implementation Order
 
-## User Service
+## User Service — all items below are implemented and manually end-to-end tested
 
-1.  User entity
-2.  Registration
-3.  Password hashing
-4.  Email verification
-5.  Login
-6.  JWT security
-7.  Refresh tokens
-8.  Logout and revocation
-9.  Roles
-10. Permissions
-11. Role-permission mappings
+1.  User entity — ✅ (`Long` id, not UUID; extra `status`/lockout fields)
+2.  Registration — ✅ (`POST /auth/signup`; issues no tokens, see section 1a)
+3.  Password hashing — ✅ (BCrypt)
+4.  Email verification — ✅ (enforced as a login gate; `GET`+`POST /auth/verify-email`)
+5.  Login — ✅ (`POST /auth/login`; includes account-lockout checks)
+6.  JWT security — ✅ (HMAC-signed, secret externalized with no fallback — see `CLAUDE.md`)
+7.  Refresh tokens — ✅ (rotation + reuse detection, see section 6.6)
+8.  Logout and revocation — ✅ (`POST /auth/logout`)
+9.  Roles — ✅ (full CRUD, unseeded, unconsumed — see section 6.2)
+10. Permissions — ✅ (full CRUD, unseeded, unconsumed — see section 6.3)
+11. Role-permission mappings — ✅ (assign/unassign API, see section 6.4)
 
 ## Airline Service
 
@@ -2054,6 +2371,18 @@ Register
 ------------------------------------------------------------------------
 
 # 28. Final Entity Checklist
+
+**Note (2026-09-18): this checklist was written aspirationally, before any
+code existed. It's kept as-is below for history, but read it against
+section 1a and the per-entity/per-section "As implemented" notes — several
+`[x]` items here (`Rate limiting`, `Airline-scoped authorization`, `Private
+document storage`) describe the *design intent*, not something actually
+built. Concretely: User Service entities/JWT/refresh-revocation/email-
+verification/password-hashing are genuinely done; role/permission checks
+exist only as unconsumed CRUD; rate limiting is per-account lockout, not
+true rate limiting; audit logging is still just a plan (section 21, no
+`audit_logs` table exists); everything Airline-Service-related (private
+document storage, airline-scoped authorization) hasn't been started.**
 
 ## User Service
 
