@@ -22,25 +22,17 @@ public class AirlineController {
     private final AirlineService airlineService;
 
     // ---------- CRUD ----------
+    // Airlines are only ever created via the onboarding approval pipeline
+    // (see OnboardingController) — there is no direct self-serve create here.
 
-    @PostMapping
-    public ResponseEntity<AirlineResponse> createAirline(
-            @Valid @RequestBody AirlineRequest request,
+    @GetMapping("/mine")
+    public ResponseEntity<List<AirlineResponse>> getMyAirlines(
             @RequestHeader("X-User-Id") Long userId) {
-        return ResponseEntity.ok(airlineService.createAirline(request, userId));
-    }
-
-
-
-    @GetMapping("/admin")
-    public ResponseEntity<AirlineResponse> getAirlineByOwner(
-            @RequestHeader("X-User-Id") Long userId) {
-        return ResponseEntity.ok(airlineService.getAirlineByOwner(userId));
+        return ResponseEntity.ok(airlineService.getMyAirlines(userId));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AirlineResponse> getAirlineById(
-
             @PathVariable Long id) {
         return ResponseEntity.ok(airlineService.getAirlineById(id));
     }
@@ -55,11 +47,12 @@ public class AirlineController {
         return ResponseEntity.ok(airlineService.getAirlinesForDropdown());
     }
 
-    @PutMapping
+    @PutMapping("/{id}")
     public ResponseEntity<AirlineResponse> updateAirline(
+            @PathVariable Long id,
             @Valid @RequestBody AirlineRequest request,
             @RequestHeader("X-User-Id") Long userId) {
-        return ResponseEntity.ok(airlineService.updateAirline(request, userId));
+        return ResponseEntity.ok(airlineService.updateAirline(id, request, userId));
     }
 
     @DeleteMapping("/{id}")
@@ -70,7 +63,6 @@ public class AirlineController {
         return ResponseEntity.noContent().build();
     }
 
-
     @PostMapping("/{id}/approve")
     public ResponseEntity<AirlineResponse> approveAirline(@PathVariable Long id) {
         return ResponseEntity.ok(airlineService.changeStatusByAdmin(id, AirlineStatus.ACTIVE));
@@ -78,14 +70,11 @@ public class AirlineController {
 
     @PostMapping("/{id}/suspend")
     public ResponseEntity<AirlineResponse> suspendAirline(@PathVariable Long id) {
-        return ResponseEntity.ok(airlineService.changeStatusByAdmin(id, AirlineStatus.INACTIVE));
+        return ResponseEntity.ok(airlineService.changeStatusByAdmin(id, AirlineStatus.SUSPENDED));
     }
 
     @PostMapping("/{id}/ban")
     public ResponseEntity<AirlineResponse> banAirline(@PathVariable Long id) {
         return ResponseEntity.ok(airlineService.changeStatusByAdmin(id, AirlineStatus.BANNED));
     }
-
-
-
 }

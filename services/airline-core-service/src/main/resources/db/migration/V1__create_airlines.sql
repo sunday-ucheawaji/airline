@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS airlines (
+    id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
+    legal_name            VARCHAR(255) NOT NULL,
+    name                  VARCHAR(255) NOT NULL,
+    alias                 VARCHAR(255),
+    registration_number   VARCHAR(100),
+    iata_code             VARCHAR(2),
+    icao_code             VARCHAR(3),
+    country               VARCHAR(255) NOT NULL,
+    logo_url              VARCHAR(255),
+    website               VARCHAR(255),
+    status                ENUM('ACTIVE', 'SUSPENDED', 'INACTIVE', 'BANNED') NOT NULL DEFAULT 'ACTIVE',
+    alliance              VARCHAR(255),
+    email                 VARCHAR(255),
+    phone                 VARCHAR(255),
+    hours                 VARCHAR(255),
+    headquarters_city_id  BIGINT,
+    created_at            DATETIME(6) NOT NULL,
+    updated_at            DATETIME(6) NOT NULL,
+    CONSTRAINT uk_airlines_iata_code UNIQUE (iata_code),
+    CONSTRAINT uk_airlines_icao_code UNIQUE (icao_code)
+);

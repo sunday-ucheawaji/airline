@@ -26,18 +26,24 @@ public class Airline {
     @Column(updatable = false, nullable = false)
     private Long id;
 
-    @Size(min = 2, max = 2, message = "IATA code must be exactly 2 characters")
-    @Column(name = "iata_code", length = 2, nullable = false, unique = true)
-    private String iataCode;
-
-    @Size(min = 3, max = 3, message = "ICAO code must be exactly 3 characters")
-    @Column(name = "icao_code", length = 3, nullable = false, unique = true)
-    private String icaoCode;
+    @Column(name = "legal_name", nullable = false)
+    private String legalName;
 
     @Column(nullable = false)
     private String name;
 
     private String alias;
+
+    @Column(name = "registration_number")
+    private String registrationNumber;
+
+    @Size(min = 2, max = 2, message = "IATA code must be exactly 2 characters")
+    @Column(name = "iata_code", length = 2, unique = true)
+    private String iataCode;
+
+    @Size(min = 3, max = 3, message = "ICAO code must be exactly 3 characters")
+    @Column(name = "icao_code", length = 3, unique = true)
+    private String icaoCode;
 
     @Column(nullable = false)
     private String country;
@@ -58,13 +64,6 @@ public class Airline {
     // Cross-service reference: stored as ID (City lives in another service)
     @Column(name = "headquarters_city_id")
     private Long headquartersCityId;
-
-    // Cross-service reference: stored as ID (User lives in user-service)
-    @Column(name = "owner_id", updatable = false, nullable = false)
-    private Long ownerId;
-
-    @Column(name = "updated_by_user_id")
-    private Long updatedById;
 
     @CreatedDate
     @Column(updatable = false, nullable = false)

@@ -68,6 +68,17 @@
             <optional>true</optional>
         </dependency>
 
+        <!--
+            Compile-only support for GlobalExceptionHandler's handleHttpMessageNotReadable
+            override (InvalidFormatException, e.g. an illegal enum value in a request body).
+            optional=true since every business service already brings this transitively.
+        -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <optional>true</optional>
+        </dependency>
+
     
         <dependency>
             <groupId>org.junit.jupiter</groupId>

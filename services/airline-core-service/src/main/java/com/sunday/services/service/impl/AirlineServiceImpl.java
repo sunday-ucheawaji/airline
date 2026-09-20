@@ -1,14 +1,18 @@
 package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.enums.AirlineStatus;
+import com.sunday.common_lib.exception.OperationNotPermittedException;
+import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AirlineRequest;
 import com.sunday.common_lib.payload.response.AirlineDropdownItem;
 import com.sunday.common_lib.payload.response.AirlineResponse;
+import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.enums.MembershipStatus;
 import com.sunday.services.mapper.AirlineMapper;
 import com.sunday.services.model.Airline;
+import com.sunday.services.repository.AirlineMembershipRepository;
 import com.sunday.services.repository.AirlineRepository;
 import com.sunday.services.service.AirlineService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -26,30 +30,23 @@ import java.util.List;
 public class AirlineServiceImpl implements AirlineService {
 
     private final AirlineRepository airlineRepository;
+    private final AirlineMembershipRepository airlineMembershipRepository;
 
     // ---------- CRUD ----------
 
     @Override
-    public AirlineResponse createAirline(AirlineRequest request, Long ownerId) {
-        Airline airline = AirlineMapper.toEntity(request, ownerId);
-        Airline saved = airlineRepository.save(airline);
-        return AirlineMapper.toResponse(saved);
-    }
-
-    @Override
-    @Cacheable(cacheNames = "airlinesByOwner", key = "#ownerId")
-    public AirlineResponse getAirlineByOwner(Long ownerId) {
-        Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException("Airline not found for owner: " + ownerId));
-        return AirlineMapper.toResponse(airline);
+    @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "airlinesByUser", key = "#userId")
+    public List<AirlineResponse> getMyAirlines(Long userId) {
+        return airlineMembershipRepository.findByUserIdAndStatus(userId, MembershipStatus.ACTIVE).stream()
+                .map(membership -> AirlineMapper.toResponse(membership.getAirline()))
+                .toList();
     }
 
     @Override
     @Cacheable(cacheNames = "airlines", key = "#id")
     public AirlineResponse getAirlineById(Long id) {
-        Airline airline = airlineRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Airline not found"));
-        return AirlineMapper.toResponse(airline);
+        return AirlineMapper.toResponse(getAirlineOrThrow(id));
     }
 
     @Override
@@ -60,14 +57,14 @@ public class AirlineServiceImpl implements AirlineService {
 
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = "airlinesByOwner", key = "#ownerId"),
-            @CacheEvict(cacheNames = "airlines", allEntries = true),
+            @CacheEvict(cacheNames = "airlines", key = "#airlineId"),
+            @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
             @CacheEvict(cacheNames = "airlinesByIata", allEntries = true),
             @CacheEvict(cacheNames = "airlinesByAlliance", allEntries = true)
     })
-    public AirlineResponse updateAirline(AirlineRequest request, Long ownerId) {
-        Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException("Airline not found for owner: " + ownerId));
+    public AirlineResponse updateAirline(Long airlineId, AirlineRequest request, Long userId) {
+        Airline airline = getAirlineOrThrow(airlineId);
+        requireActiveMembership(airlineId, userId);
 
         AirlineMapper.updateEntity(airline, request);
         return AirlineMapper.toResponse(airlineRepository.save(airline));
@@ -76,32 +73,29 @@ public class AirlineServiceImpl implements AirlineService {
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "airlines", key = "#id"),
-            @CacheEvict(cacheNames = "airlinesByOwner", allEntries = true),
+            @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
             @CacheEvict(cacheNames = "airlinesByIata", allEntries = true),
             @CacheEvict(cacheNames = "airlinesByAlliance", allEntries = true)
     })
-    public void deleteAirline(Long id, Long ownerId) {
-        Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException("Airline not found for owner: " + ownerId));
+    public void deleteAirline(Long id, Long userId) {
+        Airline airline = getAirlineOrThrow(id);
+        requireActiveMembership(id, userId);
         airlineRepository.delete(airline);
     }
 
     // ---------- Business Operations ----------
 
-
-
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "airlines", key = "#airlineId"),
+            @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
             @CacheEvict(cacheNames = "airlinesByAlliance", allEntries = true)
     })
     public AirlineResponse changeStatusByAdmin(Long airlineId, AirlineStatus status) {
-        Airline airline = airlineRepository.findById(airlineId)
-                .orElseThrow(() -> new EntityNotFoundException("Airline not found with ID: " + airlineId));
+        Airline airline = getAirlineOrThrow(airlineId);
         airline.setStatus(status);
         return AirlineMapper.toResponse(airlineRepository.save(airline));
     }
-
 
     // ---------- Search / Filters ----------
 
@@ -121,5 +115,16 @@ public class AirlineServiceImpl implements AirlineService {
                 .toList();
     }
 
+    // ---------- Helpers ----------
 
+    private Airline getAirlineOrThrow(Long id) {
+        return airlineRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRLINE_NOT_FOUND_BY_ID, id)));
+    }
+
+    private void requireActiveMembership(Long airlineId, Long userId) {
+        if (!airlineMembershipRepository.existsByUserIdAndAirlineIdAndStatus(userId, airlineId, MembershipStatus.ACTIVE)) {
+            throw new OperationNotPermittedException(String.format(ErrorMessageUtil.NO_ACTIVE_MEMBERSHIP_FOR_AIRLINE, airlineId));
+        }
+    }
 }

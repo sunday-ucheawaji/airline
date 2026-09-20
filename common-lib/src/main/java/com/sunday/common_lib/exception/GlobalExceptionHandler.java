@@ -1,6 +1,7 @@
 package com.sunday.common_lib.exception;
 
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.sunday.common_lib.payload.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,6 +20,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
@@ -112,6 +115,39 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         if (message.isBlank()) {
             message = "Validation failed";
+        }
+
+        ErrorResponse body = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                message,
+                pathOf(request)
+        );
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Unreadable body (malformed JSON, illegal enum value, …)            */
+    /* ------------------------------------------------------------------ */
+
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+
+        String message = "Malformed JSON request";
+        Throwable cause = ex.getCause();
+        if (cause instanceof InvalidFormatException ife
+                && ife.getTargetType() != null
+                && ife.getTargetType().isEnum()) {
+            String field = ife.getPath().isEmpty()
+                    ? ""
+                    : ife.getPath().get(ife.getPath().size() - 1).getFieldName() + ": ";
+            String allowed = Arrays.stream(ife.getTargetType().getEnumConstants())
+                    .map(Object::toString)
+                    .collect(Collectors.joining(", "));
+            message = field + "must be one of [" + allowed + "]";
         }
 
         ErrorResponse body = new ErrorResponse(

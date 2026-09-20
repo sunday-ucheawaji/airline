@@ -43,6 +43,23 @@ public class ErrorMessageUtil {
             "Role %s is airline-scoped and cannot be assigned directly to a user; airline-scoped roles are granted through airline membership";
     public static final String PLATFORM_ROLE_NOT_ASSIGNED_TO_USER = "Role %s is not assigned to user %s";
 
+    // ---------- Airline ----------
+    public static final String AIRLINE_NOT_FOUND_BY_ID = "Airline not found with id: %s";
+    public static final String NO_ACTIVE_MEMBERSHIP_FOR_AIRLINE = "You do not have an active membership in airline %s";
+
+    // ---------- Onboarding ----------
+    public static final String ONBOARDING_APPLICATION_NOT_FOUND_BY_ID = "Onboarding application not found with id: %s";
+    public static final String ONBOARDING_APPLICATION_NOT_OWNED_BY_APPLICANT = "Onboarding application %s does not belong to this applicant";
+    public static final String ONBOARDING_APPLICATION_NOT_EDITABLE = "Onboarding application %s is not editable in its current status: %s";
+    public static final String ONBOARDING_APPLICATION_NOT_SUBMITTABLE = "Onboarding application %s cannot be submitted in its current status: %s";
+    public static final String ONBOARDING_APPLICATION_NOT_REVIEWABLE = "Onboarding application %s is not awaiting review (current status: %s)";
+    public static final String ONBOARDING_LEGAL_NAME_MANDATORY = "legalName is mandatory";
+    public static final String ONBOARDING_DISPLAY_NAME_MANDATORY = "displayName is mandatory";
+    public static final String ONBOARDING_COUNTRY_MANDATORY = "country is mandatory";
+    public static final String ONBOARDING_REGISTRATION_NUMBER_MANDATORY = "registrationNumber is mandatory";
+    public static final String ONBOARDING_INITIAL_ADMIN_REQUIRED_FOR_APPROVAL = "initialAdminUserId must be set before an application can be approved";
+    public static final String ONBOARDING_DECISION_MANDATORY = "decision is mandatory";
+
     // ---------- Bean validation: fields ----------
     public static final String FIRST_NAME_MANDATORY = "firstName is mandatory";
     public static final String LAST_NAME_MANDATORY = "lastName is mandatory";

@@ -12,12 +12,11 @@ import java.util.List;
 public interface AirlineService {
 
     // ----- CRUD -----
-    AirlineResponse createAirline(AirlineRequest request, Long ownerId);
-    AirlineResponse getAirlineByOwner(Long ownerId);
+    List<AirlineResponse> getMyAirlines(Long userId);
     AirlineResponse getAirlineById(Long id);
     Page<AirlineResponse> getAllAirlines(Pageable pageable);
-    AirlineResponse updateAirline(AirlineRequest request, Long ownerId);
-    void deleteAirline(Long id, Long ownerId);
+    AirlineResponse updateAirline(Long airlineId, AirlineRequest request, Long userId);
+    void deleteAirline(Long id, Long userId);
 
     AirlineResponse changeStatusByAdmin(Long airlineId, AirlineStatus status);
 

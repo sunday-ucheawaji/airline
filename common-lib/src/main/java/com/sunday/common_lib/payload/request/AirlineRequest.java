@@ -1,6 +1,5 @@
 package com.sunday.common_lib.payload.request;
 
-import com.sunday.common_lib.enums.AirlineStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -13,17 +12,20 @@ import lombok.*;
 public class AirlineRequest {
 
     @NotBlank
-    @Size(min = 2, max = 2, message = "IATA code must be exactly 2 characters")
-    private String iataCode;
-
-    @NotBlank
-    @Size(min = 3, max = 3, message = "ICAO code must be exactly 3 characters")
-    private String icaoCode;
+    private String legalName;
 
     @NotBlank
     private String name;
 
     private String alias;
+
+    private String registrationNumber;
+
+    @Size(min = 2, max = 2, message = "IATA code must be exactly 2 characters")
+    private String iataCode;
+
+    @Size(min = 3, max = 3, message = "ICAO code must be exactly 3 characters")
+    private String icaoCode;
 
     @NotBlank
     private String country;
@@ -31,8 +33,6 @@ public class AirlineRequest {
     private String logoUrl;
 
     private String website;
-
-    private AirlineStatus status;
 
     private String alliance;
 

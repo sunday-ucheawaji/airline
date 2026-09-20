@@ -3,11 +3,12 @@ package com.sunday.services.service.impl;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AircraftRequest;
 import com.sunday.common_lib.payload.response.AircraftResponse;
+import com.sunday.services.enums.MembershipStatus;
 import com.sunday.services.mapper.AircraftMapper;
 import com.sunday.services.model.Aircraft;
 import com.sunday.services.model.Airline;
 import com.sunday.services.repository.AircraftRepository;
-import com.sunday.services.repository.AirlineRepository;
+import com.sunday.services.repository.AirlineMembershipRepository;
 import com.sunday.services.service.AircraftService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -25,13 +26,12 @@ import java.util.List;
 public class AircraftServiceImpl implements AircraftService {
 
     private final AircraftRepository aircraftRepository;
-    private final AirlineRepository airlineRepository;
+    private final AirlineMembershipRepository airlineMembershipRepository;
 
     @Override
     public AircraftResponse createAircraft(AircraftRequest request, Long ownerId)
             throws ResourceNotFoundException {
-        Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException("Airline not found for owner: " + ownerId));
+        Airline airline = getAirlineForUser(ownerId);
 
         Aircraft aircraft = AircraftMapper.toEntity(request, airline);
 
@@ -53,8 +53,7 @@ public class AircraftServiceImpl implements AircraftService {
 
     @Override
     public List<AircraftResponse> listAllAircraftsByOwner(Long ownerId) {
-        Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException("Airline not found for owner: " + ownerId));
+        Airline airline = getAirlineForUser(ownerId);
         return aircraftRepository.findByAirline(airline)
                 .stream()
                 .map(AircraftMapper::toResponse)
@@ -65,8 +64,7 @@ public class AircraftServiceImpl implements AircraftService {
     @CacheEvict(cacheNames = "aircrafts", key = "#id")
     public AircraftResponse updateAircraft(Long id, AircraftRequest request, Long ownerId)
             throws ResourceNotFoundException {
-        Airline airline = airlineRepository.findByOwnerId(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException("Airline not found for owner: " + ownerId));
+        Airline airline = getAirlineForUser(ownerId);
 
         Aircraft aircraft = aircraftRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aircraft not found with id: " + id));
@@ -88,6 +86,19 @@ public class AircraftServiceImpl implements AircraftService {
         Aircraft aircraft = aircraftRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aircraft not found with id: " + id));
         aircraftRepository.delete(aircraft);
+    }
+
+    /**
+     * Resolves "the caller's airline" via active membership (post-AirlineMembership
+     * migration there is no single "owned" airline anymore) — picks the first active
+     * membership found, preserving the old single-airline-per-caller assumption this
+     * pre-existing Aircraft API was built on. Not revisited further; out of scope.
+     */
+    private Airline getAirlineForUser(Long userId) {
+        return airlineMembershipRepository.findByUserIdAndStatus(userId, MembershipStatus.ACTIVE).stream()
+                .findFirst()
+                .map(membership -> membership.getAirline())
+                .orElseThrow(() -> new EntityNotFoundException("Airline not found for user: " + userId));
     }
 
     private void validateAircraftData(Aircraft aircraft) {

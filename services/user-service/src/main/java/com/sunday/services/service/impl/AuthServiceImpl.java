@@ -28,7 +28,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -209,8 +208,9 @@ public class AuthServiceImpl implements AuthService {
         existingToken.setLastUsedAt(now);
         refreshTokenRepository.save(existingToken);
 
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(user.getEmail());
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                user.getEmail(), null, Collections.emptyList());
+                user.getEmail(), null, userDetails.getAuthorities());
         String newJwt = jwtProvider.generateToken(authentication, user.getId());
         String newRefreshToken = issueRefreshToken(user, userAgent, ipAddress);
 
