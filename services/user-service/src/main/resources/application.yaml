@@ -21,6 +21,7 @@ auth:
 
 jwt:
   secret: ${JWT_SECRET_KEY}
+  issuer: ${JWT_ISSUER}
   access-token-ttl-minutes: ${ACCESS_TOKEN_TTL_MINUTES}
 
 

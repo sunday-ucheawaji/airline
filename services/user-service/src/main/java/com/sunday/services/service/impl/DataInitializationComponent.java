@@ -1,6 +1,12 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.services.enums.RoleScope;
+import com.sunday.services.enums.RoleStatus;
+import com.sunday.services.model.Role;
 import com.sunday.services.model.User;
+import com.sunday.services.model.UserPlatformRole;
+import com.sunday.services.repository.RoleRepository;
+import com.sunday.services.repository.UserPlatformRoleRepository;
 import com.sunday.services.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +19,10 @@ import org.springframework.stereotype.Component;
  * Seeds a local/dev-only admin account so there's something to log in with
  * without a manual DB insert. Never runs outside the "local" profile —
  * this must not seed a known-password account into a real environment.
+ *
+ * The admin is also granted the PLATFORM-scoped GDS_ADMIN role: the api-gateway
+ * restricts role assignment (and every other admin endpoint) to that role, so
+ * without this seed nobody could ever be granted the first one through the API.
  */
 @Component
 @Profile("local")
@@ -20,8 +30,11 @@ import org.springframework.stereotype.Component;
 public class DataInitializationComponent implements CommandLineRunner {
 
     private static final String ADMIN_EMAIL = "codewithzosh@gmail.com";
+    private static final String PLATFORM_ADMIN_ROLE = "GDS_ADMIN";
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final UserPlatformRoleRepository userPlatformRoleRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${bootstrap.admin.password}")
@@ -29,12 +42,14 @@ public class DataInitializationComponent implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        initializeAdminUser();
+        User admin = initializeAdminUser();
+        grantPlatformAdminRole(admin);
     }
 
-    private void initializeAdminUser() {
-        if (userRepository.findByEmail(ADMIN_EMAIL) != null) {
-            return;
+    private User initializeAdminUser() {
+        User existing = userRepository.findByEmail(ADMIN_EMAIL);
+        if (existing != null) {
+            return existing;
         }
 
         User adminUser = new User();
@@ -44,6 +59,25 @@ public class DataInitializationComponent implements CommandLineRunner {
         adminUser.setEmail(ADMIN_EMAIL);
         adminUser.setEmailVerified(true);
 
-        userRepository.save(adminUser);
+        return userRepository.save(adminUser);
+    }
+
+    private void grantPlatformAdminRole(User admin) {
+        Role role = roleRepository.findByName(PLATFORM_ADMIN_ROLE);
+        if (role == null) {
+            role = new Role();
+            role.setName(PLATFORM_ADMIN_ROLE);
+            role.setDescription("Platform administrator (onboarding review, moderation, role management)");
+            role.setStatus(RoleStatus.ACTIVE);
+            role.setScope(RoleScope.PLATFORM);
+            role = roleRepository.save(role);
+        }
+
+        if (!userPlatformRoleRepository.existsByUserIdAndRoleId(admin.getId(), role.getId())) {
+            UserPlatformRole grant = new UserPlatformRole();
+            grant.setUser(admin);
+            grant.setRole(role);
+            userPlatformRoleRepository.save(grant);
+        }
     }
 }

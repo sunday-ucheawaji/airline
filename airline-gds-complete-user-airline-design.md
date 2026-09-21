@@ -37,15 +37,18 @@ onboarding, and authorization foundations are stable.
 
 ------------------------------------------------------------------------
 
-# 1a. Implementation Status (updated 2026-09-18)
+# 1a. Implementation Status (updated 2026-09-21)
 
 This document was written as a greenfield design. **`services/user-service` has
 since been built against it incrementally**, inside a larger pre-existing
 microservices repo (not greenfield) — see the repo-root `CLAUDE.md` for the
 full architectural context. The sections below are now annotated against what
 was actually shipped and manually end-to-end tested. **The Airline Service
-(section 10 onward) has not been started at all** — those sections remain
-purely aspirational.
+(`services/airline-core-service`) is partially built** — onboarding
+applications, the review workflow, airline creation on approval, and
+`AirlineMembership` (sections 10.1, 10.2, 10.4, 10.5) exist; documents/object
+storage and invitations (10.3, 10.6) do not. See the "As implemented" notes
+under each of those sections and the section 27 checklist.
 
 Headline divergences from this doc, all deliberate:
 
@@ -58,11 +61,14 @@ Headline divergences from this doc, all deliberate:
 -   **API paths are unversioned** (`/auth/*`, `/api/users/*`, `/api/roles/*`,
     `/api/permissions/*`), not `/api/v1/*` — matches this repo's existing
     convention, not this doc's.
--   **`Role`/`Permission`/`RolePermission` exist and have full CRUD**, but are
-    an *unconsumed, additive* concept — nothing assigns them to a user yet,
-    because `AirlineMembership` (section 10.5) doesn't exist. There's also
-    **no seed data** — section 23's `V7`–`V9` seed migrations were never
-    written; the tables start empty and are populated only through the API.
+-   **`Role`/`Permission`/`RolePermission` exist and have full CRUD.**
+    `PLATFORM`-scoped roles are granted directly to users (`UserPlatformRole`)
+    and land in the JWT `authorities` claim; `AIRLINE`-scoped roles are
+    referenced by `AirlineMembership.roleId` in `airline-core-service`, though
+    only `OWNER` is ever assigned so far and no permission check consumes them
+    yet (see section 6.2's updates). There's also **no seed data** — section
+    23's seed migrations were never written; the tables are populated only
+    through the API.
 -   **Account lockout was added beyond this doc's scope**: `User` has
     `status`, `failed_login_attempts`, `locked_until` (migration `V7`, not in
     this doc's original Flyway plan). This is the implemented answer to this
@@ -146,7 +152,8 @@ owner.
 -   PostgreSQL *(as originally designed; **User Service actually uses MySQL**,
     matching the rest of this repo — see section 1a)*
 -   Flyway for database migrations *(implemented — `services/user-service/
-    src/main/resources/db/migration/`, V1–V7, no seed migrations)*
+    src/main/resources/db/migration/`, V1–V9, no seed migrations; also added
+    to `services/airline-core-service`, V1–V5)*
 
 ## Authentication
 
@@ -1054,6 +1061,44 @@ INACTIVE
 -   Validate the format of codes.
 -   Country codes should use a consistent standard such as ISO 3166-1
     alpha-2.
+
+### As implemented
+
+`services/airline-core-service`, migration `V1`. Divergences: `Long` IDs;
+`legal_name` plus the existing `name` column (not renamed to `display_name`);
+free-text `country` rather than `country_code`; `registration_number`
+nullable at the DB level; no `userId`/owner column on `Airline`, per the
+design note in 10.5. `iata_code`/`icao_code` are nullable and `UNIQUE`.
+`AirlineStatus` is `ACTIVE`/`SUSPENDED`/`INACTIVE`/`BANNED` (`BANNED` is an
+addition to this section's suggested list).
+
+**Status lifecycle (controller review, 2026-09-20):**
+
+-   Airlines are created `ACTIVE` by onboarding approval only.
+-   **`INACTIVE` means closed by its own members**: `DELETE /api/airlines/{id}`
+    is a *soft delete*. A hard delete can never succeed, because the
+    caller's own membership row (and any aircraft) reference the airline by
+    FK, and the audit trail should be kept anyway.
+-   `SUSPENDED`/`BANNED` are platform-side moderation, set through
+    `AirlineServiceImpl.changeStatusByAdmin` via `POST /api/airlines/{id}/
+    activate|suspend|ban`. It rejects a no-op transition and any change to an
+    `INACTIVE` airline (`409`). `/activate` reinstates a suspended or banned
+    airline (it was `/approve` before, which stopped meaning anything once
+    onboarding took over airline creation).
+-   Members can edit or close only an `ACTIVE` airline (`403` otherwise), and
+    an update that sets an IATA/ICAO code already used by another airline
+    returns `409` (a `ConflictException` in `common-lib`, mapped by
+    `GlobalExceptionHandler`). A concurrent-write race can still reach the DB
+    unique constraint and surface as a `500`.
+-   `PUT /api/airlines/{id}` is full-replace: omitted optional fields
+    (`alias`, `iataCode`, ...) are nulled. `status` is never settable there.
+-   `GET /api/airlines` and `GET /api/airlines/{id}` are public and return
+    airlines in every status, including `registrationNumber` — a known,
+    deferred gap.
+-   Redis caches: `airlines` (by id), `airlinesByUser` (`GET /mine`) and
+    `airlinesDropdown` are evicted on every mutation, including onboarding
+    approval — without that, a new owner's cached empty `/mine` list stayed
+    stale for the 2h TTL.
 
 ------------------------------------------------------------------------
 

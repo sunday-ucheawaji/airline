@@ -13,5 +13,175 @@ spring:
       port: ${SPRING_DATA_REDIS_PORT}
       timeout: 2000ms
 
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: 2000
+            response-timeout: 10s
+
+          # Routing only — who may call what is decided in SecurityConfig (default-deny), not here.
+          # Circuit-breaker instance names (*-cb) are configured under resilience4j.* in the Config Server repo.
+          routes:
+            # ---- public credential endpoints: strict per-IP limit ----
+            - id: auth-routes
+              uri: lb://user-service
+              predicates:
+                - Path=/auth/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@authRateLimiter}"
+                    key-resolver: "#{@ipKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: user-service-cb
+                    fallbackUri: forward:/fallback
+
+            - id: user-service-routes
+              uri: lb://user-service
+              predicates:
+                - Path=/api/users/**,/api/roles/**,/api/permissions/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@defaultRateLimiter}"
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: user-service-cb
+                    fallbackUri: forward:/fallback
+
+            - id: airline-core-routes
+              uri: lb://airline-core-service
+              predicates:
+                - Path=/api/airlines/**,/api/aircrafts/**,/api/onboarding/**,/api/admin/onboarding/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@defaultRateLimiter}"
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: airline-core-service-cb
+                    fallbackUri: forward:/fallback
+
+            - id: seat-service-routes
+              uri: lb://seat-service
+              predicates:
+                - Path=/api/cabin-classes/**,/api/seat-maps/**,/api/seats/**,/api/seat-instances/**,/api/flight-instance-cabins/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@defaultRateLimiter}"
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: seat-service-cb
+                    fallbackUri: forward:/fallback
+
+            - id: flight-ops-routes
+              uri: lb://flight-ops-service
+              predicates:
+                - Path=/api/flights/**,/api/flight-instances/**,/api/flight-schedules/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@defaultRateLimiter}"
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: flight-ops-service-cb
+                    fallbackUri: forward:/fallback
+
+            - id: pricing-service-routes
+              uri: lb://pricing-service
+              predicates:
+                - Path=/api/fares/**,/api/fare-rules/**,/api/baggage-policies/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@defaultRateLimiter}"
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: pricing-service-cb
+                    fallbackUri: forward:/fallback
+
+            - id: ancillary-service-routes
+              uri: lb://ancillary-service
+              predicates:
+                - Path=/api/meals/**,/api/ancillaries/**,/api/insurance-coverages/**,/api/flight-meals/**,/api/flight-cabin-ancillaries/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@defaultRateLimiter}"
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: ancillary-service-cb
+                    fallbackUri: forward:/fallback
+
+            - id: location-service-routes
+              uri: lb://location-service
+              predicates:
+                - Path=/api/cities/**,/api/airports/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@defaultRateLimiter}"
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: location-service-cb
+                    fallbackUri: forward:/fallback
+
+            - id: booking-service-routes
+              uri: lb://booking-service
+              predicates:
+                - Path=/api/bookings/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@defaultRateLimiter}"
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: booking-service-cb
+                    fallbackUri: forward:/fallback
+
+            - id: payment-service-routes
+              uri: lb://payment-service
+              predicates:
+                - Path=/api/payments/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@defaultRateLimiter}"
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: payment-service-cb
+                    fallbackUri: forward:/fallback
+
+# Must be the same value user-service signs with (HS256, at least 32 bytes) and the same issuer.
 jwt:
   secret: ${JWT_SECRET_KEY}
+  issuer: ${JWT_ISSUER}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+
+gateway:
+  security:
+    admin-authority: ROLE_GDS_ADMIN
+  # Number of trusted reverse proxies in front of the gateway (0 = use the socket address for rate limiting).
+  trusted-proxy-hops: ${TRUSTED_PROXY_HOPS:0}
+
+# Actuator lives on its own internal port so it's never reachable through the public gateway port
+# (only 5000 is published). The Config Server exposes health/info/circuitbreakers there.
+management:
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:5090}
