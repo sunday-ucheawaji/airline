@@ -73,6 +73,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 
+    /** Duplicate unique value or illegal state transition. */
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(
+            ConflictException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
     /** Auth / user domain failures (bad credentials, duplicate email, etc.). */
     @ExceptionHandler(UserException.class)
     public ResponseEntity<ErrorResponse> handleUser(

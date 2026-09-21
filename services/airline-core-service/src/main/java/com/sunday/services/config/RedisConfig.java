@@ -54,9 +54,8 @@ public class RedisConfig implements CachingConfigurer {
         Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
                 // Airline data — 2 h (status changes occasionally)
                 "airlines", defaults.entryTtl(Duration.ofHours(2)),
-                "airlinesByOwner", defaults.entryTtl(Duration.ofHours(2)),
-                "airlinesByIata", defaults.entryTtl(Duration.ofHours(2)),
-                "airlinesByAlliance", defaults.entryTtl(Duration.ofHours(2)),
+                "airlinesByUser", defaults.entryTtl(Duration.ofHours(2)),
+                "airlinesDropdown", defaults.entryTtl(Duration.ofHours(2)),
                 // Aircraft models — 6 h (very stable)
                 "aircrafts", defaults.entryTtl(Duration.ofHours(6))
         );

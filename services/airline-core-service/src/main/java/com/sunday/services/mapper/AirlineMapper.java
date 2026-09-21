@@ -46,7 +46,7 @@ public class AirlineMapper {
         airline.setLogoUrl(request.getLogoUrl());
         airline.setWebsite(request.getWebsite());
         // status is deliberately not settable here — it only changes via the
-        // dedicated /approve, /suspend, /ban admin endpoints (changeStatusByAdmin).
+        // dedicated /activate, /suspend, /ban admin endpoints (changeStatusByAdmin).
         airline.setAlliance(request.getAlliance());
         airline.setHeadquartersCityId(request.getHeadquartersCityId());
 

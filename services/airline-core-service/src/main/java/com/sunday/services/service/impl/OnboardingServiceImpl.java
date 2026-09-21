@@ -23,6 +23,8 @@ import com.sunday.services.repository.OnboardingReviewRepository;
 import com.sunday.services.service.OnboardingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -122,8 +124,14 @@ public class OnboardingServiceImpl implements OnboardingService {
         return OnboardingMapper.toResponse(getApplicationOrThrow(applicationId));
     }
 
+    // Approval creates an Airline + owner membership, so the per-user airline list and the
+    // ACTIVE-airlines dropdown must be evicted or they stay stale until their TTL expires.
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
+            @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
+    })
     public OnboardingApplicationResponse reviewApplication(Long applicationId, OnboardingReviewRequest request, Long reviewerUserId) {
         AirlineOnboardingApplication application = getApplicationOrThrow(applicationId);
 

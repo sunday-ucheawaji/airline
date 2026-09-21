@@ -46,6 +46,11 @@ public class ErrorMessageUtil {
     // ---------- Airline ----------
     public static final String AIRLINE_NOT_FOUND_BY_ID = "Airline not found with id: %s";
     public static final String NO_ACTIVE_MEMBERSHIP_FOR_AIRLINE = "You do not have an active membership in airline %s";
+    public static final String AIRLINE_NOT_ACTIVE = "Airline %s is %s and cannot be modified";
+    public static final String AIRLINE_IATA_CODE_ALREADY_EXISTS = "IATA code %s is already in use by another airline";
+    public static final String AIRLINE_ICAO_CODE_ALREADY_EXISTS = "ICAO code %s is already in use by another airline";
+    public static final String AIRLINE_STATUS_UNCHANGED = "Airline %s is already %s";
+    public static final String AIRLINE_CLOSED_STATUS_LOCKED = "Airline %s has been closed and its status can no longer be changed";
 
     // ---------- Onboarding ----------
     public static final String ONBOARDING_APPLICATION_NOT_FOUND_BY_ID = "Onboarding application not found with id: %s";

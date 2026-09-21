@@ -63,8 +63,10 @@ public class AirlineController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{id}/approve")
-    public ResponseEntity<AirlineResponse> approveAirline(@PathVariable Long id) {
+    // Reinstates a SUSPENDED/BANNED airline. Not an approval — onboarding approval already creates
+    // airlines ACTIVE (see OnboardingController).
+    @PostMapping("/{id}/activate")
+    public ResponseEntity<AirlineResponse> activateAirline(@PathVariable Long id) {
         return ResponseEntity.ok(airlineService.changeStatusByAdmin(id, AirlineStatus.ACTIVE));
     }
 

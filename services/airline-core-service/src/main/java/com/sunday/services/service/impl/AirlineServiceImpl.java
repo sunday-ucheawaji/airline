@@ -1,6 +1,7 @@
 package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.enums.AirlineStatus;
+import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AirlineRequest;
@@ -59,28 +60,34 @@ public class AirlineServiceImpl implements AirlineService {
     @Caching(evict = {
             @CacheEvict(cacheNames = "airlines", key = "#airlineId"),
             @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
-            @CacheEvict(cacheNames = "airlinesByIata", allEntries = true),
-            @CacheEvict(cacheNames = "airlinesByAlliance", allEntries = true)
+            @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
     })
     public AirlineResponse updateAirline(Long airlineId, AirlineRequest request, Long userId) {
         Airline airline = getAirlineOrThrow(airlineId);
         requireActiveMembership(airlineId, userId);
+        requireActiveAirline(airline);
+        requireUniqueCodes(airlineId, request);
 
         AirlineMapper.updateEntity(airline, request);
         return AirlineMapper.toResponse(airlineRepository.save(airline));
     }
 
+    /**
+     * Soft delete: the airline is marked INACTIVE rather than removed. A hard delete can never
+     * succeed here — the caller's own membership row (and any aircraft) reference the airline by FK.
+     */
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "airlines", key = "#id"),
             @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
-            @CacheEvict(cacheNames = "airlinesByIata", allEntries = true),
-            @CacheEvict(cacheNames = "airlinesByAlliance", allEntries = true)
+            @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
     })
     public void deleteAirline(Long id, Long userId) {
         Airline airline = getAirlineOrThrow(id);
         requireActiveMembership(id, userId);
-        airlineRepository.delete(airline);
+        requireActiveAirline(airline);
+        airline.setStatus(AirlineStatus.INACTIVE);
+        airlineRepository.save(airline);
     }
 
     // ---------- Business Operations ----------
@@ -89,10 +96,16 @@ public class AirlineServiceImpl implements AirlineService {
     @Caching(evict = {
             @CacheEvict(cacheNames = "airlines", key = "#airlineId"),
             @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
-            @CacheEvict(cacheNames = "airlinesByAlliance", allEntries = true)
+            @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
     })
     public AirlineResponse changeStatusByAdmin(Long airlineId, AirlineStatus status) {
         Airline airline = getAirlineOrThrow(airlineId);
+        if (airline.getStatus() == AirlineStatus.INACTIVE) {
+            throw new ConflictException(String.format(ErrorMessageUtil.AIRLINE_CLOSED_STATUS_LOCKED, airlineId));
+        }
+        if (airline.getStatus() == status) {
+            throw new ConflictException(String.format(ErrorMessageUtil.AIRLINE_STATUS_UNCHANGED, airlineId, status));
+        }
         airline.setStatus(status);
         return AirlineMapper.toResponse(airlineRepository.save(airline));
     }
@@ -120,6 +133,33 @@ public class AirlineServiceImpl implements AirlineService {
     private Airline getAirlineOrThrow(Long id) {
         return airlineRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRLINE_NOT_FOUND_BY_ID, id)));
+    }
+
+    private void requireActiveAirline(Airline airline) {
+        if (airline.getStatus() != AirlineStatus.ACTIVE) {
+            throw new OperationNotPermittedException(String.format(
+                    ErrorMessageUtil.AIRLINE_NOT_ACTIVE, airline.getId(), airline.getStatus()));
+        }
+    }
+
+    /** Pre-check for the DB unique constraints so a clash is a 409 instead of a 500. */
+    private void requireUniqueCodes(Long airlineId, AirlineRequest request) {
+        if (request.getIataCode() != null) {
+            airlineRepository.findByIataCode(request.getIataCode())
+                    .filter(other -> !other.getId().equals(airlineId))
+                    .ifPresent(other -> {
+                        throw new ConflictException(String.format(
+                                ErrorMessageUtil.AIRLINE_IATA_CODE_ALREADY_EXISTS, request.getIataCode()));
+                    });
+        }
+        if (request.getIcaoCode() != null) {
+            airlineRepository.findByIcaoCode(request.getIcaoCode())
+                    .filter(other -> !other.getId().equals(airlineId))
+                    .ifPresent(other -> {
+                        throw new ConflictException(String.format(
+                                ErrorMessageUtil.AIRLINE_ICAO_CODE_ALREADY_EXISTS, request.getIcaoCode()));
+                    });
+        }
     }
 
     private void requireActiveMembership(Long airlineId, Long userId) {

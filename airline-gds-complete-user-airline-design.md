@@ -933,6 +933,29 @@ initially because memberships and roles can change frequently. Instead,
 resolve airline membership and permissions when processing
 airline-scoped requests.
 
+### Update (2026-09-20) — this guidance was tested and confirmed correct
+
+`PLATFORM`-scoped roles (`UserPlatformRole`, section 6.2's update) *are* now
+placed in the JWT `authorities` claim — that's fine, since a platform role
+like `GDS_ADMIN` isn't scoped to any resource, so there's nothing for it to
+go stale against.
+
+`AIRLINE`-scoped roles (via `AirlineMembership`) were a different story: a
+synchronous Feign call and an async Kafka-mirror from `airline-core-service`
+into a local `user-service` table were both designed as ways to fold them
+into the same JWT claim. The mirror was actually built, end-to-end, then
+deliberately reverted — building it surfaced the exact problem this
+section warned about, plus one more: a flat `GrantedAuthority` string has
+no room for *which* airline a role applies to, so at best it could only
+ever express "holds role X on some airline somewhere," which is not a
+question any real authorization decision in this system actually asks —
+every airline-scoped decision needs "on airline N specifically." Real
+per-airline authorization stays exactly where this section implies it
+should: a live lookup against `AirlineMembership` at request time
+(`AirlineServiceImpl.requireActiveMembership` in `airline-core-service`),
+never something cached in a token. See `CLAUDE.md`'s `user-service`
+section for the fuller writeup.
+
 ### As implemented
 
 Login flow matches this section's steps closely, including the ordering
@@ -943,8 +966,10 @@ both `User.status` and the `locked_until` timestamp (section 6.1 — beyond
 this doc's original design). JWT claims implemented: `jti` (random UUID,
 for future per-token revocation — not currently used for anything, added
 speculatively), `sub` (=email), `iat`, `exp`, `email`, `authorities`
-(comma-joined granted authorities — **currently always empty**, since
-`User.role` was removed entirely, see `CLAUDE.md`), `userId`. Access tokens
+(comma-joined granted authorities — populated from a user's `PLATFORM`-
+scoped `UserPlatformRole` grants as `ROLE_<name>`; see the "Recommended
+Initial JWT Claims" update above for why `AIRLINE`-scoped roles are
+deliberately excluded), `userId`. Access tokens
 are short-lived (15 min default, `jwt.access-token-ttl-minutes`) precisely
 so the refresh-token flow in section 6.6 is meaningful, per this doc's own
 "short-lived access tokens" security requirement (section 20).
@@ -1121,6 +1146,21 @@ The `initial_admin_user_id` should be explicitly selected or confirmed
 during the review and approval process. The system may assign that user
 the `OWNER` role only after approval.
 
+### As implemented
+
+`country_code` stays as free-text `country` instead (a known, out-of-scope
+divergence — see `CLAUDE.md`'s `airline-core-service` section). The four
+fields this section's own field table marks `Required: Yes` (`legal_name`,
+`display_name`, `country`, `registration_number`) are enforced by Bean
+Validation on the same DTO used for both draft creation and updates —
+but only on *creation* (`OnCreate` validation group), not on update,
+since update is a PATCH and Jackson can't tell "field omitted" from
+"field explicitly null." A separate, entity-level completeness check
+(`requireCompleteForSubmission`) still runs at submission — it's the
+backstop against a later PATCH blanking one of those fields to `""` after
+creation, which DTO validation alone can't safely close without breaking
+legitimate partial updates.
+
 ------------------------------------------------------------------------
 
 ## 10.3 OnboardingDocument
@@ -1263,6 +1303,19 @@ REQUESTED_CHANGES
 Multiple review records may exist for one application. This preserves
 the full decision history and supports compliance and dispute
 resolution.
+
+### As implemented
+
+`decision` is a real `ReviewDecision` enum with exactly these three
+constants — not a `String` the service manually parses. It lives in
+`common-lib` rather than `airline-core-service` specifically so the
+shared request DTO (`OnboardingReviewRequest`) can be typed against it
+directly: `common-lib` can't depend on a type living in a downstream
+service module, so the enum had to move there first. An illegal value now
+fails at JSON deserialization, before the controller method even runs;
+`GlobalExceptionHandler` (common-lib, repo-wide) gained a generic handler
+for that case so the client still gets the app's normal error shape
+(listing the legal values) instead of Spring Boot's default error body.
 
 ------------------------------------------------------------------------
 
@@ -2374,20 +2427,24 @@ The following scenario should work end-to-end:
 10. Permissions — ✅ (full CRUD, unseeded, unconsumed — see section 6.3)
 11. Role-permission mappings — ✅ (assign/unassign API, see section 6.4)
 
-## Airline Service
+## Airline Service — update (2026-09-20)
 
-1.  Onboarding application
-2.  Application status transitions
-3.  Document metadata
-4.  Object storage integration
-5.  Document upload validation
-6.  Review workflow
-7.  Airline creation
-8.  Initial administrator selection
-9.  OWNER membership
-10. Invitations
-11. Invitation acceptance
-12. Airline-scoped authorization
+1.  Onboarding application — ✅ (`AirlineOnboardingApplication`, `/api/onboarding/applications`, Bean-Validated on create — section 10.2)
+2.  Application status transitions — ✅ (`DRAFT`→`SUBMITTED`→`APPROVED`/`REJECTED`, `REQUESTED_CHANGES` loops back to `DRAFT`)
+3.  Document metadata — not started
+4.  Object storage integration — not started
+5.  Document upload validation — not started
+6.  Review workflow — ✅ (`OnboardingReviewController`, append-only `OnboardingReview`, `ReviewDecision` enum — section 10.4)
+7.  Airline creation — ✅ (only via onboarding approval; no self-serve `POST /api/airlines` anymore)
+8.  Initial administrator selection — ✅ (`initialAdminUserId`, required before approval)
+9.  OWNER membership — ✅ (`AirlineMembership`, `roleId` from the `airline.owner-role-id` config value — section 10.5)
+10. Invitations — not started
+11. Invitation acceptance — not started
+12. Airline-scoped authorization — partial: `requireActiveMembership` checks membership *existence* per airline, not yet role/permission-granular (no `@PreAuthorize`/role check anywhere yet — see `CLAUDE.md`)
+
+No authorization is enforced yet on the admin review side either (`OnboardingReviewController`) — same deferred posture as items above and as `user-service`'s `/api/users`, `/api/roles`.
+
+**Airline lifecycle (controller review, 2026-09-20):** an airline is closed by *soft delete* (`status = INACTIVE`, memberships and aircraft kept — a hard delete can't work since memberships FK-reference the airline). Only `ACTIVE` airlines can be edited or closed by members; platform-side status changes go through `/activate`, `/suspend`, `/ban` (no no-op transitions, and an `INACTIVE` airline's status is locked). IATA/ICAO uniqueness clashes on update return `409`.
 
 ## First Complete Target
 
