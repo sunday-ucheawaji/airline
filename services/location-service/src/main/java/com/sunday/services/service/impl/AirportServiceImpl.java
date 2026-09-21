@@ -2,6 +2,7 @@ package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.exception.AirportException;
 import com.sunday.common_lib.exception.CityException;
+import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AirportRequest;
 import com.sunday.common_lib.payload.response.AirportResponse;
 import com.sunday.services.mapper.AirportMapper;
@@ -10,7 +11,6 @@ import com.sunday.services.model.City;
 import com.sunday.services.repository.AirportRepository;
 import com.sunday.services.repository.CityRepository;
 import com.sunday.services.service.AirportService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -87,7 +87,7 @@ public class AirportServiceImpl implements AirportService {
     @Cacheable(cacheNames = "airports", key = "#id")
     public AirportResponse getAirportById(Long id) {
         Airport airport = airportRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Airport not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Airport not found with id: " + id));
         return AirportMapper.toResponse(airport);
     }
 
@@ -111,7 +111,7 @@ public class AirportServiceImpl implements AirportService {
     })
     public AirportResponse updateAirport(Long id, AirportRequest request) {
         Airport existingAirport = airportRepository.findById(id)
-                .orElseThrow(() -> new AirportException("Airport not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Airport not found with id: " + id));
 
         if (request.getIataCode() != null
                 && !existingAirport.getIataCode().equals(request.getIataCode())
@@ -141,7 +141,7 @@ public class AirportServiceImpl implements AirportService {
     })
     public void deleteAirport(Long id) {
         Airport airport = airportRepository.findById(id)
-                .orElseThrow(() -> new AirportException("Airport not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Airport not found with id: " + id));
         airportRepository.delete(airport);
     }
 

@@ -1,11 +1,14 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.exception.BadRequestException;
+import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.CityRequest;
 import com.sunday.common_lib.payload.response.CityResponse;
 import com.sunday.services.mapper.CityMapper;
 import com.sunday.services.model.City;
+import com.sunday.services.repository.AirportRepository;
 import com.sunday.services.repository.CityRepository;
 import com.sunday.services.service.CityService;
 import jakarta.transaction.Transactional;
@@ -30,6 +33,7 @@ import java.util.List;
 public class CityServiceImpl implements CityService {
 
     private final CityRepository cityRepository;
+    private final AirportRepository airportRepository;
 
     // ---------- Core CRUD ----------
 
@@ -56,7 +60,7 @@ public class CityServiceImpl implements CityService {
         for (CityRequest request : requests) {
             try {
                 validateCityRequest(request);
-            } catch (IllegalArgumentException e) {
+            } catch (BadRequestException e) {
                 skippedCodes.add(request.getCityCode() + " (invalid: " + e.getMessage() + ")");
                 continue;
             }
@@ -91,13 +95,18 @@ public class CityServiceImpl implements CityService {
     @Override
     @Caching(evict = {
             @CacheEvict(cacheNames = "cities", key = "#id"),
-            @CacheEvict(cacheNames = "citiesByCode", allEntries = true)
+            @CacheEvict(cacheNames = "citiesByCode", allEntries = true),
+            // AirportResponse embeds CityResponse, so cached airports would otherwise show stale city data
+            @CacheEvict(cacheNames = "airports", allEntries = true),
+            @CacheEvict(cacheNames = "allAirports", allEntries = true),
+            @CacheEvict(cacheNames = "airportsByIata", allEntries = true),
+            @CacheEvict(cacheNames = "airportsByCity", allEntries = true)
     })
     public CityResponse updateCity(Long id, CityRequest request) {
         City city = cityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + id));
 
-        validateCityRequest(request, id);
+        validateCityRequest(request);
 
         if (cityRepository.existsByCityCodeAndIdNot(request.getCityCode(), id)) {
             throw new OperationNotPermittedException("City with code " + request.getCityCode() + " already exists");
@@ -117,6 +126,11 @@ public class CityServiceImpl implements CityService {
     public void deleteCity(Long id) {
         City city = cityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + id));
+
+        if (airportRepository.existsByCityId(id)) {
+            throw new ConflictException("City " + city.getCityCode() + " still has airports; remove or reassign them first");
+        }
+
         cityRepository.delete(city);
         log.info("City deleted: {} ({})", city.getName(), city.getCityCode());
     }
@@ -156,26 +170,22 @@ public class CityServiceImpl implements CityService {
     // ---------- Private Helpers ----------
 
     private void validateCityRequest(CityRequest request) {
-        validateCityRequest(request, null);
-    }
-
-    private void validateCityRequest(CityRequest request, Long excludeId) {
         if (!validateCityCode(request.getCityCode())) {
-            throw new IllegalArgumentException("Invalid city code format. Must be 2-10 alphanumeric characters.");
+            throw new BadRequestException("Invalid city code format. Must be 2-10 alphanumeric characters.");
         }
 
         if (request.getCountryCode() == null || !request.getCountryCode().matches("[A-Z]{2,5}")) {
-            throw new IllegalArgumentException("Country code must be 2-5 uppercase letters");
+            throw new BadRequestException("Country code must be 2-5 uppercase letters");
         }
 
-        if (request.getTimeZoneId() == null || !request.getTimeZoneId().matches("[A-Za-z_]+/[A-Za-z_]+")) {
-            throw new IllegalArgumentException("Invalid timezone format. Must be in format 'Continent/City'");
+        if (request.getTimeZoneId() == null) {
+            throw new BadRequestException("Time zone is required");
         }
 
         try {
             ZoneId.of(request.getTimeZoneId());
         } catch (DateTimeException ex) {
-            throw new IllegalArgumentException("Invalid timezone");
+            throw new BadRequestException("Invalid timezone: " + request.getTimeZoneId());
         }
 
 

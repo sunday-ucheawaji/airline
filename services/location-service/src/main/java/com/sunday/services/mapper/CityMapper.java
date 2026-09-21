@@ -49,6 +49,9 @@ public class CityMapper {
         if (request.getRegionCode() != null) {
             city.setRegionCode(request.getRegionCode().toUpperCase().trim());
         }
+        if (request.getTimeZoneId() != null) {
+            city.setTimeZoneId(request.getTimeZoneId().trim());
+        }
         return city;
     }
 }

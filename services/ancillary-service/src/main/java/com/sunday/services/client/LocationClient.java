@@ -9,6 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(name = "location-service", fallback = LocationClientFallback.class)
 public interface LocationClient {
 
-    @GetMapping("/{id}")
+    @GetMapping("/api/airports/{id}")
     AirportResponse getAirportById(@PathVariable Long id) throws AirportException;
 }

@@ -83,14 +83,17 @@ Headline divergences from this doc, all deliberate:
     Instead there's `GET /api/users/profile` (via an `X-User-Email` header,
     the repo's gateway-trust convention — see `CLAUDE.md`) and
     `GET /api/users/{userId}`/`GET /api/users` (list-all — **not** in this
-    doc's original API list, and currently has **no authorization check at
-    all**, a known, deliberately deferred gap; the plan is to close it from
-    `api-gateway` once roles/permissions are wired through).
+    doc's original API list; restricted to `GDS_ADMIN` at `api-gateway` since
+    2026-09-21, see section 4.3 — `user-service` itself does no checks).
 -   **Role/Permission endpoints ended up as full CRUD, not read-only-and-
     admin-restricted** as section 7 recommended: `POST /api/roles`,
     `POST /api/roles/{roleId}/permissions` (assign), `DELETE .../permissions/
-    {permissionId}` (unassign), `POST /api/permissions` all exist, and — like
-    the `/api/users` gap above — carry no authorization check yet.
+    {permissionId}` (unassign), `POST /api/permissions` all exist; they are
+    restricted to `GDS_ADMIN` at the gateway (section 4.3), which is what
+    satisfies section 7's "restrict to trusted administrators" advice.
+-   **The API Gateway is now an enforced access-control point** (rewritten
+    2026-09-21): JWT validation, platform-role authorization, identity-header
+    hygiene and rate limiting all live there — see section 4.3.
 -   **A transactionality lesson worth carrying into the Airline Service**:
     `refresh()`'s reuse-detection revocation, and `login()`'s failed-attempt
     tracking, both write a row and *then* throw to reject the request. Under
@@ -231,6 +234,58 @@ Responsibilities:
 The Airline Service stores `userId` and `roleId` as logical references
 to the User Service. These are not physical database foreign keys
 because the services have separate databases.
+
+## 4.3 API Gateway (as implemented — not in the original design)
+
+The original design assumed each service would authorize its own requests.
+In this repo the gateway (`cloud/api-gateway`, Spring Cloud Gateway on
+WebFlux) is the single, enforced access-control point instead; business
+services trust the identity headers it forwards, which is only safe because
+the gateway's port is the only one published.
+
+**Authentication.** Spring Security validates the bearer JWT: signature
+(HS256, shared secret with `user-service`, algorithm pinned so tokens signed
+with anything else — including `none` — are rejected), expiry and issuer
+(`jwt.issuer`). There is no OAuth2 authorization server involved; the
+"resource server" wiring is Spring's standard bearer-token validation, and
+`user-service`'s `/auth/login` remains a plain credentials endpoint that
+issues the token.
+
+**Authorization** is one default-deny rule table in `SecurityConfig`:
+
+| Access | Routes |
+|---|---|
+| Public | `/auth/**`, `/fallback`, CORS preflights |
+| `ROLE_GDS_ADMIN` | `/api/admin/**` (onboarding review); `/api/roles/**`, `/api/permissions/**`; `GET /api/users` (list), `/api/users/{id}`, `/api/users/{id}/roles`; `GET /api/airlines` (list all) and `POST /api/airlines/{id}/activate\|suspend\|ban`; any write (`POST`/`PUT`/`PATCH`/`DELETE`) on `/api/cities/**` and `/api/airports/**` |
+| Any signed-in user | everything else under `/api/**` (incl. `/api/users/profile`, `/api/onboarding/**`, `/api/airlines/mine`) |
+| Denied | anything else (`/eureka`, `/actuator`, unknown paths) |
+
+Checks are **role-based only**; `Permission` rows (section 6.3) are not yet
+consumed. The rules are written so any single one can later switch from a
+role to a permission once `user-service` puts platform permissions in the
+token. Airline-scoped decisions ("may this user edit airline N?") are
+deliberately *not* made here — a role in a token cannot say which airline it
+applies to (see section 9's update) — so they remain a live membership check
+in `airline-core-service`.
+
+**Identity headers.** Client-supplied `X-User-Id`/`X-User-Email`/
+`X-User-Roles` are always stripped — on public routes too — and re-set from
+the verified token; every request also gets an `X-Request-Id`.
+
+**Other.** Rate limiting (Redis): a strict per-IP limit on `/auth/**` (5
+req/s, burst 10) and a per-user limit elsewhere (20 req/s, burst 40); the
+client IP comes from the socket address unless `gateway.trusted-proxy-hops`
+declares trusted proxies, so `X-Forwarded-For` can't be rotated to dodge the
+limit. Routes are declared in `application.yaml`, circuit breakers come from
+the Config Server, timeouts are set on the HTTP client, and Actuator is on a
+separate internal port. Rejections use the repo's `ErrorResponse` shape
+(section 19). Removed: the gateway's own access-token blacklist and its
+`/auth/logout` — logout is `user-service`'s refresh-token revocation only.
+
+**Tests.** `mvn -pl cloud/api-gateway test`: a table-driven access matrix
+over the whole policy (anonymous / normal user / admin) plus token-validation
+cases (wrong algorithm, wrong key, wrong issuer, expired, unsigned), identity
+header stripping, and a whole-application boot test.
 
 ------------------------------------------------------------------------
 
@@ -802,15 +857,19 @@ GET    /api/permissions/{permissionId}/roles              (extra)
 **No `PATCH /api/users/me`-equivalent exists** — there is currently no way
 to update a user's own profile (name, phone number, etc.) through the API.
 
-**None of these endpoints have any authorization check** — `SecurityConfig`
-currently `permitAll()`s everything at this service, relying entirely on
-network-level trust (only the gateway should be able to reach it) rather
-than per-route checks. This is a known, deliberately deferred gap for
-`GET /api/users*` and all of `/api/roles*`/`/api/permissions*` — the design
-below's recommendation to restrict role/permission management to trusted
-admins has **not** been implemented. The plan is to close this from
-`api-gateway` as a single RBAC entry point once roles/permissions are wired
-through to `AirlineMembership` (which doesn't exist yet) — see `CLAUDE.md`.
+**`user-service` performs no authorization itself** — its `SecurityConfig`
+`permitAll()`s everything, relying on network-level trust (only the gateway
+can reach it). Access control is enforced at `api-gateway` instead (updated
+2026-09-21, section 4.3): `/auth/**` is public, `GET /api/users/profile` is
+open to any signed-in user, and `GET /api/users`, `GET /api/users/{id}`,
+`GET /api/users/{id}/roles`, all of `/api/roles/**` (including granting a
+platform role) and all of `/api/permissions/**` require `ROLE_GDS_ADMIN`.
+This satisfies the recommendation below to restrict role/permission
+management to trusted administrators. The first `GDS_ADMIN` cannot be
+granted through the API (assignment itself needs `GDS_ADMIN`), so the local
+seeded admin is given the role by `DataInitializationComponent`; **a
+production bootstrap for the first admin is not built yet** (a seed
+migration or an operations step).
 
 ## Original design (aspirational, superseded by the above)
 
@@ -970,13 +1029,23 @@ Login flow matches this section's steps closely, including the ordering
 account-lockout note in section 1a about that revealing lock state to an
 unauthenticated caller, an accepted tradeoff). Account status now covers
 both `User.status` and the `locked_until` timestamp (section 6.1 — beyond
-this doc's original design). JWT claims implemented: `jti` (random UUID,
-for future per-token revocation — not currently used for anything, added
-speculatively), `sub` (=email), `iat`, `exp`, `email`, `authorities`
-(comma-joined granted authorities — populated from a user's `PLATFORM`-
-scoped `UserPlatformRole` grants as `ROLE_<name>`; see the "Recommended
-Initial JWT Claims" update above for why `AIRLINE`-scoped roles are
-deliberately excluded), `userId`. Access tokens
+this doc's original design). JWT claims implemented: `iss` (`jwt.issuer`, checked
+by the gateway), `jti` (random UUID, for future per-token revocation — not
+currently used for anything, added speculatively), `sub` (=email), `iat`,
+`exp`, `email`, `authorities` (a **JSON array** of granted authorities —
+populated from a user's `PLATFORM`-scoped `UserPlatformRole` grants as
+`ROLE_<name>`; it used to be a comma-joined string, which standard JWT
+authority converters can't read; see the "Recommended Initial JWT Claims"
+update above for why `AIRLINE`-scoped roles are deliberately excluded),
+`userId`. **The signing algorithm is pinned to HS256** on both sides
+(`JwtProvider` signs with `Jwts.SIG.HS256`, the gateway decoder accepts only
+HS256, and both fail fast on a secret under 32 bytes) — previously jjwt
+silently inferred HS512 from the 64-character secret. Both services must be
+given the same `JWT_SECRET_KEY` and `JWT_ISSUER`. **Logout revokes only the
+refresh token**; there is no access-token blacklist, so an access token —
+and any platform role it carries — stays valid until its 15-minute expiry
+(an accepted trade-off; RS256 with a published key set is the upgrade path
+if the gateway sharing the signing secret ever becomes a concern). Access tokens
 are short-lived (15 min default, `jwt.access-token-ttl-minutes`) precisely
 so the refresh-token flow in section 6.6 is meaningful, per this doc's own
 "short-lived access tokens" security requirement (section 20).
@@ -1092,9 +1161,12 @@ addition to this section's suggested list).
     unique constraint and surface as a `500`.
 -   `PUT /api/airlines/{id}` is full-replace: omitted optional fields
     (`alias`, `iataCode`, ...) are nulled. `status` is never settable there.
--   `GET /api/airlines` and `GET /api/airlines/{id}` are public and return
-    airlines in every status, including `registrationNumber` — a known,
-    deferred gap.
+-   `GET /api/airlines` (list all) is `GDS_ADMIN`-only at the gateway, as are
+    `/activate`, `/suspend` and `/ban` (section 4.3). `GET /api/airlines/{id}`
+    is open to any signed-in user and returns the airline in every status,
+    including `registrationNumber` — a known, deferred gap (needs a
+    public-vs-admin response split; `AirlineResponse` is shared with Feign
+    consumers).
 -   Redis caches: `airlines` (by id), `airlinesByUser` (`GET /mine`) and
     `airlinesDropdown` are evicted on every mutation, including onboarding
     approval — without that, a new owner's cached empty `/mine` list stayed
@@ -2117,10 +2189,12 @@ detected refresh-token reuse). Email verification ✓, and — beyond this
 doc — actually enforced as a login gate (section 1a). **"Rate-limit login
 attempts" is implemented as per-account lockout** (`failed_login_attempts`/
 `locked_until`, default: lock for 15 min after 5 consecutive failures),
-**not IP-based rate limiting** — there's no throttle on distinct accounts
-being tried from one source. **"Rate-limit verification email requests" is
-not implemented at all** — `/auth/resend-verification` can be called
-without limit for any email.
+**not IP-based rate limiting inside `user-service`**. Since the gateway
+rewrite (2026-09-21) there *is* IP-based throttling in front of it: all
+`/auth/**` traffic is limited per client IP (5 req/s, burst 10, section
+4.3), which now also covers `/auth/resend-verification` — so **"Rate-limit
+verification email requests" is only covered by that coarse per-IP limit**;
+there is still no per-email limit on resends.
 
 ## Authorization
 
@@ -2130,6 +2204,27 @@ without limit for any email.
 -   Prevent insecure direct object references.
 -   Restrict onboarding review to authorized GDS administrators.
 -   Restrict airline membership management to authorized airline roles.
+
+### As implemented
+
+Split across two layers (section 4.3 for the gateway half):
+
+-   **Platform-level restrictions are enforced at `api-gateway`** — onboarding
+    review, airline moderation, user/role/permission administration and
+    location-data writes require `ROLE_GDS_ADMIN`; everything under `/api/**`
+    otherwise requires a signed-in user; anything unlisted is denied.
+    Role-based only for now — `Permission` rows are not yet consumed.
+-   **Airline-scoped authorization is a live check in `airline-core-service`**
+    (`requireActiveMembership`): it verifies the caller has an `ACTIVE`
+    membership in *that* airline, which also prevents acting on other
+    airlines by changing the path id. It does **not** yet check the member's
+    role or permissions — a `VIEWER` can currently edit or close an airline —
+    and membership management/invitations don't exist yet.
+-   Operational hygiene: secrets are externalised with no fallback; tokens
+    are never logged; the gateway strips client-supplied identity headers.
+    Known outstanding: the first `GDS_ADMIN` has no production bootstrap,
+    and role names are free text that the gateway now matches literally
+    (`GDS_ADMIN`) — predefine them before production.
 
 ## Document Security
 
@@ -2465,11 +2560,11 @@ The following scenario should work end-to-end:
 3.  Password hashing — ✅ (BCrypt)
 4.  Email verification — ✅ (enforced as a login gate; `GET`+`POST /auth/verify-email`)
 5.  Login — ✅ (`POST /auth/login`; includes account-lockout checks)
-6.  JWT security — ✅ (HMAC-signed, secret externalized with no fallback — see `CLAUDE.md`)
+6.  JWT security — ✅ (HS256 pinned, `iss` validated, secret externalized with no fallback; validated and authorized at the gateway — sections 4.3, 9)
 7.  Refresh tokens — ✅ (rotation + reuse detection, see section 6.6)
 8.  Logout and revocation — ✅ (`POST /auth/logout`)
-9.  Roles — ✅ (full CRUD, unseeded, unconsumed — see section 6.2)
-10. Permissions — ✅ (full CRUD, unseeded, unconsumed — see section 6.3)
+9.  Roles — ✅ (full CRUD, unseeded; `PLATFORM` roles reach the JWT and drive gateway authorization, `AIRLINE` roles are only stored on memberships — see section 6.2)
+10. Permissions — ✅ (full CRUD, unseeded, not yet consumed by any check — see section 6.3)
 11. Role-permission mappings — ✅ (assign/unassign API, see section 6.4)
 
 ## Airline Service — update (2026-09-20)
@@ -2485,9 +2580,10 @@ The following scenario should work end-to-end:
 9.  OWNER membership — ✅ (`AirlineMembership`, `roleId` from the `airline.owner-role-id` config value — section 10.5)
 10. Invitations — not started
 11. Invitation acceptance — not started
-12. Airline-scoped authorization — partial: `requireActiveMembership` checks membership *existence* per airline, not yet role/permission-granular (no `@PreAuthorize`/role check anywhere yet — see `CLAUDE.md`)
+12. Airline-scoped authorization — partial: `requireActiveMembership` checks membership *existence* per airline, not yet role/permission-granular
+13. Platform-level authorization — ✅ (2026-09-21) enforced at `api-gateway`, role-based (`ROLE_GDS_ADMIN`): onboarding review, airline moderation, user/role/permission administration — section 4.3. Not built: production bootstrap of the first `GDS_ADMIN`; permission-based rules.
 
-No authorization is enforced yet on the admin review side either (`OnboardingReviewController`) — same deferred posture as items above and as `user-service`'s `/api/users`, `/api/roles`.
+The admin review side (`OnboardingReviewController`) has no checks of its own — it is protected only by the gateway rule on `/api/admin/**`, so it must never be reachable except through the gateway.
 
 **Airline lifecycle (controller review, 2026-09-20):** an airline is closed by *soft delete* (`status = INACTIVE`, memberships and aircraft kept — a hard delete can't work since memberships FK-reference the airline). Only `ACTIVE` airlines can be edited or closed by members; platform-side status changes go through `/activate`, `/suspend`, `/ban` (no no-op transitions, and an `INACTIVE` airline's status is locked). IATA/ICAO uniqueness clashes on update return `409`.
 

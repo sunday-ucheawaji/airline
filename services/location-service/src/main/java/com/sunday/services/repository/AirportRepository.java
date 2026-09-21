@@ -11,4 +11,6 @@ public interface AirportRepository extends JpaRepository<Airport, Long> {
     Optional<Airport> findByIataCode(String iataCode);
 
     List<Airport> findByCityId(Long cityId);
+
+    boolean existsByCityId(Long cityId);
 }
