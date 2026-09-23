@@ -1,8 +1,12 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.constants.AncillaryPermissions;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.InsuranceCoverageRequest;
+import com.sunday.common_lib.payload.response.InsuranceCoverageBulkCreateResponse;
 import com.sunday.common_lib.payload.response.InsuranceCoverageResponse;
+import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.Integration.AirlineIntegrationService;
 import com.sunday.services.mapper.InsuranceCoverageMapper;
 import com.sunday.services.model.Ancillary;
 import com.sunday.services.model.InsuranceCoverage;
@@ -13,7 +17,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,14 +29,16 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
 
     private final InsuranceCoverageRepository coverageRepository;
     private final AncillaryRepository ancillaryRepository;
+    private final AirlineIntegrationService airlineIntegrationService;
 
     @Override
     @Transactional
-    public InsuranceCoverageResponse createCoverage(InsuranceCoverageRequest request)
-            throws ResourceNotFoundException {
+    public InsuranceCoverageResponse createCoverage(Long userId, InsuranceCoverageRequest request) {
         Ancillary ancillary = ancillaryRepository.findById(request.getAncillaryId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Ancillary not found with ID: " + request.getAncillaryId()));
+                        String.format(ErrorMessageUtil.ANCILLARY_NOT_FOUND_BY_ID, request.getAncillaryId())));
+        airlineIntegrationService.requirePermission(
+                userId, ancillary.getAirlineId(), AncillaryPermissions.INSURANCE_MANAGE);
 
         InsuranceCoverage coverage = InsuranceCoverageMapper.toEntity(request, ancillary);
         InsuranceCoverage saved = coverageRepository.save(coverage);
@@ -38,48 +47,63 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
 
     @Override
     @Transactional
-    public List<InsuranceCoverageResponse> createCoveragesBulk(List<InsuranceCoverageRequest> requests)
-            throws ResourceNotFoundException {
+    public InsuranceCoverageBulkCreateResponse createCoveragesBulk(Long userId, List<InsuranceCoverageRequest> requests) {
         if (requests == null || requests.isEmpty()) {
-            throw new IllegalArgumentException("Coverage request list cannot be empty");
+            return InsuranceCoverageBulkCreateResponse.builder().created(List.of()).skipped(List.of()).build();
         }
 
-        Long ancillaryId = requests.get(0).getAncillaryId();
-        boolean allSameAncillary = requests.stream()
-                .allMatch(req -> req.getAncillaryId().equals(ancillaryId));
+        List<Long> ancillaryIds = requests.stream()
+                .map(InsuranceCoverageRequest::getAncillaryId)
+                .distinct()
+                .toList();
+        Map<Long, Ancillary> ancillaryById = ancillaryRepository.findAllById(ancillaryIds).stream()
+                .collect(Collectors.toMap(Ancillary::getId, a -> a));
 
-        if (!allSameAncillary) {
-            throw new IllegalArgumentException(
-                    "All coverages in bulk request must belong to the same ancillary");
+        Set<Long> airlineIds = ancillaryById.values().stream()
+                .map(Ancillary::getAirlineId)
+                .collect(Collectors.toSet());
+        airlineIntegrationService.requirePermission(userId, airlineIds, AncillaryPermissions.INSURANCE_MANAGE);
+
+        List<InsuranceCoverageBulkCreateResponse.SkippedRequest> skipped = new ArrayList<>();
+        List<InsuranceCoverage> toInsert = new ArrayList<>();
+        for (InsuranceCoverageRequest request : requests) {
+            Ancillary ancillary = ancillaryById.get(request.getAncillaryId());
+            if (ancillary == null) {
+                skipped.add(InsuranceCoverageBulkCreateResponse.SkippedRequest.builder()
+                        .request(request)
+                        .reason(String.format(ErrorMessageUtil.ANCILLARY_NOT_FOUND_BY_ID, request.getAncillaryId()))
+                        .build());
+                continue;
+            }
+            toInsert.add(InsuranceCoverageMapper.toEntity(request, ancillary));
         }
 
-        Ancillary ancillary = ancillaryRepository.findById(ancillaryId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Ancillary not found with ID: " + ancillaryId));
-
-        List<InsuranceCoverage> coverages = requests.stream()
-                .map(request -> InsuranceCoverageMapper.toEntity(request, ancillary))
-                .collect(Collectors.toList());
-
-        List<InsuranceCoverage> saved = coverageRepository.saveAll(coverages);
-        return saved.stream()
+        List<InsuranceCoverageResponse> created = coverageRepository.saveAll(toInsert).stream()
                 .map(InsuranceCoverageMapper::toResponse)
                 .collect(Collectors.toList());
+
+        return InsuranceCoverageBulkCreateResponse.builder().created(created).skipped(skipped).build();
     }
 
     @Override
     @Transactional
-    public InsuranceCoverageResponse updateCoverage(Long id, InsuranceCoverageRequest request)
-            throws ResourceNotFoundException {
+    public InsuranceCoverageResponse updateCoverage(Long userId, Long id, InsuranceCoverageRequest request) {
         InsuranceCoverage existing = coverageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Insurance coverage not found with ID: " + id));
+                        String.format(ErrorMessageUtil.INSURANCE_COVERAGE_NOT_FOUND_BY_ID, id)));
+        airlineIntegrationService.requirePermission(
+                userId, existing.getAncillary().getAirlineId(), AncillaryPermissions.INSURANCE_MANAGE);
 
         Ancillary ancillary = null;
         if (request.getAncillaryId() != null) {
             ancillary = ancillaryRepository.findById(request.getAncillaryId())
                     .orElseThrow(() -> new ResourceNotFoundException(
-                            "Ancillary not found with ID: " + request.getAncillaryId()));
+                            String.format(ErrorMessageUtil.ANCILLARY_NOT_FOUND_BY_ID, request.getAncillaryId())));
+            // Re-parenting to an ancillary under a different airline needs permission there too
+            if (!ancillary.getAirlineId().equals(existing.getAncillary().getAirlineId())) {
+                airlineIntegrationService.requirePermission(
+                        userId, ancillary.getAirlineId(), AncillaryPermissions.INSURANCE_MANAGE);
+            }
         }
 
         InsuranceCoverageMapper.updateEntityFromRequest(existing, request, ancillary);
@@ -89,18 +113,20 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
 
     @Override
     @Transactional
-    public void deleteCoverage(Long id) throws ResourceNotFoundException {
+    public void deleteCoverage(Long userId, Long id) {
         InsuranceCoverage coverage = coverageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Insurance coverage not found with ID: " + id));
+                        String.format(ErrorMessageUtil.INSURANCE_COVERAGE_NOT_FOUND_BY_ID, id)));
+        airlineIntegrationService.requirePermission(
+                userId, coverage.getAncillary().getAirlineId(), AncillaryPermissions.INSURANCE_MANAGE);
         coverageRepository.delete(coverage);
     }
 
     @Override
-    public InsuranceCoverageResponse getCoverageById(Long id) throws ResourceNotFoundException {
+    public InsuranceCoverageResponse getCoverageById(Long id) {
         InsuranceCoverage coverage = coverageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Insurance coverage not found with ID: " + id));
+                        String.format(ErrorMessageUtil.INSURANCE_COVERAGE_NOT_FOUND_BY_ID, id)));
         return InsuranceCoverageMapper.toResponse(coverage);
     }
 

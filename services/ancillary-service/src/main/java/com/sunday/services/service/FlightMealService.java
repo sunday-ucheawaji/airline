@@ -1,28 +1,28 @@
 package com.sunday.services.service;
 
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightMealRequest;
+import com.sunday.common_lib.payload.response.FlightMealBulkCreateResponse;
 import com.sunday.common_lib.payload.response.FlightMealResponse;
 
 import java.util.List;
 
 public interface FlightMealService {
 
-    FlightMealResponse create(FlightMealRequest request) throws ResourceNotFoundException;
+    FlightMealResponse create(Long userId, FlightMealRequest request);
 
-    List<FlightMealResponse> bulkCreate(List<FlightMealRequest> requests) throws ResourceNotFoundException;
+    FlightMealBulkCreateResponse bulkCreate(Long userId, List<FlightMealRequest> requests);
 
-    FlightMealResponse getById(Long id) throws ResourceNotFoundException;
+    FlightMealResponse getById(Long id);
 
     List<FlightMealResponse> getByFlightId(Long flightId);
 
     List<FlightMealResponse> getAllByIds(List<Long> Ids);
 
-    FlightMealResponse update(Long id, FlightMealRequest request) throws ResourceNotFoundException;
+    FlightMealResponse update(Long userId, Long id, FlightMealRequest request);
 
-    void delete(Long id) throws ResourceNotFoundException;
+    void delete(Long userId, Long id);
 
-    FlightMealResponse updateAvailability(Long id, Boolean available) throws ResourceNotFoundException;
+    FlightMealResponse updateAvailability(Long userId, Long id, Boolean available);
 
     Double calculateMealPrice(List<Long> mealIds);
 }

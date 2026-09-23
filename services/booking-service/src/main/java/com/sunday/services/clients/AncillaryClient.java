@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@FeignClient(name = "ancillary-service", fallback = AncillaryClientFallback.class)
+@FeignClient(name = "ancillary-service", fallbackFactory = AncillaryClientFallbackFactory.class)
 public interface AncillaryClient {
 
     @PostMapping("/api/flight-cabin-ancillaries/price/total")

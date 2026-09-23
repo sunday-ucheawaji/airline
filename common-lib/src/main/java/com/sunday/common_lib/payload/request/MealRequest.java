@@ -9,6 +9,10 @@ import lombok.*;
 @AllArgsConstructor
 public class MealRequest {
 
+    // Required on create (the airline the caller is acting for); ignored on update,
+    // since a meal can't be moved between airlines.
+    private Long airlineId;
+
     @NotBlank(message = "Meal code is required")
     @Size(max = 10, message = "Meal code must not exceed 10 characters")
     @Pattern(regexp = "^[A-Z0-9]+$", message = "Meal code must contain only uppercase letters and numbers")

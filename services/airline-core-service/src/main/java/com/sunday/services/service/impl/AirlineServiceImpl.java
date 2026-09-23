@@ -11,6 +11,7 @@ import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.enums.MembershipStatus;
 import com.sunday.services.mapper.AirlineMapper;
 import com.sunday.services.model.Airline;
+import com.sunday.services.model.AirlineMembership;
 import com.sunday.services.repository.AirlineMembershipRepository;
 import com.sunday.services.repository.AirlineRepository;
 import com.sunday.services.service.AirlineService;
@@ -32,6 +33,7 @@ public class AirlineServiceImpl implements AirlineService {
 
     private final AirlineRepository airlineRepository;
     private final AirlineMembershipRepository airlineMembershipRepository;
+    private final RolePermissionCacheService rolePermissionCacheService;
 
     // ---------- CRUD ----------
 
@@ -42,6 +44,36 @@ public class AirlineServiceImpl implements AirlineService {
         return airlineMembershipRepository.findByUserIdAndStatus(userId, MembershipStatus.ACTIVE).stream()
                 .map(membership -> AirlineMapper.toResponse(membership.getAirline()))
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getMyPermissions(Long airlineId, Long userId) {
+        AirlineMembership membership = airlineMembershipRepository.findByUserIdAndAirlineId(userId, airlineId)
+                .filter(m -> m.getStatus() == MembershipStatus.ACTIVE)
+                .orElseThrow(() -> new OperationNotPermittedException(
+                        String.format(ErrorMessageUtil.NO_ACTIVE_MEMBERSHIP_FOR_AIRLINE, airlineId)));
+        return rolePermissionCacheService.getPermissionNamesForRole(membership.getRoleId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void requirePermission(Long userId, List<Long> airlineIds, String permission) {
+        List<Long> denied = airlineIds.stream()
+                .filter(airlineId -> !resolvePermissions(userId, airlineId).contains(permission))
+                .toList();
+        if (!denied.isEmpty()) {
+            throw new OperationNotPermittedException(
+                    String.format(ErrorMessageUtil.NO_PERMISSION_FOR_AIRLINES, permission, denied));
+        }
+    }
+
+    /** Empty list (not a throw) when there's no active membership, so callers checking several airlines can collect every denial instead of stopping at the first. */
+    private List<String> resolvePermissions(Long userId, Long airlineId) {
+        return airlineMembershipRepository.findByUserIdAndAirlineId(userId, airlineId)
+                .filter(m -> m.getStatus() == MembershipStatus.ACTIVE)
+                .map(m -> rolePermissionCacheService.getPermissionNamesForRole(m.getRoleId()))
+                .orElse(List.of());
     }
 
     @Override

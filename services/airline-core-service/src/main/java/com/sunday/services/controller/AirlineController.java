@@ -37,6 +37,24 @@ public class AirlineController {
         return ResponseEntity.ok(airlineService.getAirlineById(id));
     }
 
+    @GetMapping("/{airlineId}/permissions")
+    public ResponseEntity<List<String>> getMyPermissions(
+            @PathVariable Long airlineId,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(airlineService.getMyPermissions(airlineId, userId));
+    }
+
+    // Batch check for callers validating a permission across several airlines in one request
+    // (e.g. a bulk create spanning multiple airlines) — one round trip instead of one per airline.
+    @GetMapping("/permissions/check")
+    public ResponseEntity<Void> requirePermission(
+            @RequestParam List<Long> airlineIds,
+            @RequestParam String permission,
+            @RequestHeader("X-User-Id") Long userId) {
+        airlineService.requirePermission(userId, airlineIds, permission);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<Page<AirlineResponse>> getAllAirlines(Pageable pageable) {
         return ResponseEntity.ok(airlineService.getAllAirlines(pageable));

@@ -1,8 +1,8 @@
 package com.sunday.services.controller;
 
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.InsuranceCoverageRequest;
 import com.sunday.common_lib.payload.response.ApiResponse;
+import com.sunday.common_lib.payload.response.InsuranceCoverageBulkCreateResponse;
 import com.sunday.common_lib.payload.response.InsuranceCoverageResponse;
 import com.sunday.services.service.InsuranceCoverageService;
 import jakarta.validation.Valid;
@@ -23,37 +23,36 @@ public class InsuranceCoverageController {
     @PostMapping
     public ResponseEntity<InsuranceCoverageResponse> createCoverage(
             @Valid @RequestBody InsuranceCoverageRequest request,
-            @RequestHeader("X-User-Id") Long userId) throws ResourceNotFoundException {
-        InsuranceCoverageResponse response = coverageService.createCoverage(request);
+            @RequestHeader("X-User-Id") Long userId) {
+        InsuranceCoverageResponse response = coverageService.createCoverage(userId, request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @PostMapping("/bulk")
-    public ResponseEntity<List<InsuranceCoverageResponse>> createCoveragesBulk(
+    public ResponseEntity<InsuranceCoverageBulkCreateResponse> createCoveragesBulk(
             @Valid @RequestBody List<InsuranceCoverageRequest> requests,
-            @RequestHeader("X-User-Id") Long userId) throws ResourceNotFoundException {
-        List<InsuranceCoverageResponse> responses = coverageService.createCoveragesBulk(requests);
-        return new ResponseEntity<>(responses, HttpStatus.CREATED);
+            @RequestHeader("X-User-Id") Long userId) {
+        return new ResponseEntity<>(coverageService.createCoveragesBulk(userId, requests), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id:\\d+}")
     public ResponseEntity<InsuranceCoverageResponse> updateCoverage(
             @PathVariable Long id,
-            @Valid @RequestBody InsuranceCoverageRequest request) throws ResourceNotFoundException {
-        return ResponseEntity.ok(coverageService.updateCoverage(id, request));
+            @Valid @RequestBody InsuranceCoverageRequest request,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(coverageService.updateCoverage(userId, id, request));
     }
 
     @DeleteMapping("/{id:\\d+}")
     public ResponseEntity<ApiResponse> deleteCoverage(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) throws ResourceNotFoundException {
-        coverageService.deleteCoverage(id);
+            @RequestHeader("X-User-Id") Long userId) {
+        coverageService.deleteCoverage(userId, id);
         return ResponseEntity.ok(new ApiResponse("Coverage deleted successfully"));
     }
 
     @GetMapping("/{id:\\d+}")
-    public ResponseEntity<InsuranceCoverageResponse> getCoverageById(@PathVariable Long id)
-            throws ResourceNotFoundException {
+    public ResponseEntity<InsuranceCoverageResponse> getCoverageById(@PathVariable Long id) {
         return ResponseEntity.ok(coverageService.getCoverageById(id));
     }
 

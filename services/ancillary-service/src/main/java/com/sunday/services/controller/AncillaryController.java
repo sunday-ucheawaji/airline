@@ -1,7 +1,7 @@
 package com.sunday.services.controller;
 
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AncillaryRequest;
+import com.sunday.common_lib.payload.response.AncillaryBulkCreateResponse;
 import com.sunday.common_lib.payload.response.AncillaryResponse;
 import com.sunday.services.service.AncillaryService;
 import jakarta.validation.Valid;
@@ -21,33 +21,43 @@ public class AncillaryController {
     @PostMapping
     public ResponseEntity<AncillaryResponse> create(
             @Valid @RequestBody AncillaryRequest request,
-            @RequestHeader("X-User-Id") Long userId) throws ResourceNotFoundException {
+            @RequestHeader("X-User-Id") Long userId) {
         return ResponseEntity.ok(ancillaryService.create(userId, request));
     }
 
+    @PostMapping("/bulk")
+    public ResponseEntity<AncillaryBulkCreateResponse> bulkCreate(
+            @Valid @RequestBody List<AncillaryRequest> requests,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(ancillaryService.bulkCreate(userId, requests));
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<AncillaryResponse> getById(@PathVariable Long id)
-            throws ResourceNotFoundException {
+    public ResponseEntity<AncillaryResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ancillaryService.getById(id));
     }
 
     @GetMapping
     public ResponseEntity<List<AncillaryResponse>> getAllByAirlineId(
-            @RequestHeader("X-User-Id") Long userId
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam Long airlineId
     ) {
-        return ResponseEntity.ok(ancillaryService.getAllByAirlineId(userId));
+        return ResponseEntity.ok(ancillaryService.getAllByAirlineId(userId, airlineId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<AncillaryResponse> update(
             @PathVariable Long id,
-            @Valid @RequestBody AncillaryRequest request) throws ResourceNotFoundException {
-        return ResponseEntity.ok(ancillaryService.update(id, request));
+            @Valid @RequestBody AncillaryRequest request,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(ancillaryService.update(userId, id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        ancillaryService.delete(id);
+    public ResponseEntity<Void> delete(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId) {
+        ancillaryService.delete(userId, id);
         return ResponseEntity.noContent().build();
     }
 }

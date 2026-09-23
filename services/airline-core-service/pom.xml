@@ -64,6 +64,15 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
 		</dependency>
+		<!--
+			First outbound Feign client this service makes (role/permission lookup in user-service).
+			NOTE: no spring.cloud.openfeign.*/resilience4j.* block exists yet for this service in the
+			Config Server's repo — that's an external follow-up, out of reach from this codebase.
+		-->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-openfeign</artifactId>
+		</dependency>
 
 		<!-- Lombok -->
 		<dependency>

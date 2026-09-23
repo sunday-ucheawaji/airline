@@ -1488,6 +1488,29 @@ UNIQUE(user_id, airline_id)
 -   `user_id` and `role_id` are logical cross-service references, not
     physical foreign keys.
 
+### Update (2026-09-22) — first downstream consumer of this model: `ancillary-service`
+
+`services/ancillary-service` (outside this document's original scope — see
+section 1) needed per-airline, per-role authorization for its own writes
+(baggage/meal/insurance-coverage management), and became the first service to
+actually consume the `Role`/`Permission` model this document defines, beyond
+the gateway's own platform-role checks (section 4.3). It does this through a
+new read-only endpoint on `airline-core-service`, `GET /api/airlines/
+{airlineId}/permissions` (plus a batch variant, `GET /api/airlines/
+permissions/check`, for one bulk operation spanning several airlines in one
+call instead of one call per airline): given the caller's `AirlineMembership`
+for that airline, it resolves `role_id` → `user-service`'s `GET /api/roles/
+{roleId}/permissions` (section 6.3), cached by `role_id` in
+`airline-core-service` rather than by user or airline, since role/permission
+cardinality is small and stable system-wide. This is exactly the "live
+lookup, never cached in a token" pattern section 9's update already
+established for airline-scoped authorization — extended here to a
+service-to-service call, not only a gateway-to-browser one.
+`airline-core-service`'s own writes still only check membership *existence*,
+unchanged (section 10.1). Two new `Permission` rows this introduced
+(`ANCILLARY_MANAGE`, `ANCILLARY_INSURANCE_MANAGE`) are, like every other
+permission in this repo, not seeded — see section 6.3's existing note on that.
+
 ------------------------------------------------------------------------
 
 ## 10.6 AirlineInvitation

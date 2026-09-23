@@ -13,6 +13,10 @@ import lombok.*;
 @AllArgsConstructor
 public class AncillaryRequest {
 
+    // Required on create (the airline the caller is acting for); ignored on update,
+    // since an ancillary can't be moved between airlines.
+    private Long airlineId;
+
     @NotNull(message = "Ancillary type is required")
     private AncillaryType type;
 

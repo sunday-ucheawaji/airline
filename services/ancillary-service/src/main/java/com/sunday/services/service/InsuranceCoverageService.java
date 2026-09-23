@@ -1,28 +1,26 @@
 package com.sunday.services.service;
 
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.InsuranceCoverageRequest;
+import com.sunday.common_lib.payload.response.InsuranceCoverageBulkCreateResponse;
 import com.sunday.common_lib.payload.response.InsuranceCoverageResponse;
 
 import java.util.List;
 
 public interface InsuranceCoverageService {
 
-    InsuranceCoverageResponse createCoverage(InsuranceCoverageRequest request) throws ResourceNotFoundException;
+    InsuranceCoverageResponse createCoverage(Long userId, InsuranceCoverageRequest request);
 
-    List<InsuranceCoverageResponse> createCoveragesBulk(List<InsuranceCoverageRequest> requests) throws ResourceNotFoundException;
+    InsuranceCoverageBulkCreateResponse createCoveragesBulk(Long userId, List<InsuranceCoverageRequest> requests);
 
-    InsuranceCoverageResponse updateCoverage(Long id, InsuranceCoverageRequest request) throws ResourceNotFoundException;
+    InsuranceCoverageResponse updateCoverage(Long userId, Long id, InsuranceCoverageRequest request);
 
-    void deleteCoverage(Long id) throws ResourceNotFoundException;
+    void deleteCoverage(Long userId, Long id);
 
-    InsuranceCoverageResponse getCoverageById(Long id) throws ResourceNotFoundException;
+    InsuranceCoverageResponse getCoverageById(Long id);
 
-    List<InsuranceCoverageResponse> getCoveragesByAncillaryId(
-            Long ancillaryId);
+    List<InsuranceCoverageResponse> getCoveragesByAncillaryId(Long ancillaryId);
 
-    List<InsuranceCoverageResponse> getActiveCoveragesByAncillaryId(
-            Long ancillaryId);
+    List<InsuranceCoverageResponse> getActiveCoveragesByAncillaryId(Long ancillaryId);
 
     List<InsuranceCoverageResponse> getAllCoverages();
 }

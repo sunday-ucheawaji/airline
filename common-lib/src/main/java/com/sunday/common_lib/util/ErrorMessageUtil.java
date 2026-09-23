@@ -46,11 +46,32 @@ public class ErrorMessageUtil {
     // ---------- Airline ----------
     public static final String AIRLINE_NOT_FOUND_BY_ID = "Airline not found with id: %s";
     public static final String NO_ACTIVE_MEMBERSHIP_FOR_AIRLINE = "You do not have an active membership in airline %s";
+    public static final String NO_PERMISSION_FOR_AIRLINE = "You do not have permission %s for airline %s";
+    public static final String NO_PERMISSION_FOR_AIRLINES = "You do not have permission %s for airline(s): %s";
     public static final String AIRLINE_NOT_ACTIVE = "Airline %s is %s and cannot be modified";
     public static final String AIRLINE_IATA_CODE_ALREADY_EXISTS = "IATA code %s is already in use by another airline";
     public static final String AIRLINE_ICAO_CODE_ALREADY_EXISTS = "ICAO code %s is already in use by another airline";
     public static final String AIRLINE_STATUS_UNCHANGED = "Airline %s is already %s";
     public static final String AIRLINE_CLOSED_STATUS_LOCKED = "Airline %s has been closed and its status can no longer be changed";
+
+    // ---------- Ancillary ----------
+    public static final String AIRLINE_ID_REQUIRED = "airlineId is required";
+    public static final String ANCILLARY_NOT_FOUND_BY_ID = "Ancillary not found with id: %s";
+    public static final String ANCILLARY_NOT_AVAILABLE = "Ancillary %s is not available";
+    public static final String ANCILLARY_MAX_QUANTITY_EXCEEDED = "Ancillary %s: max quantity is %s, requested %s";
+    public static final String ANCILLARY_PRICE_NOT_SET = "Ancillary %s has no price set";
+    public static final String MEAL_NOT_FOUND_BY_ID = "Meal not found with id: %s";
+    public static final String MEAL_CODE_ALREADY_EXISTS_FOR_AIRLINE = "Meal with code %s already exists for airline %s";
+    public static final String MEAL_NOT_AVAILABLE = "Meal %s is not available";
+    public static final String MEAL_PRICE_NOT_SET = "Meal %s has no price set";
+    public static final String FLIGHT_CABIN_ANCILLARY_NOT_FOUND_BY_ID = "FlightCabinAncillary not found with id: %s";
+    public static final String FLIGHT_CABIN_ANCILLARY_NOT_FOUND_FOR_TYPE = "FlightCabinAncillary not found for type: %s";
+    public static final String FLIGHT_CABIN_ANCILLARY_NOT_FOUND_FOR_IDS = "FlightCabinAncillary not found for id(s): %s";
+    public static final String FLIGHT_MEAL_NOT_FOUND_BY_ID = "FlightMeal not found with id: %s";
+    public static final String FLIGHT_MEAL_NOT_FOUND_FOR_IDS = "FlightMeal not found for id(s): %s";
+    public static final String FLIGHT_MEAL_ALREADY_ASSIGNED_TO_FLIGHT = "Meal %s is already assigned to flight %s";
+    public static final String FLIGHT_MEAL_DUPLICATE_IN_REQUEST = "Each meal can only be selected once per booking; duplicate meal id(s): %s";
+    public static final String INSURANCE_COVERAGE_NOT_FOUND_BY_ID = "Insurance coverage not found with id: %s";
 
     // ---------- Onboarding ----------
     public static final String ONBOARDING_APPLICATION_NOT_FOUND_BY_ID = "Onboarding application not found with id: %s";

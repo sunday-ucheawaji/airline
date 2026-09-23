@@ -101,8 +101,12 @@ public class BookingServiceImpl implements BookingService {
         int passengerCount = booking.getPassengers().size();
         Double fareTotal = pricingIntegrationService.calculateFareTotal(booking.getFareId()) * passengerCount;
         Double seatPrice= seatClient.calculateSeatPrice(booking.getSeatInstanceIds());
-        Double ancillaryPrice=ancillaryClient.calculateAncillariesPrice(booking.getAncillaryIds());
-        Double mealPrice=ancillaryClient.calculateMealPrice(booking.getMealIds());
+        // Skip the call when nothing was selected: a missing list sends no request body, which
+        // ancillary-service rejects with a 4xx (no longer masked by a 0.0 fallback).
+        Double ancillaryPrice = booking.getAncillaryIds() == null || booking.getAncillaryIds().isEmpty()
+                ? 0.0 : ancillaryClient.calculateAncillariesPrice(booking.getAncillaryIds());
+        Double mealPrice = booking.getMealIds() == null || booking.getMealIds().isEmpty()
+                ? 0.0 : ancillaryClient.calculateMealPrice(booking.getMealIds());
 
         Double totalPrice=fareTotal+seatPrice+ancillaryPrice+mealPrice;
 
@@ -360,10 +364,24 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingResponse convertBookingResponse(Booking booking)  {
-        List<FlightCabinAncillaryResponse> ancillaryResponses=ancillaryClient.getAllByIds(
-                booking.getAncillaryIds()
-        );
-        List<FlightMealResponse> mealResponses=ancillaryClient.getMealsByIds(booking.getMealIds());
+        // getAllByIds/getMealsByIds return one response per *unique* id — re-map over the booking's
+        // raw (possibly repeated) id list so a quantity-2 item still renders as two entries.
+        List<Long> ancillaryIds = booking.getAncillaryIds() != null ? booking.getAncillaryIds() : List.of();
+        List<Long> mealIds = booking.getMealIds() != null ? booking.getMealIds() : List.of();
+
+        Map<Long, FlightCabinAncillaryResponse> ancillaryMap = ancillaryIds.isEmpty()
+                ? Collections.emptyMap()
+                : ancillaryClient.getAllByIds(ancillaryIds).stream()
+                        .collect(Collectors.toMap(FlightCabinAncillaryResponse::getId, a -> a));
+        Map<Long, FlightMealResponse> mealMap = mealIds.isEmpty()
+                ? Collections.emptyMap()
+                : ancillaryClient.getMealsByIds(mealIds).stream()
+                        .collect(Collectors.toMap(FlightMealResponse::getId, m -> m));
+
+        List<FlightCabinAncillaryResponse> ancillaryResponses = ancillaryIds.stream()
+                .map(ancillaryMap::get).filter(Objects::nonNull).collect(Collectors.toList());
+        List<FlightMealResponse> mealResponses = mealIds.stream()
+                .map(mealMap::get).filter(Objects::nonNull).collect(Collectors.toList());
         PaymentDTO paymentDTO=paymentClient.getPaymentByBookingId(booking.getId());
         FareResponse fareResponse=pricingClient.getFareById(booking.getFareId());
         FlightResponse flightResponse=flightClient.getFlightById(booking.getFlightId());

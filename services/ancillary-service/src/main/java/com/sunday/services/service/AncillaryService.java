@@ -1,20 +1,22 @@
 package com.sunday.services.service;
 
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AncillaryRequest;
+import com.sunday.common_lib.payload.response.AncillaryBulkCreateResponse;
 import com.sunday.common_lib.payload.response.AncillaryResponse;
 
 import java.util.List;
 
 public interface AncillaryService {
 
-    AncillaryResponse create(Long userId, AncillaryRequest request) throws ResourceNotFoundException;
+    AncillaryResponse create(Long userId, AncillaryRequest request);
 
-    AncillaryResponse getById(Long id) throws ResourceNotFoundException;
+    AncillaryBulkCreateResponse bulkCreate(Long userId, List<AncillaryRequest> requests);
 
-    List<AncillaryResponse> getAllByAirlineId(Long userId);
+    AncillaryResponse getById(Long id);
 
-    AncillaryResponse update(Long id, AncillaryRequest request) throws ResourceNotFoundException;
+    List<AncillaryResponse> getAllByAirlineId(Long userId, Long airlineId);
 
-    void delete(Long id);
+    AncillaryResponse update(Long userId, Long id, AncillaryRequest request);
+
+    void delete(Long userId, Long id);
 }

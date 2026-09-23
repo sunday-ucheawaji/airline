@@ -1,7 +1,7 @@
 package com.sunday.services.controller;
 
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightMealRequest;
+import com.sunday.common_lib.payload.response.FlightMealBulkCreateResponse;
 import com.sunday.common_lib.payload.response.FlightMealResponse;
 import com.sunday.services.service.FlightMealService;
 import jakarta.validation.Valid;
@@ -21,16 +21,17 @@ public class FlightMealController {
 
     @PostMapping
     public ResponseEntity<FlightMealResponse> createFlightMeal(
-            @Valid @RequestBody FlightMealRequest request) throws ResourceNotFoundException {
-        FlightMealResponse response = flightMealService.create(request);
+            @Valid @RequestBody FlightMealRequest request,
+            @RequestHeader("X-User-Id") Long userId) {
+        FlightMealResponse response = flightMealService.create(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/bulk")
-    public ResponseEntity<List<FlightMealResponse>> bulkCreateFlightMeals(
-            @Valid @RequestBody List<FlightMealRequest> requests) throws ResourceNotFoundException {
-        List<FlightMealResponse> responses = flightMealService.bulkCreate(requests);
-        return ResponseEntity.status(HttpStatus.CREATED).body(responses);
+    public ResponseEntity<FlightMealBulkCreateResponse> bulkCreateFlightMeals(
+            @Valid @RequestBody List<FlightMealRequest> requests,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(flightMealService.bulkCreate(userId, requests));
     }
 
     @PostMapping("/price/total")
@@ -41,8 +42,7 @@ public class FlightMealController {
     }
 
     @GetMapping("/{id:\\d+}")
-    public ResponseEntity<FlightMealResponse> getFlightMealById(@PathVariable Long id)
-            throws ResourceNotFoundException {
+    public ResponseEntity<FlightMealResponse> getFlightMealById(@PathVariable Long id) {
         return ResponseEntity.ok(flightMealService.getById(id));
     }
 
@@ -61,21 +61,24 @@ public class FlightMealController {
     @PutMapping("/{id:\\d+}")
     public ResponseEntity<FlightMealResponse> updateFlightMeal(
             @PathVariable Long id,
-            @Valid @RequestBody FlightMealRequest request) throws ResourceNotFoundException {
-        return ResponseEntity.ok(flightMealService.update(id, request));
+            @Valid @RequestBody FlightMealRequest request,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(flightMealService.update(userId, id, request));
     }
 
     @PatchMapping("/{id:\\d+}/availability")
     public ResponseEntity<FlightMealResponse> updateFlightMealAvailability(
             @PathVariable Long id,
-            @RequestParam Boolean available) throws ResourceNotFoundException {
-        return ResponseEntity.ok(flightMealService.updateAvailability(id, available));
+            @RequestParam Boolean available,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(flightMealService.updateAvailability(userId, id, available));
     }
 
     @DeleteMapping("/{id:\\d+}")
-    public ResponseEntity<Void> deleteFlightMeal(@PathVariable Long id)
-            throws ResourceNotFoundException {
-        flightMealService.delete(id);
+    public ResponseEntity<Void> deleteFlightMeal(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId) {
+        flightMealService.delete(userId, id);
         return ResponseEntity.noContent().build();
     }
 }

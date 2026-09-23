@@ -13,6 +13,13 @@ public interface AirlineService {
 
     // ----- CRUD -----
     List<AirlineResponse> getMyAirlines(Long userId);
+    /** Permission names the caller's active membership in this specific airline grants — resolved per (userId, airlineId), never "the user's role" in the abstract. */
+    List<String> getMyPermissions(Long airlineId, Long userId);
+    /**
+     * Batch variant: one call instead of one per airline. Throws OperationNotPermittedException
+     * naming every airline the caller lacks the permission on (missing membership counts as lacking it).
+     */
+    void requirePermission(Long userId, List<Long> airlineIds, String permission);
     AirlineResponse getAirlineById(Long id);
     Page<AirlineResponse> getAllAirlines(Pageable pageable);
     AirlineResponse updateAirline(Long airlineId, AirlineRequest request, Long userId);

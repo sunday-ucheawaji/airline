@@ -28,6 +28,25 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
+
+		<!--
+			Flyway: versioned SQL migrations, applied automatically on startup.
+			In Spring Boot 4, FlywayAutoConfiguration was split out of spring-boot-autoconfigure
+			into its own module (spring-boot-flyway) — flyway-core/flyway-mysql alone are not
+			enough to trigger auto-configuration, that module must be an explicit dependency too.
+		-->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-mysql</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-flyway</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
