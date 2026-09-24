@@ -1,0 +1,36 @@
+# Local Spring profile config — per-developer credentials and localhost settings.
+# Matches at every depth, so every service/cloud module's copy is covered.
+application-local.yaml
+application-local.yml
+application-local.properties
+
+# Environment files and key material
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.jks
+
+# Build output
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code per-user settings
+.claude/settings.local.json

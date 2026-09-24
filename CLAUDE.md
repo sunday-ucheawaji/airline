@@ -33,6 +33,8 @@ SPRING_PROFILES_ACTIVE=local mvn spring-boot:run
 ```
 (On Windows PowerShell: `$env:SPRING_PROFILES_ACTIVE = 'local'` first, or set it in an `application-local.yaml`-adjacent way — the `local` profile is what supplies concrete `localhost` values for the datasource and Config Server URL; the base `application.yaml` uses unresolved `${...}` env-var placeholders that assume a container/cluster environment.)
 
+**`application-local.yaml` files are gitignored** (root `.gitignore`) because they hold per-developer credentials (DB password, JWT secret, Gmail/Twilio/Razorpay keys, the config-server's git token) — a fresh clone won't have them; create one per service mirroring the keys of that service's base `application.yaml` with concrete local values. `config-server` follows the same pattern: its git URI/credentials are `${SPRING_CLOUD_CONFIG_SERVER_GIT_URI}` / `..._USERNAME` / `..._PASSWORD` placeholders in `application.yaml`, so it now needs `SPRING_PROFILES_ACTIVE=local` to start locally. Never commit real credentials to a tracked file — GitHub push protection rejects the push, and recovering means rewriting history.
+
 Local infra a service needs before it'll boot cleanly: MySQL (`localhost:3306`, one DB per service, e.g. `airline_user`), Config Server (`localhost:8888`), Eureka (`localhost:8761`). `spring.config.import` is `optional:configserver:...`, so a service will still start without the Config Server, just without whatever config it serves (locations, Flyway/JPA settings for `user-service` — see below).
 
 Run tests:

@@ -10,9 +10,9 @@ spring:
       server:
         git:
 #          uri: https://github.com/developer407/gds-config
-          uri: https://github.com/sunday-ucheawaji/git-localconfig-repo
-          username: sunday-ucheawaji
-          password: ***REMOVED***
+          uri: ${SPRING_CLOUD_CONFIG_SERVER_GIT_URI}
+          username: ${SPRING_CLOUD_CONFIG_SERVER_GIT_USERNAME:}
+          password: ${SPRING_CLOUD_CONFIG_SERVER_GIT_PASSWORD:}
           clone-on-start: true
 
 # Register this config server with Eureka so microservices can discover it

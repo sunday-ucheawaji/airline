@@ -513,24 +513,24 @@ mvn spring-boot:run
 
 ```env
 # Email (Gmail SMTP)
-MAIL_USERNAME=your-email@gmail.com
-MAIL_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx   # Gmail App Password (not regular password)
+MAIL_USERNAME=<your-gmail-address>
+MAIL_APP_PASSWORD=<your-gmail-app-password>   # Gmail App Password (not regular password)
 
 # SMS (Twilio)
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_FROM_NUMBER=+1xxxxxxxxxx
+TWILIO_ACCOUNT_SID=<your-twilio-account-sid>
+TWILIO_AUTH_TOKEN=<your-twilio-auth-token>
+TWILIO_FROM_NUMBER=<your-twilio-phone-number>
 TWILIO_ENABLED=true
 
 # Payment — Razorpay
-RAZORPAY_KEY_ID=***REMOVED***
-RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+RAZORPAY_KEY_ID=<your-razorpay-key-id>
+RAZORPAY_KEY_SECRET=<your-razorpay-key-secret>
 
 # Payment — Stripe
-STRIPE_API_KEY=***REMOVED***
+STRIPE_API_KEY=<your-stripe-api-key>
 
 # JWT — required by both api-gateway and user-service; they must match, no default is baked in
-JWT_SECRET_KEY=your-256-bit-secret-key
+JWT_SECRET_KEY=<your-jwt-secret-min-32-bytes>
 ```
 
 ---
