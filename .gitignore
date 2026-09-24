@@ -32,5 +32,6 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Claude Code per-user settings
-.claude/settings.local.json
+# Claude Code project files (instructions, agents, settings)
+.claude/
+CLAUDE.md
