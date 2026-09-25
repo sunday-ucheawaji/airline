@@ -1,10 +1,14 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.constants.PlatformRoles;
+import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
+import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.payload.request.AssignPermissionsRequest;
 import com.sunday.common_lib.payload.request.RoleRequest;
 import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.client.MembershipClient;
 import com.sunday.services.enums.RoleScope;
 import com.sunday.services.model.Permission;
 import com.sunday.services.model.Role;
@@ -21,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +38,7 @@ public class RoleServiceImpl implements RoleService {
     private final RolePermissionRepository rolePermissionRepository;
     private final UserRepository userRepository;
     private final UserPlatformRoleRepository userPlatformRoleRepository;
+    private final MembershipClient membershipClient;
 
     @Override
     public List<Role> getRoles() {
@@ -112,25 +118,40 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public void assignPlatformRoleToUser(Long roleId, Long userId) {
+    public void assignPlatformRoleToUser(Long roleId, Long userId, Long grantorUserId, Collection<String> grantorRoles) {
         Role role = getRoleById(roleId);
         if (role.getScope() != RoleScope.PLATFORM) {
-            throw new OperationNotPermittedException(String.format(ErrorMessageUtil.ROLE_NOT_PLATFORM_SCOPED, role.getName()));
+            throw new OperationNotPermittedException(
+                    String.format(ErrorMessageUtil.ROLE_SCOPE_NOT_ASSIGNABLE, role.getName(), role.getScope()));
+        }
+        requireSuperAdminForSuperAdminRole(role, grantorRoles);
+        if (userId.equals(grantorUserId)) {
+            throw new OperationNotPermittedException(ErrorMessageUtil.ROLE_SELF_GRANT_FORBIDDEN);
         }
 
         User user = getUserOrThrow(userId);
-
-        if (!userPlatformRoleRepository.existsByUserIdAndRoleId(userId, roleId)) {
-            UserPlatformRole grant = new UserPlatformRole();
-            grant.setUser(user);
-            grant.setRole(role);
-            userPlatformRoleRepository.save(grant);
+        if (userPlatformRoleRepository.existsByUserIdAndRoleId(userId, roleId)) {
+            return;
         }
+
+        requireNotAirlineMember(userId);
+        for (UserPlatformRole held : userPlatformRoleRepository.findByUserId(userId)) {
+            if (PlatformRoles.conflicts(role.getName(), held.getRole().getName())) {
+                throw new ConflictException(String.format(
+                        ErrorMessageUtil.ROLE_CONFLICTS_WITH_HELD_ROLE, role.getName(), held.getRole().getName(), userId));
+            }
+        }
+
+        UserPlatformRole grant = new UserPlatformRole();
+        grant.setUser(user);
+        grant.setRole(role);
+        userPlatformRoleRepository.save(grant);
     }
 
     @Override
-    public void unassignPlatformRoleFromUser(Long roleId, Long userId) {
-        getRoleById(roleId);
+    public void unassignPlatformRoleFromUser(Long roleId, Long userId, Collection<String> grantorRoles) {
+        Role role = getRoleById(roleId);
+        requireSuperAdminForSuperAdminRole(role, grantorRoles);
         getUserOrThrow(userId);
 
         UserPlatformRole grant = userPlatformRoleRepository
@@ -139,6 +160,26 @@ public class RoleServiceImpl implements RoleService {
                         String.format(ErrorMessageUtil.PLATFORM_ROLE_NOT_ASSIGNED_TO_USER, roleId, userId)));
 
         userPlatformRoleRepository.delete(grant);
+    }
+
+    private void requireSuperAdminForSuperAdminRole(Role role, Collection<String> grantorRoles) {
+        if (PlatformRoles.SUPER_ADMIN.equals(role.getName())
+                && !grantorRoles.contains(PlatformRoles.SUPER_ADMIN)) {
+            throw new OperationNotPermittedException(String.format(ErrorMessageUtil.ROLE_SUPER_ADMIN_ONLY, role.getName()));
+        }
+    }
+
+    /** A platform user cannot be an airline member; fails closed (503) when airline-core-service cannot answer. */
+    private void requireNotAirlineMember(Long userId) {
+        boolean member;
+        try {
+            member = membershipClient.hasMembership(userId);
+        } catch (Exception e) {
+            throw new ServiceUnavailableException(ErrorMessageUtil.MEMBERSHIP_CHECK_UNAVAILABLE, e);
+        }
+        if (member) {
+            throw new ConflictException(String.format(ErrorMessageUtil.ROLE_TARGET_IS_AIRLINE_MEMBER, userId));
+        }
     }
 
     private User getUserOrThrow(Long userId) {

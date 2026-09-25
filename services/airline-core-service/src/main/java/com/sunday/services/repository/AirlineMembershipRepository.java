@@ -15,5 +15,7 @@ public interface AirlineMembershipRepository extends JpaRepository<AirlineMember
 
     List<AirlineMembership> findByUserIdAndStatus(Long userId, MembershipStatus status);
 
+    boolean existsByUserIdAndStatusNot(Long userId, MembershipStatus status);
+
     boolean existsByUserIdAndAirlineIdAndStatus(Long userId, Long airlineId, MembershipStatus status);
 }

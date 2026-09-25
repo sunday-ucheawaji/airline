@@ -1,7 +1,6 @@
 package com.sunday.services.service.impl;
 
-import com.sunday.services.enums.RoleScope;
-import com.sunday.services.enums.RoleStatus;
+import com.sunday.common_lib.constants.PlatformRoles;
 import com.sunday.services.model.Role;
 import com.sunday.services.model.User;
 import com.sunday.services.model.UserPlatformRole;
@@ -20,7 +19,7 @@ import org.springframework.stereotype.Component;
  * without a manual DB insert. Never runs outside the "local" profile —
  * this must not seed a known-password account into a real environment.
  *
- * The admin is also granted the PLATFORM-scoped GDS_ADMIN role: the api-gateway
+ * The admin is also granted the PLATFORM-scoped SUPER_ADMIN role (seeded by Flyway): the api-gateway
  * restricts role assignment (and every other admin endpoint) to that role, so
  * without this seed nobody could ever be granted the first one through the API.
  */
@@ -30,7 +29,6 @@ import org.springframework.stereotype.Component;
 public class DataInitializationComponent implements CommandLineRunner {
 
     private static final String ADMIN_EMAIL = "codewithzosh@gmail.com";
-    private static final String PLATFORM_ADMIN_ROLE = "GDS_ADMIN";
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -63,14 +61,9 @@ public class DataInitializationComponent implements CommandLineRunner {
     }
 
     private void grantPlatformAdminRole(User admin) {
-        Role role = roleRepository.findByName(PLATFORM_ADMIN_ROLE);
+        Role role = roleRepository.findByName(PlatformRoles.SUPER_ADMIN);
         if (role == null) {
-            role = new Role();
-            role.setName(PLATFORM_ADMIN_ROLE);
-            role.setDescription("Platform administrator (onboarding review, moderation, role management)");
-            role.setStatus(RoleStatus.ACTIVE);
-            role.setScope(RoleScope.PLATFORM);
-            role = roleRepository.save(role);
+            throw new IllegalStateException("Role " + PlatformRoles.SUPER_ADMIN + " is missing; the V8 access-model seed did not run");
         }
 
         if (!userPlatformRoleRepository.existsByUserIdAndRoleId(admin.getId(), role.getId())) {

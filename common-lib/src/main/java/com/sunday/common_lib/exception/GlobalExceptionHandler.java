@@ -87,6 +87,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    /** A required downstream service is unreachable; the request fails closed. */
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleServiceUnavailable(
+            ServiceUnavailableException ex, HttpServletRequest request) {
+        log.warn("Fail-closed on {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
+    }
+
     /** Auth / user domain failures (bad credentials, duplicate email, etc.). */
     @ExceptionHandler(UserException.class)
     public ResponseEntity<ErrorResponse> handleUser(

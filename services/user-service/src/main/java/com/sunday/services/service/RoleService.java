@@ -5,6 +5,7 @@ import com.sunday.common_lib.payload.request.RoleRequest;
 import com.sunday.services.model.Permission;
 import com.sunday.services.model.Role;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface RoleService {
@@ -15,6 +16,7 @@ public interface RoleService {
     List<Permission> assignPermissionsToRole(Long roleId, AssignPermissionsRequest request);
     void unassignPermissionFromRole(Long roleId, Long permissionId);
     List<Role> getPlatformRolesForUser(Long userId);
-    void assignPlatformRoleToUser(Long roleId, Long userId);
-    void unassignPlatformRoleFromUser(Long roleId, Long userId);
+    void assignPlatformRoleToUser(Long roleId, Long userId, Long grantorUserId, Collection<String> grantorRoles);
+    void unassignPlatformRoleFromUser(Long roleId, Long userId, Collection<String> grantorRoles);
+
 }

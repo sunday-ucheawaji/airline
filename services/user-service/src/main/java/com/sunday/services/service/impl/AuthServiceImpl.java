@@ -19,8 +19,6 @@ import com.sunday.services.util.TokenHasher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -106,9 +104,9 @@ public class AuthServiceImpl implements AuthService {
             throw new UserException(ErrorMessageUtil.ACCOUNT_NOT_ACTIVE);
         }
 
-        Authentication authentication;
+        UserDetails userDetails;
         try {
-            authentication = authenticate(email, password);
+            userDetails = authenticate(email, password);
         } catch (UserException e) {
             if (user != null) {
                 registerFailedLogin(user);
@@ -120,7 +118,7 @@ public class AuthServiceImpl implements AuthService {
             throw new UserException(ErrorMessageUtil.EMAIL_NOT_VERIFIED);
         }
 
-        String token = jwtProvider.generateToken(authentication, user.getId());
+        String token = jwtProvider.generateToken(userDetails, user.getId());
         String refreshToken = issueRefreshToken(user, userAgent, ipAddress);
 
         user.setFailedLoginAttempts(0);
@@ -209,9 +207,7 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.save(existingToken);
 
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(user.getEmail());
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                user.getEmail(), null, userDetails.getAuthorities());
-        String newJwt = jwtProvider.generateToken(authentication, user.getId());
+        String newJwt = jwtProvider.generateToken(userDetails, user.getId());
         String newRefreshToken = issueRefreshToken(user, userAgent, ipAddress);
 
         AuthResponse response = new AuthResponse();
@@ -287,7 +283,7 @@ public class AuthServiceImpl implements AuthService {
         emailService.sendVerificationEmail(user.getEmail(), user.getFirstName(), rawToken);
     }
 
-    private Authentication authenticate(String email, String password) throws UserException {
+    private UserDetails authenticate(String email, String password) throws UserException {
         UserDetails userDetails;
         try {
             userDetails = customUserDetailsService.loadUserByUsername(email);
@@ -298,8 +294,7 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordEncoder.matches(password, userDetails.getPassword())) {
             throw new UserException(ErrorMessageUtil.INVALID_CREDENTIALS);
         }
-        return new UsernamePasswordAuthenticationToken(
-                email, null, userDetails.getAuthorities());
+        return userDetails;
     }
 
     private String normalizeEmail(String email) {

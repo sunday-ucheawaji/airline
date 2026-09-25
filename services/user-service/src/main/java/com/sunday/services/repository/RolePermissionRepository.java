@@ -1,9 +1,11 @@
 package com.sunday.services.repository;
 
+import com.sunday.services.model.Role;
 import com.sunday.services.model.RolePermission;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +16,9 @@ public interface RolePermissionRepository extends JpaRepository<RolePermission, 
 
     @EntityGraph(attributePaths = "role")
     List<RolePermission> findByPermissionId(Long permissionId);
+
+    @EntityGraph(attributePaths = "permission")
+    List<RolePermission> findByRoleIn(Collection<Role> roles);
 
     Optional<RolePermission> findByRoleIdAndPermissionId(Long roleId, Long permissionId);
 

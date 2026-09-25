@@ -83,8 +83,25 @@ public class ErrorMessageUtil {
     public static final String ONBOARDING_DISPLAY_NAME_MANDATORY = "displayName is mandatory";
     public static final String ONBOARDING_COUNTRY_MANDATORY = "country is mandatory";
     public static final String ONBOARDING_REGISTRATION_NUMBER_MANDATORY = "registrationNumber is mandatory";
-    public static final String ONBOARDING_INITIAL_ADMIN_REQUIRED_FOR_APPROVAL = "initialAdminUserId must be set before an application can be approved";
-    public static final String ONBOARDING_DECISION_MANDATORY = "decision is mandatory";
+    public static final String ONBOARDING_INITIAL_ADMIN_REQUIRED_FOR_APPROVAL = "initialAdminUserId must be set before an application can be provisioned";
+    public static final String ONBOARDING_DRAFTS_NOT_LISTABLE = "Draft applications are private to their applicant and cannot be listed";
+    public static final String OWNER_USER_ID_MANDATORY = "ownerUserId is mandatory";
+    public static final String ONBOARDING_APPLICATION_NOT_APPROVED = "Onboarding application %s must be approved before it can be provisioned (current status: %s)";
+    public static final String ONBOARDING_OWNER_NOT_ASSIGNABLE = "Onboarding application %s no longer accepts an owner change (current status: %s)";
+    public static final String ONBOARDING_SEGREGATION_OF_DUTIES = "You cannot perform this step on an application you %s";
+    public static final String ONBOARDING_OWNER_IS_REVIEWER = "The nominated owner cannot be the user acting on application %s";
+    public static final String ONBOARDING_PLATFORM_USER_CANNOT_APPLY = "Platform staff cannot apply to onboard an airline";
+    public static final String ONBOARDING_PLATFORM_USER_CANNOT_OWN = "User %s is platform staff and cannot own an airline";
+    public static final String ONBOARDING_OWNER_USER_NOT_FOUND = "Owner user %s does not exist";
+
+    // ---------- Platform access model ----------
+    public static final String ROLE_SUPER_ADMIN_ONLY = "Only a super admin can grant or revoke role %s";
+    public static final String ROLE_SELF_GRANT_FORBIDDEN = "You cannot grant a platform role to yourself";
+    public static final String ROLE_TARGET_IS_AIRLINE_MEMBER = "User %s is an airline member and cannot hold a platform role";
+    public static final String ROLE_CONFLICTS_WITH_HELD_ROLE = "Role %s cannot be combined with role %s held by user %s";
+    public static final String ROLE_SCOPE_NOT_ASSIGNABLE = "Role %s has scope %s and cannot be granted directly to a user";
+    public static final String MEMBERSHIP_CHECK_UNAVAILABLE = "Airline membership cannot be verified right now; please try again later";
+    public static final String USER_ROLE_CHECK_UNAVAILABLE = "User roles cannot be verified right now; please try again later";
 
     // ---------- Bean validation: fields ----------
     public static final String FIRST_NAME_MANDATORY = "firstName is mandatory";
@@ -94,7 +111,7 @@ public class ErrorMessageUtil {
     public static final String NAME_MANDATORY = "name is mandatory";
     public static final String STATUS_MANDATORY = "status is mandatory";
     public static final String SCOPE_MANDATORY = "scope is mandatory";
-    public static final String ROLE_SCOPE_INVALID = "scope must be PLATFORM or AIRLINE";
+    public static final String ROLE_SCOPE_INVALID = "scope must be PLATFORM, AIRLINE or BASELINE";
     public static final String ROLE_MANDATORY = "role is mandatory";
     public static final String PERMISSION_MANDATORY = "permission is mandatory";
     public static final String USER_MANDATORY = "user is mandatory";

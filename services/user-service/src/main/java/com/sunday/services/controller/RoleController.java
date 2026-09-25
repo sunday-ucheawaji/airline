@@ -17,10 +17,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -77,16 +79,23 @@ public class RoleController {
     @PostMapping("/{roleId}/users/{userId}")
     public ResponseEntity<Void> assignPlatformRoleToUser(
             @PathVariable Long roleId,
-            @PathVariable Long userId) {
-        roleService.assignPlatformRoleToUser(roleId, userId);
+            @PathVariable Long userId,
+            @RequestHeader("X-User-Id") Long grantorUserId,
+            @RequestHeader(value = "X-User-Roles", defaultValue = "") String grantorRoles) {
+        roleService.assignPlatformRoleToUser(roleId, userId, grantorUserId, parseRoles(grantorRoles));
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{roleId}/users/{userId}")
     public ResponseEntity<Void> unassignPlatformRoleFromUser(
             @PathVariable Long roleId,
-            @PathVariable Long userId) {
-        roleService.unassignPlatformRoleFromUser(roleId, userId);
+            @PathVariable Long userId,
+            @RequestHeader(value = "X-User-Roles", defaultValue = "") String grantorRoles) {
+        roleService.unassignPlatformRoleFromUser(roleId, userId, parseRoles(grantorRoles));
         return ResponseEntity.noContent().build();
+    }
+
+    private static List<String> parseRoles(String header) {
+        return Arrays.stream(header.split(",")).map(String::trim).filter(r -> !r.isEmpty()).toList();
     }
 }

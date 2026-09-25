@@ -551,6 +551,20 @@ For example:
 -   John can be `VIEWER` in XYZ Airways.
 -   Mary can be `ADMIN` in ABC Airways.
 
+**Update (2026-09-25) — platform access model, supersedes the `GDS_ADMIN` note
+above**: the single all-purpose `GDS_ADMIN` was replaced by a least-privilege
+set. `Role.scope` gained `BASELINE` (implicit for users who hold no platform
+role; never assigned directly). Seeded by Flyway (`V8`, replacing the earlier
+"none of these are seeded" state): `SUPER_ADMIN` (formerly `GDS_ADMIN`, now
+holds every permission), `AIRLINE_APPLICANT` (`BASELINE`), seven `PLATFORM`
+staff roles — `ONBOARDING_OFFICER`, `COMPLIANCE_OFFICER`, `COMMERCIAL_OFFICER`,
+`TECHNICAL_OFFICER`, `SENIOR_APPROVER`, `AIRLINE_PROVISIONER`,
+`GDS_PLATFORM_ADMIN`, `GDS_AUDITOR` — and the airline roles `OWNER`, `ADMIN`,
+`VIEWER` (ids 3/4/5). A platform user cannot be an airline member and vice
+versa; conflicting staff roles (`SENIOR_APPROVER` with `AIRLINE_PROVISIONER`
+or a reviewer role, `GDS_AUDITOR` with any other staff role) cannot be held
+together; only a super admin grants or revokes `SUPER_ADMIN`.
+
 ------------------------------------------------------------------------
 
 ## 6.3 Permission
@@ -625,6 +639,23 @@ For example:
 -   `MEMBER_UPDATE` allows changing membership roles or status.
 -   `ONBOARDING_REVIEW` allows an authorized GDS administrator to review
     applications.
+
+**Update (2026-09-25) — platform permissions**: 72 permissions are now seeded
+(`V8`): the applicant set (`ONBOARDING_APPLICATION_CREATE/READ_OWN/UPDATE_OWN/
+SUBMIT`), staff onboarding (`ONBOARDING_APPLICATION_READ/RETURN`,
+`ONBOARDING_FINAL_APPROVE/REJECT`, `APPROVAL_HISTORY_READ`), provisioning
+(`AIRLINE_CREATE`, `AIRLINE_ADMIN_ASSIGN`, `AIRLINE_ACTIVATE`), platform
+administration (`USER_READ`, `USER_ROLE_ASSIGN/REVOKE`, `AIRLINE_READ/SUSPEND/BAN`,
+`LOCATION_MANAGE`), `ACCESS_MANAGE` (define roles/permissions, super admin only)
+and a larger reserved set (documents, KYC, commercial, technical, tenants,
+credentials, audit log) that no endpoint enforces yet. The old
+`ONBOARDING_READ`/`ONBOARDING_REVIEW` were retired. **Permissions are enforced
+at the api-gateway from the JWT**, which carries the caller's platform (or
+baseline) role names in a `roles` claim *and* the permissions those roles
+grant in a separate `permissions` claim (this supersedes the single
+`authorities` claim described in the JWT-claims notes below); changes reach a user at their
+next token issue (up to 15 minutes). Airline-scoped permissions (`AIRLINE_*`, `MEMBER_*`, `ANCILLARY_*`)
+are never put in the token — they are resolved live per airline.
 
 ------------------------------------------------------------------------
 
@@ -1277,6 +1308,20 @@ since update is a PATCH and Jackson can't tell "field omitted" from
 backstop against a later PATCH blanking one of those fields to `""` after
 creation, which DTO validation alone can't safely close without breaking
 legitimate partial updates.
+
+**Update (2026-09-25) — approval is separate from provisioning**: an
+application now moves `DRAFT → SUBMITTED → APPROVED → PROVISIONED` (or
+`REJECTED`; `return` sends it back to `DRAFT`). `approve` (permission
+`ONBOARDING_FINAL_APPROVE`) records the approver and creates nothing;
+`provision` (`AIRLINE_CREATE`), done by a different person, creates the
+`Airline` and the `OWNER` `AirlineMembership` for the owner nominated with
+`PUT .../owner` (`AIRLINE_ADMIN_ASSIGN`), stores `airline_id` on the
+application, and marks it `PROVISIONED`. Separation of duties: provisioner ≠
+approver ≠ applicant/nominee. The nominated owner must not be platform staff,
+and staff cannot create or submit applications. Staff cannot read `DRAFT`
+applications. `rejection_reason` is cleared on submit, approval and
+provisioning. Review history gained `OWNER_ASSIGNED` and `PROVISIONED`
+decisions and `assigned_owner_user_id`.
 
 ------------------------------------------------------------------------
 

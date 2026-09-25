@@ -27,14 +27,24 @@ class IdentityHeadersGlobalFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/users/profile")
                 .header("X-User-Id", "1")
                 .header("X-User-Email", "forged@example.com")
-                .header("X-User-Roles", "ROLE_GDS_ADMIN")
+                .header("X-User-Roles", "SUPER_ADMIN")
                 .build());
 
-        HttpHeaders forwarded = run(exchange, authenticated(42L, "real@example.com", "ROLE_B", "ROLE_A"));
+        HttpHeaders forwarded = run(exchange, authenticated(42L, "real@example.com", List.of("B", "A"), List.of("SOME_PERMISSION")));
 
         assertThat(forwarded.get("X-User-Id")).containsExactly("42");
         assertThat(forwarded.get("X-User-Email")).containsExactly("real@example.com");
-        assertThat(forwarded.get("X-User-Roles")).containsExactly("ROLE_A,ROLE_B");
+        assertThat(forwarded.get("X-User-Roles")).containsExactly("A,B");
+    }
+
+    @Test
+    void permissionsInTheTokenAreNotForwardedOnlyRolesAre() {
+        MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/users/profile").build());
+
+        HttpHeaders forwarded = run(exchange, authenticated(42L, "real@example.com",
+                List.of("SENIOR_APPROVER"), List.of("ONBOARDING_FINAL_APPROVE", "ONBOARDING_APPLICATION_READ")));
+
+        assertThat(forwarded.get("X-User-Roles")).containsExactly("SENIOR_APPROVER");
     }
 
     @Test
@@ -42,7 +52,7 @@ class IdentityHeadersGlobalFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.post("/auth/login")
                 .header("X-User-Id", "1")
                 .header("X-User-Email", "forged@example.com")
-                .header("X-User-Roles", "ROLE_GDS_ADMIN")
+                .header("X-User-Roles", "SUPER_ADMIN")
                 .build());
 
         HttpHeaders forwarded = run(exchange, null);
@@ -56,7 +66,7 @@ class IdentityHeadersGlobalFilterTest {
     void aUserWithNoRolesGetsAnEmptyRolesHeaderNotAMissingOne() {
         MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/users/profile").build());
 
-        HttpHeaders forwarded = run(exchange, authenticated(7L, "plain@example.com"));
+        HttpHeaders forwarded = run(exchange, authenticated(7L, "plain@example.com", List.of(), List.of()));
 
         assertThat(forwarded.getFirst("X-User-Roles")).isEmpty();
     }
@@ -100,15 +110,17 @@ class IdentityHeadersGlobalFilterTest {
         return seen.get().getRequest().getHeaders();
     }
 
-    private JwtAuthenticationToken authenticated(Long userId, String email, String... authorities) {
+    private JwtAuthenticationToken authenticated(Long userId, String email, List<String> roles, List<String> permissions) {
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "HS256")
                 .subject(email)
                 .claim("email", email)
                 .claim("userId", userId)
+                .claim("roles", roles)
+                .claim("permissions", permissions)
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(60))
                 .build();
-        return new JwtAuthenticationToken(jwt, List.of(authorities).stream().map(SimpleGrantedAuthority::new).toList());
+        return new JwtAuthenticationToken(jwt, permissions.stream().map(SimpleGrantedAuthority::new).toList());
     }
 }

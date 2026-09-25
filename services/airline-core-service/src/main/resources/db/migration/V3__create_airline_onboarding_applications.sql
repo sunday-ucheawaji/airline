@@ -15,10 +15,15 @@ CREATE TABLE IF NOT EXISTS airline_onboarding_applications (
     support_phone          VARCHAR(255),
     support_hours          VARCHAR(255),
     headquarters_city_id   BIGINT,
-    status                 ENUM('DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN') NOT NULL DEFAULT 'DRAFT',
+    status                 ENUM('DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'PROVISIONED', 'REJECTED', 'WITHDRAWN') NOT NULL DEFAULT 'DRAFT',
     rejection_reason       TEXT,
+    approved_by_user_id    BIGINT,
+    airline_id             BIGINT,
     submitted_at           DATETIME(6),
     reviewed_at            DATETIME(6),
     created_at             DATETIME(6) NOT NULL,
-    updated_at             DATETIME(6) NOT NULL
+    updated_at             DATETIME(6) NOT NULL,
+    CONSTRAINT fk_onboarding_applications_airline FOREIGN KEY (airline_id) REFERENCES airlines (id),
+    INDEX idx_onboarding_applications_status (status),
+    INDEX idx_onboarding_applications_applicant (applicant_user_id)
 );

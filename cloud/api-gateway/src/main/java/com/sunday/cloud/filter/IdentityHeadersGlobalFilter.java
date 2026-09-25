@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -53,10 +54,9 @@ public class IdentityHeadersGlobalFilter implements GlobalFilter, Ordered {
 
     private ServerWebExchange withIdentity(ServerWebExchange exchange, Authentication auth, String requestId) {
         Jwt jwt = ((JwtAuthenticationToken) auth).getToken();
-        String roles = auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .sorted()
-                .collect(Collectors.joining(","));
+        // Only role names are forwarded; the permissions in the token are the gateway's business and would just bloat the header.
+        List<String> roleClaim = jwt.getClaimAsStringList("roles");
+        String roles = roleClaim == null ? "" : roleClaim.stream().sorted().collect(Collectors.joining(","));
 
         ServerHttpRequest request = exchange.getRequest().mutate()
                 .headers(headers -> {

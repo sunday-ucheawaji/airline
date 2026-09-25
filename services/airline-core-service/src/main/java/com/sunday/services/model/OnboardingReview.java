@@ -43,6 +43,10 @@ public class OnboardingReview {
     @Column(columnDefinition = "TEXT")
     private String comments;
 
+    // Set only on OWNER_ASSIGNED / PROVISIONED rows.
+    @Column(name = "assigned_owner_user_id")
+    private Long assignedOwnerUserId;
+
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
     private Instant createdAt;

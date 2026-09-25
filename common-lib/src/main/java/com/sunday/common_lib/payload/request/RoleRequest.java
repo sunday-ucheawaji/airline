@@ -17,7 +17,7 @@ public class RoleRequest {
 
     private String description;
 
-    /** "PLATFORM" or "AIRLINE" — defaults to AIRLINE when omitted. */
-    @Pattern(regexp = "PLATFORM|AIRLINE", message = ErrorMessageUtil.ROLE_SCOPE_INVALID)
+    /** "PLATFORM", "AIRLINE" or "BASELINE" — defaults to AIRLINE when omitted. */
+    @Pattern(regexp = "PLATFORM|AIRLINE|BASELINE", message = ErrorMessageUtil.ROLE_SCOPE_INVALID)
     private String scope;
 }

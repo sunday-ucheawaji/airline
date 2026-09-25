@@ -176,7 +176,6 @@ app:
 
 gateway:
   security:
-    admin-authority: ROLE_GDS_ADMIN
   # Number of trusted reverse proxies in front of the gateway (0 = use the socket address for rate limiting).
   trusted-proxy-hops: ${TRUSTED_PROXY_HOPS:0}
 

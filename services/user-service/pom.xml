@@ -66,6 +66,12 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Outbound call to airline-core-service (is this user an airline member?) -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+
         <!-- REST API support (embedded Tomcat, Jackson JSON, Spring MVC) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

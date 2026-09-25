@@ -16,5 +16,6 @@ public class OnboardingReviewResponse {
     private Long reviewerUserId;
     private String decision;
     private String comments;
+    private Long assignedOwnerUserId;
     private Instant createdAt;
 }

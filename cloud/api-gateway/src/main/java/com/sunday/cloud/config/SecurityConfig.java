@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -17,19 +19,21 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtGrantedAuthoritiesConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.ServerAuthenticationEntryPoint;
 import org.springframework.security.web.server.authorization.ServerAccessDeniedHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import static com.sunday.cloud.security.GatewayPermissions.*;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -43,8 +47,7 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(
             ServerHttpSecurity http,
             ReactiveJwtDecoder jwtDecoder,
-            CorsConfigurationSource corsConfigurationSource,
-            @Value("${gateway.security.admin-authority:ROLE_GDS_ADMIN}") String admin) {
+            CorsConfigurationSource corsConfigurationSource) {
 
         ServerAuthenticationEntryPoint unauthorized = (exchange, ex) -> {
             exchange.getResponse().getHeaders().set(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
@@ -75,22 +78,52 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.OPTIONS).permitAll()
                         .pathMatchers("/auth/**", "/fallback").permitAll()
 
-                        // --- platform admin ---
-                        .pathMatchers("/api/admin/**").hasAuthority(admin)
-                        .pathMatchers("/api/roles/**", "/api/permissions/**").hasAuthority(admin)
-                        .pathMatchers(HttpMethod.GET, "/api/airlines").hasAuthority(admin)
-                        .pathMatchers(HttpMethod.POST,
-                                "/api/airlines/*/activate",
-                                "/api/airlines/*/suspend",
-                                "/api/airlines/*/ban").hasAuthority(admin)
+                        // --- applicant: own onboarding application ---
+                        .pathMatchers(HttpMethod.POST, "/api/onboarding/applications")
+                                .hasAuthority(ONBOARDING_APPLICATION_CREATE)
+                        .pathMatchers(HttpMethod.GET, "/api/onboarding/applications", "/api/onboarding/applications/{id:\\d+}")
+                                .hasAuthority(ONBOARDING_APPLICATION_READ_OWN)
+                        .pathMatchers(HttpMethod.PATCH, "/api/onboarding/applications/{id:\\d+}")
+                                .hasAuthority(ONBOARDING_APPLICATION_UPDATE_OWN)
+                        .pathMatchers(HttpMethod.POST, "/api/onboarding/applications/{id:\\d+}/submit")
+                                .hasAuthority(ONBOARDING_APPLICATION_SUBMIT)
+                        .pathMatchers("/api/onboarding/**").denyAll()
+
+                        // --- staff: onboarding review, approval and provisioning ---
+                        .pathMatchers(HttpMethod.GET, "/api/admin/onboarding/applications", "/api/admin/onboarding/applications/{id:\\d+}")
+                                .hasAnyAuthority(ONBOARDING_APPLICATION_READ, AIRLINE_CREATE)
+                        .pathMatchers(HttpMethod.GET, "/api/admin/onboarding/applications/{id:\\d+}/reviews")
+                                .hasAnyAuthority(ONBOARDING_APPLICATION_READ, APPROVAL_HISTORY_READ)
+                        .pathMatchers(HttpMethod.POST, "/api/admin/onboarding/applications/{id:\\d+}/return")
+                                .hasAuthority(ONBOARDING_APPLICATION_RETURN)
+                        .pathMatchers(HttpMethod.POST, "/api/admin/onboarding/applications/{id:\\d+}/approve")
+                                .hasAuthority(ONBOARDING_FINAL_APPROVE)
+                        .pathMatchers(HttpMethod.POST, "/api/admin/onboarding/applications/{id:\\d+}/reject")
+                                .hasAuthority(ONBOARDING_FINAL_REJECT)
+                        .pathMatchers(HttpMethod.PUT, "/api/admin/onboarding/applications/{id:\\d+}/owner")
+                                .hasAuthority(AIRLINE_ADMIN_ASSIGN)
+                        .pathMatchers(HttpMethod.POST, "/api/admin/onboarding/applications/{id:\\d+}/provision")
+                                .hasAuthority(AIRLINE_CREATE)
+                        .pathMatchers("/api/admin/**").denyAll()
+
+                        // --- platform administration ---
+                        .pathMatchers(HttpMethod.GET, "/api/airlines").hasAuthority(AIRLINE_READ)
+                        .pathMatchers(HttpMethod.POST, "/api/airlines/{id:\\d+}/activate").hasAuthority(AIRLINE_ACTIVATE)
+                        .pathMatchers(HttpMethod.POST, "/api/airlines/{id:\\d+}/suspend").hasAuthority(AIRLINE_SUSPEND)
+                        .pathMatchers(HttpMethod.POST, "/api/airlines/{id:\\d+}/ban").hasAuthority(AIRLINE_BAN)
                         .pathMatchers(HttpMethod.GET,
                                 "/api/users",
                                 "/api/users/{id:\\d+}",
-                                "/api/users/{id:\\d+}/roles").hasAuthority(admin)
-                        .pathMatchers(HttpMethod.POST, "/api/cities/**", "/api/airports/**").hasAuthority(admin)
-                        .pathMatchers(HttpMethod.PUT, "/api/cities/**", "/api/airports/**").hasAuthority(admin)
-                        .pathMatchers(HttpMethod.PATCH, "/api/cities/**", "/api/airports/**").hasAuthority(admin)
-                        .pathMatchers(HttpMethod.DELETE, "/api/cities/**", "/api/airports/**").hasAuthority(admin)
+                                "/api/users/{id:\\d+}/roles").hasAuthority(USER_READ)
+                        .pathMatchers(HttpMethod.POST, "/api/roles/{roleId:\\d+}/users/{userId:\\d+}").hasAuthority(USER_ROLE_ASSIGN)
+                        .pathMatchers(HttpMethod.DELETE, "/api/roles/{roleId:\\d+}/users/{userId:\\d+}").hasAuthority(USER_ROLE_REVOKE)
+                        .pathMatchers(HttpMethod.GET, "/api/roles/**", "/api/permissions/**").hasAnyAuthority(USER_ROLE_ASSIGN, USER_ROLE_REVOKE)
+                        // defining roles/permissions and assigning permissions to roles: ACCESS_MANAGE, which only SUPER_ADMIN holds
+                        .pathMatchers("/api/roles/**", "/api/permissions/**").hasAuthority(ACCESS_MANAGE)
+                        .pathMatchers(HttpMethod.POST, "/api/cities/**", "/api/airports/**").hasAuthority(LOCATION_MANAGE)
+                        .pathMatchers(HttpMethod.PUT, "/api/cities/**", "/api/airports/**").hasAuthority(LOCATION_MANAGE)
+                        .pathMatchers(HttpMethod.PATCH, "/api/cities/**", "/api/airports/**").hasAuthority(LOCATION_MANAGE)
+                        .pathMatchers(HttpMethod.DELETE, "/api/cities/**", "/api/airports/**").hasAuthority(LOCATION_MANAGE)
 
                         // --- any signed-in user (per-airline checks happen inside the services) ---
                         .pathMatchers("/api/**").authenticated()
@@ -121,15 +154,25 @@ public class SecurityConfig {
         return decoder;
     }
 
-    /** user-service already emits fully-formed authorities (e.g. {@code ROLE_GDS_ADMIN}) as a JSON array. */
+    /**
+     * The token carries two claims: {@code roles} (e.g. {@code SENIOR_APPROVER}) and {@code permissions}
+     * (e.g. {@code ONBOARDING_FINAL_APPROVE}). They become Spring authorities here: permissions as plain names
+     * (use {@code hasAuthority}), roles with Spring's {@code ROLE_} prefix (use {@code hasRole}).
+     */
     private Converter<Jwt, Mono<AbstractAuthenticationToken>> authoritiesConverter() {
-        JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
-        authorities.setAuthoritiesClaimName("authorities");
-        authorities.setAuthorityPrefix("");
-
         ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(new ReactiveJwtGrantedAuthoritiesConverterAdapter(authorities));
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            List<GrantedAuthority> authorities = new ArrayList<>();
+            claim(jwt, "roles").forEach(role -> authorities.add(new SimpleGrantedAuthority("ROLE_" + role)));
+            claim(jwt, "permissions").forEach(permission -> authorities.add(new SimpleGrantedAuthority(permission)));
+            return Flux.fromIterable(authorities);
+        });
         return converter;
+    }
+
+    private static List<String> claim(Jwt jwt, String name) {
+        List<String> values = jwt.getClaimAsStringList(name);
+        return values == null ? List.of() : values;
     }
 
     @Bean

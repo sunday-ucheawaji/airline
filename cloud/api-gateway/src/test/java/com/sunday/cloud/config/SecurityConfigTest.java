@@ -30,7 +30,10 @@ import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,7 +52,38 @@ class SecurityConfigTest {
 
     static final String SECRET = "test-secret-test-secret-test-secret-0123456789";
     static final String ISSUER = "gds-user-service";
-    private static final String ADMIN = "ROLE_GDS_ADMIN";
+    private static final String SUPER = "SUPER_ADMIN";
+    private static final String APPLICANT = "AIRLINE_APPLICANT";
+    private static final String OFFICER = "ONBOARDING_OFFICER";
+    private static final String APPROVER = "SENIOR_APPROVER";
+    private static final String PROVISIONER = "AIRLINE_PROVISIONER";
+    private static final String PLATFORM_ADMIN = "GDS_PLATFORM_ADMIN";
+    private static final String AUDITOR = "GDS_AUDITOR";
+
+    private static final List<String> ALL_PERSONAS =
+            List.of(APPLICANT, OFFICER, APPROVER, PROVISIONER, PLATFORM_ADMIN, AUDITOR, SUPER);
+
+    /** Mirrors the user-service seed for the permissions the gateway enforces; user-service puts them in the token next to the role. */
+    private static final Map<String, List<String>> STAFF_AND_APPLICANT_PERMISSIONS = Map.of(
+            "AIRLINE_APPLICANT", List.of("ONBOARDING_APPLICATION_CREATE", "ONBOARDING_APPLICATION_READ_OWN",
+                    "ONBOARDING_APPLICATION_UPDATE_OWN", "ONBOARDING_APPLICATION_SUBMIT"),
+            "ONBOARDING_OFFICER", List.of("ONBOARDING_APPLICATION_READ", "ONBOARDING_APPLICATION_RETURN"),
+            "SENIOR_APPROVER", List.of("ONBOARDING_APPLICATION_READ", "ONBOARDING_FINAL_APPROVE", "ONBOARDING_FINAL_REJECT"),
+            "AIRLINE_PROVISIONER", List.of("AIRLINE_CREATE", "AIRLINE_ADMIN_ASSIGN", "AIRLINE_ACTIVATE"),
+            "GDS_PLATFORM_ADMIN", List.of("USER_READ", "USER_ROLE_ASSIGN", "USER_ROLE_REVOKE", "AIRLINE_READ", "AIRLINE_SUSPEND",
+                    "AIRLINE_BAN", "LOCATION_MANAGE"),
+            "GDS_AUDITOR", List.of("ONBOARDING_APPLICATION_READ", "AIRLINE_READ", "USER_READ", "APPROVAL_HISTORY_READ"));
+
+    /** SUPER_ADMIN holds every permission there is, including ACCESS_MANAGE which no other role has. */
+    private static final Map<String, List<String>> SEEDED_MATRIX = withSuperAdmin(STAFF_AND_APPLICANT_PERMISSIONS);
+
+    private static Map<String, List<String>> withSuperAdmin(Map<String, List<String>> others) {
+        List<String> all = new ArrayList<>(others.values().stream().flatMap(List::stream).distinct().toList());
+        all.add("ACCESS_MANAGE");
+        Map<String, List<String>> matrix = new HashMap<>(others);
+        matrix.put("SUPER_ADMIN", all);
+        return matrix;
+    }
 
     @Configuration
     @EnableWebFlux
@@ -77,74 +111,137 @@ class SecurityConfigTest {
 
     // ---------------------------------------------------------------- access matrix
 
-    static Stream<Arguments> accessMatrix() {
-        // method, path, expected status for: [anonymous, normal user, platform admin]
+    /** Anonymous gets 401; the listed roles get 200; every other signed-in caller (including one with no roles) gets 403. */
+    private record Rule(String method, String path, List<String> allowed) {}
+
+    private static Rule rule(String method, String path, String... allowed) {
+        return new Rule(method, path, List.of(allowed));
+    }
+
+    private static Rule anyone(String method, String path) {
+        return new Rule(method, path, ALL_PERSONAS);
+    }
+
+    static Stream<Rule> accessMatrix() {
         return Stream.of(
                 // public
-                row("POST", "/auth/login", 200, 200, 200),
-                row("POST", "/auth/logout", 200, 200, 200),
+                anyone("POST", "/auth/login"),
+                anyone("POST", "/auth/logout"),
 
                 // any signed-in user
-                row("GET", "/api/users/profile", 401, 200, 200),
-                row("GET", "/api/onboarding/applications", 401, 200, 200),
-                row("POST", "/api/onboarding/applications", 401, 200, 200),
-                row("GET", "/api/airlines/mine", 401, 200, 200),
-                row("GET", "/api/airlines/dropdown", 401, 200, 200),
-                row("GET", "/api/airlines/5", 401, 200, 200),
-                row("PUT", "/api/airlines/5", 401, 200, 200),
-                row("GET", "/api/cities", 401, 200, 200),
-                row("GET", "/api/airports/3", 401, 200, 200),
-                row("POST", "/api/bookings", 401, 200, 200),
+                anyone("GET", "/api/users/profile"),
+                anyone("GET", "/api/airlines/mine"),
+                anyone("GET", "/api/airlines/dropdown"),
+                anyone("GET", "/api/airlines/5"),
+                anyone("PUT", "/api/airlines/5"),
+                anyone("GET", "/api/cities"),
+                anyone("GET", "/api/airports/3"),
+                anyone("POST", "/api/bookings"),
 
-                // platform admin only
-                row("GET", "/api/admin/onboarding/applications", 401, 403, 200),
-                row("POST", "/api/admin/onboarding/applications/1/review", 401, 403, 200),
-                row("GET", "/api/airlines", 401, 403, 200),
-                row("POST", "/api/airlines/5/activate", 401, 403, 200),
-                row("POST", "/api/airlines/5/suspend", 401, 403, 200),
-                row("POST", "/api/airlines/5/ban", 401, 403, 200),
-                row("GET", "/api/users", 401, 403, 200),
-                row("GET", "/api/users/7", 401, 403, 200),
-                row("GET", "/api/users/7/roles", 401, 403, 200),
-                row("GET", "/api/roles", 401, 403, 200),
-                row("POST", "/api/roles", 401, 403, 200),
-                row("POST", "/api/roles/2/users/7", 401, 403, 200),
-                row("DELETE", "/api/roles/2/users/7", 401, 403, 200),
-                row("GET", "/api/permissions", 401, 403, 200),
-                row("POST", "/api/permissions", 401, 403, 200),
+                // applicant: own application (staff carry no applicant permissions, except the super admin)
+                rule("POST", "/api/onboarding/applications", APPLICANT, SUPER),
+                rule("GET", "/api/onboarding/applications", APPLICANT, SUPER),
+                rule("GET", "/api/onboarding/applications/3", APPLICANT, SUPER),
+                rule("PATCH", "/api/onboarding/applications/3", APPLICANT, SUPER),
+                rule("POST", "/api/onboarding/applications/3/submit", APPLICANT, SUPER),
+                // anything unlisted under /api/onboarding or /api/admin is denied outright, even for the super admin
+                rule("DELETE", "/api/onboarding/applications/3"),
+
+                // staff: onboarding
+                rule("GET", "/api/admin/onboarding/applications", OFFICER, APPROVER, PROVISIONER, AUDITOR, SUPER),
+                rule("GET", "/api/admin/onboarding/applications/3", OFFICER, APPROVER, PROVISIONER, AUDITOR, SUPER),
+                rule("GET", "/api/admin/onboarding/applications/3/reviews", OFFICER, APPROVER, AUDITOR, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/return", OFFICER, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/approve", APPROVER, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/reject", APPROVER, SUPER),
+                rule("PUT", "/api/admin/onboarding/applications/3/owner", PROVISIONER, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/provision", PROVISIONER, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/review"),
+                rule("GET", "/api/admin/something-new"),
+
+                // platform administration
+                rule("GET", "/api/airlines", PLATFORM_ADMIN, AUDITOR, SUPER),
+                rule("POST", "/api/airlines/5/activate", PROVISIONER, SUPER),
+                rule("POST", "/api/airlines/5/suspend", PLATFORM_ADMIN, SUPER),
+                rule("POST", "/api/airlines/5/ban", PLATFORM_ADMIN, SUPER),
+                rule("GET", "/api/users", PLATFORM_ADMIN, AUDITOR, SUPER),
+                rule("GET", "/api/users/7", PLATFORM_ADMIN, AUDITOR, SUPER),
+                rule("GET", "/api/users/7/roles", PLATFORM_ADMIN, AUDITOR, SUPER),
+                rule("GET", "/api/roles", PLATFORM_ADMIN, SUPER),
+                rule("GET", "/api/roles/2/permissions", PLATFORM_ADMIN, SUPER),
+                rule("GET", "/api/permissions", PLATFORM_ADMIN, SUPER),
+                rule("POST", "/api/roles/2/users/7", PLATFORM_ADMIN, SUPER),
+                rule("DELETE", "/api/roles/2/users/7", PLATFORM_ADMIN, SUPER),
+                // defining roles/permissions and their grants
+                rule("POST", "/api/roles", SUPER),
+                rule("POST", "/api/roles/2/permissions", SUPER),
+                rule("DELETE", "/api/roles/2/permissions/4", SUPER),
+                rule("POST", "/api/permissions", SUPER),
+
+                // locations: reads are open, writes need LOCATION_MANAGE
                 // regression: the old guard matched "/api/cities/" only, so POST /api/cities and PUT/DELETE slipped through
-                row("POST", "/api/cities", 401, 403, 200),
-                row("POST", "/api/cities/bulk", 401, 403, 200),
-                row("PUT", "/api/cities/1", 401, 403, 200),
-                row("DELETE", "/api/cities/1", 401, 403, 200),
-                row("POST", "/api/airports", 401, 403, 200),
-                row("PUT", "/api/airports/1", 401, 403, 200),
-                row("DELETE", "/api/airports/1", 401, 403, 200),
+                rule("POST", "/api/cities", PLATFORM_ADMIN, SUPER),
+                rule("POST", "/api/cities/bulk", PLATFORM_ADMIN, SUPER),
+                rule("PUT", "/api/cities/1", PLATFORM_ADMIN, SUPER),
+                rule("DELETE", "/api/cities/1", PLATFORM_ADMIN, SUPER),
+                rule("POST", "/api/airports", PLATFORM_ADMIN, SUPER),
+                rule("PUT", "/api/airports/1", PLATFORM_ADMIN, SUPER),
+                rule("DELETE", "/api/airports/1", PLATFORM_ADMIN, SUPER),
 
-                // never reachable through the gateway
-                row("POST", "/eureka/apps/ROGUE", 401, 403, 403),
-                row("GET", "/eureka/main", 401, 403, 403),
-                row("GET", "/actuator/env", 401, 403, 403),
-                row("GET", "/something-unlisted", 401, 403, 403)
+                // never reachable through the gateway, even for the super admin
+                rule("POST", "/eureka/apps/ROGUE"),
+                rule("GET", "/eureka/main"),
+                rule("GET", "/actuator/env"),
+                rule("GET", "/internal/access/role-permissions"),
+                rule("GET", "/something-unlisted")
         );
     }
 
-    private static Arguments row(String method, String path, int anonymous, int user, int admin) {
-        return Arguments.of(method, path, anonymous, user, admin);
-    }
-
-    @ParameterizedTest(name = "{0} {1}: anonymous={2}, user={3}, admin={4}")
+    @ParameterizedTest(name = "{0}")
     @MethodSource("accessMatrix")
-    void enforcesAccessPolicy(String method, String path, int anonymous, int user, int admin) throws Exception {
-        assertStatus(method, path, null, anonymous);
-        assertStatus(method, path, token(List.of()), user);
-        assertStatus(method, path, token(List.of(ADMIN)), admin);
+    void enforcesAccessPolicy(Rule rule) throws Exception {
+        assertStatus(rule.method(), rule.path(), null, rule.path().startsWith("/auth/") ? 200 : 401);
+        assertStatus(rule.method(), rule.path(), token(List.of()), rule.allowed().size() == ALL_PERSONAS.size() ? 200 : 403);
+        for (String persona : ALL_PERSONAS) {
+            int expected = rule.allowed().contains(persona) ? 200 : 403;
+            assertStatus(rule.method(), rule.path(), tokenFor(persona), expected);
+        }
     }
 
     @Test
-    void adminRoleIsMatchedExactlyNotBySubstring() throws Exception {
-        assertStatus("GET", "/api/admin/onboarding/applications", token(List.of("ROLE_GDS_ADMIN_LOOKALIKE")), 403);
-        assertStatus("GET", "/api/admin/onboarding/applications", token(List.of("GDS_ADMIN")), 403);
+    void permissionsAreMatchedExactlyNotBySubstring() throws Exception {
+        assertStatus("POST", "/api/admin/onboarding/applications/3/approve", token(List.of("ONBOARDING_FINAL_APPROVE_LOOKALIKE")), 403);
+        assertStatus("POST", "/api/admin/onboarding/applications/3/approve", tokenWithRoles(List.of("ONBOARDING_FINAL_APPROVE")), 403);
+        assertStatus("POST", "/api/roles", token(List.of("ACCESS_MANAGE_LOOKALIKE")), 403);
+    }
+
+    @Test
+    void onlyTheSuperAdminHoldsRoleManage() throws Exception {
+        for (String persona : ALL_PERSONAS) {
+            assertStatus("POST", "/api/roles", tokenFor(persona), SUPER.equals(persona) ? 200 : 403);
+        }
+    }
+
+    @Test
+    void aCallerHoldingSeveralRolesGetsTheirUnion() throws Exception {
+        assertStatus("POST", "/api/admin/onboarding/applications/3/approve", tokenFor(OFFICER, APPROVER), 200);
+        assertStatus("POST", "/api/admin/onboarding/applications/3/provision", tokenFor(OFFICER, APPROVER), 403);
+    }
+
+    @Test
+    void aLegacyAuthoritiesClaimIsIgnored() throws Exception {
+        JWTClaimsSet legacy = new JWTClaimsSet.Builder()
+                .issuer(ISSUER).subject("someone@example.com").claim("userId", 42L)
+                .claim("authorities", List.of("ROLE_SUPER_ADMIN", "ONBOARDING_FINAL_APPROVE"))
+                .issueTime(new Date()).expirationTime(future()).build();
+
+        assertStatus("POST", "/api/admin/onboarding/applications/3/approve", sign(JWSAlgorithm.HS256, SECRET, legacy), 403);
+    }
+
+    @Test
+    void aRoleAloneGrantsNothingWithoutItsPermissionsInTheToken() throws Exception {
+        assertStatus("POST", "/api/admin/onboarding/applications/3/approve", tokenWithRoles(List.of(APPROVER)), 403);
+        assertStatus("POST", "/api/admin/onboarding/applications/3/approve", token(List.of("ONBOARDING_FINAL_APPROVE")), 200);
     }
 
     // ---------------------------------------------------------------- token validation
@@ -165,14 +262,14 @@ class SecurityConfigTest {
         assertStatus("GET", path, sign(JWSAlgorithm.HS256, SECRET,
                 claims(ISSUER, Date.from(Instant.now().minusSeconds(120)), List.of())), 401);
         // alg=none (unsigned)
-        assertStatus("GET", path, new PlainJWT(claims(ISSUER, future(), List.of(ADMIN))).serialize(), 401);
+        assertStatus("GET", path, new PlainJWT(claims(ISSUER, future(), List.of(), List.of("ACCESS_MANAGE"))).serialize(), 401);
         // garbage
         assertStatus("GET", path, "not-a-jwt", 401);
     }
 
     @Test
     void anUnsignedAdminTokenDoesNotGrantAdminAccess() {
-        String unsignedAdmin = new PlainJWT(claims(ISSUER, future(), List.of(ADMIN))).serialize();
+        String unsignedAdmin = new PlainJWT(claims(ISSUER, future(), List.of(), List.of("ACCESS_MANAGE"))).serialize();
         assertStatus("GET", "/api/admin/onboarding/applications", unsignedAdmin, 401);
     }
 
@@ -235,6 +332,20 @@ class SecurityConfigTest {
 
     // ---------------------------------------------------------------- helpers
 
+    /** The token user-service would issue for these roles: the roles themselves plus the permissions they grant. */
+    private static String tokenFor(String... roles) throws Exception {
+        List<String> permissions = new ArrayList<>();
+        for (String role : roles) {
+            permissions.addAll(SEEDED_MATRIX.getOrDefault(role, List.of()));
+        }
+        return sign(JWSAlgorithm.HS256, SECRET, claims(ISSUER, future(), List.of(roles), permissions));
+    }
+
+    /** A token that carries role names but no permissions at all. */
+    private static String tokenWithRoles(List<String> roles) throws Exception {
+        return sign(JWSAlgorithm.HS256, SECRET, claims(ISSUER, future(), roles, List.of()));
+    }
+
     private void assertStatus(String method, String path, String bearer, int expected) {
         WebTestClient.RequestHeadersSpec<?> request = client
                 .method(HttpMethod.valueOf(method))
@@ -245,17 +356,23 @@ class SecurityConfigTest {
         request.exchange().expectStatus().isEqualTo(expected);
     }
 
-    private static String token(List<String> authorities) throws Exception {
-        return sign(JWSAlgorithm.HS256, SECRET, claims(ISSUER, future(), authorities));
+    /** A token that carries only these permissions (no roles). */
+    private static String token(List<String> permissions) throws Exception {
+        return sign(JWSAlgorithm.HS256, SECRET, claims(ISSUER, future(), permissions));
     }
 
-    private static JWTClaimsSet claims(String issuer, Date expiry, List<String> authorities) {
+    private static JWTClaimsSet claims(String issuer, Date expiry, List<String> permissions) {
+        return claims(issuer, expiry, List.of(), permissions);
+    }
+
+    private static JWTClaimsSet claims(String issuer, Date expiry, List<String> roles, List<String> permissions) {
         return new JWTClaimsSet.Builder()
                 .issuer(issuer)
                 .subject("someone@example.com")
                 .claim("email", "someone@example.com")
                 .claim("userId", 42L)
-                .claim("authorities", authorities)
+                .claim("roles", roles)
+                .claim("permissions", permissions)
                 .issueTime(new Date())
                 .expirationTime(expiry)
                 .build();

@@ -78,6 +78,14 @@ public class AirlineOnboardingApplication {
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
+    // Who gave the final approval — the provisioner must be someone else (separation of duties).
+    @Column(name = "approved_by_user_id")
+    private Long approvedByUserId;
+
+    // Set once the application is provisioned into a real Airline.
+    @Column(name = "airline_id")
+    private Long airlineId;
+
     private Instant submittedAt;
     private Instant reviewedAt;
 

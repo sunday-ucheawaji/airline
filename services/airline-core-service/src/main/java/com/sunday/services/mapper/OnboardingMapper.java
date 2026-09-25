@@ -83,6 +83,7 @@ public class OnboardingMapper {
                 .headquartersCityId(application.getHeadquartersCityId())
                 .status(application.getStatus().name())
                 .rejectionReason(application.getRejectionReason())
+                .airlineId(application.getAirlineId())
                 .submittedAt(application.getSubmittedAt())
                 .reviewedAt(application.getReviewedAt())
                 .createdAt(application.getCreatedAt())
@@ -103,6 +104,7 @@ public class OnboardingMapper {
                 .reviewerUserId(review.getReviewerUserId())
                 .decision(review.getDecision().name())
                 .comments(review.getComments())
+                .assignedOwnerUserId(review.getAssignedOwnerUserId())
                 .createdAt(review.getCreatedAt())
                 .build();
     }

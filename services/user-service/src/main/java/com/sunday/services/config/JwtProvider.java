@@ -3,12 +3,15 @@ package com.sunday.services.config;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import com.sunday.services.service.impl.CustomUserDetailsService;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -38,21 +41,34 @@ public class JwtProvider {
         this.issuer = issuer;
     }
 
-    public String generateToken(Authentication auth, Long userId) {
-        // JSON array (not a comma-joined string) so standard JWT authority converters can read it.
-        List<String> authorities = auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .sorted()
-                .toList();
+    /**
+     * Roles and permissions travel as two separate JSON-array claims: {@code roles} and {@code permissions}.
+     * The user's authorities are split by the {@code ROLE_} prefix: prefixed ones are roles (prefix removed), the
+     * rest are permissions. That is unambiguous because no permission name starts with {@code ROLE_}.
+     */
+    public String generateToken(UserDetails user, Long userId) {
+        List<String> roles = new ArrayList<>();
+        List<String> permissions = new ArrayList<>();
+        for (GrantedAuthority authority : user.getAuthorities()) {
+            String name = authority.getAuthority();
+            if (name.startsWith(CustomUserDetailsService.ROLE_PREFIX)) {
+                roles.add(name.substring(CustomUserDetailsService.ROLE_PREFIX.length()));
+            } else {
+                permissions.add(name);
+            }
+        }
+        Collections.sort(roles);
+        Collections.sort(permissions);
 
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
                 .issuer(issuer)
-                .subject(auth.getName())
+                .subject(user.getUsername())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenTtlMinutes * 60 * 1000))
-                .claim("email", auth.getName())
-                .claim("authorities", authorities)
+                .claim("email", user.getUsername())
+                .claim("roles", roles)
+                .claim("permissions", permissions)
                 .claim("userId", userId)
                 .signWith(key, Jwts.SIG.HS256)
                 .compact();

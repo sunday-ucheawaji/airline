@@ -1,6 +1,5 @@
 package com.sunday.common_lib.payload.request;
 
-import com.sunday.common_lib.enums.ReviewDecision;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -10,10 +9,10 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OnboardingReviewRequest {
+public class OwnerAssignmentRequest {
 
-    @NotNull(message = ErrorMessageUtil.ONBOARDING_DECISION_MANDATORY)
-    private ReviewDecision decision;
+    @NotNull(message = ErrorMessageUtil.OWNER_USER_ID_MANDATORY)
+    private Long ownerUserId;
 
     private String comments;
 }

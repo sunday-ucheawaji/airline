@@ -1,9 +1,10 @@
 package com.sunday.services.service;
 
 import com.sunday.common_lib.payload.request.OnboardingApplicationRequest;
-import com.sunday.common_lib.payload.request.OnboardingReviewRequest;
+import com.sunday.common_lib.payload.request.OwnerAssignmentRequest;
 import com.sunday.common_lib.payload.response.OnboardingApplicationResponse;
 import com.sunday.common_lib.payload.response.OnboardingReviewResponse;
+import com.sunday.services.enums.OnboardingStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -18,9 +19,14 @@ public interface OnboardingService {
     List<OnboardingApplicationResponse> getMyApplications(Long applicantUserId);
     OnboardingApplicationResponse submitApplication(Long applicationId, Long applicantUserId);
 
-    // ----- Review side -----
-    Page<OnboardingApplicationResponse> getApplicationsForReview(Pageable pageable);
+    // ----- Staff side (drafts are never visible here) -----
+    Page<OnboardingApplicationResponse> getApplicationsForReview(OnboardingStatus status, Pageable pageable);
     OnboardingApplicationResponse getApplicationForReview(Long applicationId);
-    OnboardingApplicationResponse reviewApplication(Long applicationId, OnboardingReviewRequest request, Long reviewerUserId);
     List<OnboardingReviewResponse> getReviewHistory(Long applicationId);
+
+    OnboardingApplicationResponse returnApplication(Long applicationId, String comments, Long actorUserId);
+    OnboardingApplicationResponse approveApplication(Long applicationId, String comments, Long actorUserId);
+    OnboardingApplicationResponse rejectApplication(Long applicationId, String comments, Long actorUserId);
+    OnboardingApplicationResponse assignOwner(Long applicationId, OwnerAssignmentRequest request, Long actorUserId);
+    OnboardingApplicationResponse provisionApplication(Long applicationId, String comments, Long actorUserId);
 }

@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS airports (
+    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    iata_code           VARCHAR(3)   NOT NULL,
+    name                VARCHAR(255) NOT NULL,
+    time_zone_id        VARCHAR(50),
+    street              VARCHAR(255),
+    postal_code         VARCHAR(20),
+    latitude            DOUBLE,
+    longitude           DOUBLE,
+    airlines_count      INT,
+    annual_passengers   DOUBLE,
+    destinations_count  INT,
+    on_time_performance DOUBLE,
+    size_category       VARCHAR(20),
+    traveler_score      INT,
+    city_id             BIGINT       NOT NULL,
+    CONSTRAINT uk_airports_iata_code UNIQUE (iata_code),
+    CONSTRAINT fk_airports_city FOREIGN KEY (city_id) REFERENCES cities (id),
+    INDEX idx_airport_city_id (city_id)
+);

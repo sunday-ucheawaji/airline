@@ -1,4 +1,0 @@
-ALTER TABLE users
-    ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-    ADD COLUMN failed_login_attempts INT NOT NULL DEFAULT 0,
-    ADD COLUMN locked_until DATETIME NULL;

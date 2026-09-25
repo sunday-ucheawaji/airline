@@ -5,6 +5,7 @@ public enum OnboardingStatus {
     SUBMITTED,
     UNDER_REVIEW,
     APPROVED,
+    PROVISIONED,
     REJECTED,
     WITHDRAWN
 }
