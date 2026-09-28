@@ -38,6 +38,7 @@ public class OnboardingApplicationResponse {
     private String status;
     private String rejectionReason;
     private Long airlineId;
+    private Long caseOwnerUserId;
 
     private Instant submittedAt;
     private Instant reviewedAt;

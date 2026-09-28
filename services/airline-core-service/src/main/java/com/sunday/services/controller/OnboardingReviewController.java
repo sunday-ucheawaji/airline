@@ -22,11 +22,16 @@ public class OnboardingReviewController {
 
     private final OnboardingService onboardingService;
 
-    /** Defaults to the SUBMITTED queue; pass {@code status=APPROVED} for applications awaiting provisioning. */
+    /**
+     * Defaults to the SUBMITTED queue (cases waiting to be claimed). Use {@code status=UNDER_REVIEW} for cases in review,
+     * {@code PENDING_APPROVAL} for cases awaiting final approval, {@code APPROVED} for cases awaiting provisioning,
+     * and {@code caseOwner=<userId>} for one officer's cases.
+     */
     @GetMapping
     public ResponseEntity<Page<OnboardingApplicationResponse>> getApplicationsForReview(
-            @RequestParam(required = false) OnboardingStatus status, Pageable pageable) {
-        return ResponseEntity.ok(onboardingService.getApplicationsForReview(status, pageable));
+            @RequestParam(required = false) OnboardingStatus status,
+            @RequestParam(required = false) Long caseOwner, Pageable pageable) {
+        return ResponseEntity.ok(onboardingService.getApplicationsForReview(status, caseOwner, pageable));
     }
 
     @GetMapping("/{id}")

@@ -12,6 +12,9 @@ public interface UserPlatformRoleRepository extends JpaRepository<UserPlatformRo
     @EntityGraph(attributePaths = "role")
     List<UserPlatformRole> findByUserId(Long userId);
 
+    @EntityGraph(attributePaths = "user")
+    List<UserPlatformRole> findByRoleName(String roleName);
+
     Optional<UserPlatformRole> findByUserIdAndRoleId(Long userId, Long roleId);
 
     boolean existsByUserIdAndRoleId(Long userId, Long roleId);

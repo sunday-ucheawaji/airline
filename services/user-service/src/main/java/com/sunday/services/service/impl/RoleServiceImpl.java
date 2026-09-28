@@ -7,9 +7,11 @@ import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.payload.request.AssignPermissionsRequest;
 import com.sunday.common_lib.payload.request.RoleRequest;
+import com.sunday.common_lib.payload.response.ReviewerResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.client.MembershipClient;
 import com.sunday.services.enums.RoleScope;
+import com.sunday.services.enums.UserStatus;
 import com.sunday.services.model.Permission;
 import com.sunday.services.model.Role;
 import com.sunday.services.model.RolePermission;
@@ -115,6 +117,21 @@ public class RoleServiceImpl implements RoleService {
         return userPlatformRoleRepository.findByUserId(userId).stream()
                 .map(UserPlatformRole::getRole)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReviewerResponse> getReviewersByRole(String roleName) {
+        return userPlatformRoleRepository.findByRoleName(roleName).stream()
+                .map(UserPlatformRole::getUser)
+                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+                .map(user -> ReviewerResponse.builder()
+                        .userId(user.getId())
+                        .firstName(user.getFirstName())
+                        .lastName(user.getLastName())
+                        .email(user.getEmail())
+                        .build())
+                .toList();
     }
 
     @Override

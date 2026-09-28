@@ -20,7 +20,7 @@ public interface OnboardingService {
     OnboardingApplicationResponse submitApplication(Long applicationId, Long applicantUserId);
 
     // ----- Staff side (drafts are never visible here) -----
-    Page<OnboardingApplicationResponse> getApplicationsForReview(OnboardingStatus status, Pageable pageable);
+    Page<OnboardingApplicationResponse> getApplicationsForReview(OnboardingStatus status, Long caseOwnerUserId, Pageable pageable);
     OnboardingApplicationResponse getApplicationForReview(Long applicationId);
     List<OnboardingReviewResponse> getReviewHistory(Long applicationId);
 

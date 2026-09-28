@@ -19,6 +19,27 @@ spring:
   flyway:
     enabled: true
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_URL}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      acks: all
+    consumer:
+      group-id: airline-core-document-processing
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        "[spring.deserializer.value.delegate.class]": org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+        "[spring.json.trusted.packages]": com.sunday.common_lib.event
+        "[spring.json.value.default.type]": com.sunday.common_lib.event.OnboardingDocumentUploadedEvent
+
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
@@ -27,6 +48,27 @@ spring:
 
 airline:
   owner-role-id: ${AIRLINE_OWNER_ROLE_ID}
+  documents:
+    max-file-size-bytes: 10485760
+    max-documents-per-application: 20
+    max-pdf-pages: 50
+    max-image-pixels: 25000000
+    stale-after: 10m
+    sweep-interval: 5m
+    max-processing-attempts: 5
+    scanner:
+      host: ${DOCUMENT_SCANNER_HOST:localhost}
+      port: ${DOCUMENT_SCANNER_PORT:3310}
+    storage:
+      # Any S3-compatible server: SeaweedFS in dev (docker-compose.dev.yml), Cloudflare R2 or AWS S3 in production.
+      endpoint: ${DOCUMENT_STORAGE_ENDPOINT:}
+      region: ${DOCUMENT_STORAGE_REGION:us-east-1}
+      access-key: ${DOCUMENT_STORAGE_ACCESS_KEY}
+      secret-key: ${DOCUMENT_STORAGE_SECRET_KEY}
+      path-style-access: ${DOCUMENT_STORAGE_PATH_STYLE:true}
+      quarantine-bucket: ${DOCUMENT_STORAGE_QUARANTINE_BUCKET:quarantine}
+      clean-bucket: ${DOCUMENT_STORAGE_CLEAN_BUCKET:clean}
+      presign-ttl: ${DOCUMENT_STORAGE_PRESIGN_TTL:5m}
 
 
 

@@ -2,8 +2,6 @@ package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
-import com.sunday.common_lib.exception.OperationNotPermittedException;
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.exception.UserException;
 import com.sunday.common_lib.payload.request.OnboardingApplicationRequest;
 import com.sunday.common_lib.payload.request.OwnerAssignmentRequest;
@@ -11,17 +9,21 @@ import com.sunday.common_lib.payload.response.OnboardingApplicationResponse;
 import com.sunday.common_lib.payload.response.OnboardingReviewResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.common_lib.enums.ReviewDecision;
+import com.sunday.services.enums.CaseOwnerAction;
 import com.sunday.services.enums.MembershipStatus;
+import com.sunday.services.enums.OnboardingStage;
 import com.sunday.services.enums.OnboardingStatus;
+import com.sunday.services.enums.StageStatus;
 import com.sunday.services.mapper.OnboardingMapper;
 import com.sunday.services.model.Airline;
 import com.sunday.services.model.AirlineMembership;
 import com.sunday.services.model.AirlineOnboardingApplication;
-import com.sunday.services.model.OnboardingReview;
+import com.sunday.services.model.OnboardingStageReview;
 import com.sunday.services.repository.AirlineMembershipRepository;
 import com.sunday.services.repository.AirlineOnboardingApplicationRepository;
 import com.sunday.services.repository.AirlineRepository;
 import com.sunday.services.repository.OnboardingReviewRepository;
+import com.sunday.services.repository.OnboardingStageReviewRepository;
 import com.sunday.services.service.OnboardingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,16 +43,22 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class OnboardingServiceImpl implements OnboardingService {
 
+    private static final Set<OnboardingStatus> UNDER_REVIEW = Set.of(OnboardingStatus.UNDER_REVIEW);
+    private static final Set<OnboardingStatus> PENDING_APPROVAL = Set.of(OnboardingStatus.PENDING_APPROVAL);
+    /** Where a final rejection is still possible. */
     private static final Set<OnboardingStatus> REVIEWABLE_STATUSES =
-            Set.of(OnboardingStatus.SUBMITTED, OnboardingStatus.UNDER_REVIEW);
-    private static final Set<OnboardingStatus> OWNER_ASSIGNABLE_STATUSES =
-            Set.of(OnboardingStatus.SUBMITTED, OnboardingStatus.UNDER_REVIEW, OnboardingStatus.APPROVED);
+            Set.of(OnboardingStatus.SUBMITTED, OnboardingStatus.UNDER_REVIEW, OnboardingStatus.PENDING_APPROVAL);
+    private static final Set<OnboardingStatus> OWNER_ASSIGNABLE_STATUSES = Set.of(
+            OnboardingStatus.SUBMITTED, OnboardingStatus.UNDER_REVIEW, OnboardingStatus.PENDING_APPROVAL, OnboardingStatus.APPROVED);
 
     private final AirlineOnboardingApplicationRepository applicationRepository;
     private final OnboardingReviewRepository reviewRepository;
+    private final OnboardingStageReviewRepository stageRepository;
     private final AirlineRepository airlineRepository;
     private final AirlineMembershipRepository airlineMembershipRepository;
     private final PlatformUserGuard platformUserGuard;
+    private final OnboardingSupport support;
+    private final OnboardingDocumentGate documentGate;
 
     @Value("${airline.owner-role-id}")
     private Long ownerRoleId;
@@ -71,8 +79,8 @@ public class OnboardingServiceImpl implements OnboardingService {
     @Override
     @Transactional
     public OnboardingApplicationResponse updateDraft(Long applicationId, OnboardingApplicationRequest request, Long applicantUserId) {
-        AirlineOnboardingApplication application = getApplicationOrThrow(applicationId);
-        requireOwnedByApplicant(application, applicantUserId);
+        AirlineOnboardingApplication application = support.getOrThrow(applicationId);
+        support.requireOwnedByApplicant(application, applicantUserId);
 
         if (application.getStatus() != OnboardingStatus.DRAFT) {
             throw new UserException(String.format(
@@ -86,8 +94,8 @@ public class OnboardingServiceImpl implements OnboardingService {
     @Override
     @Transactional(readOnly = true)
     public OnboardingApplicationResponse getMyApplicationById(Long applicationId, Long applicantUserId) {
-        AirlineOnboardingApplication application = getApplicationOrThrow(applicationId);
-        requireOwnedByApplicant(application, applicantUserId);
+        AirlineOnboardingApplication application = support.getOrThrow(applicationId);
+        support.requireOwnedByApplicant(application, applicantUserId);
         return OnboardingMapper.toResponse(application);
     }
 
@@ -100,8 +108,8 @@ public class OnboardingServiceImpl implements OnboardingService {
     @Override
     @Transactional
     public OnboardingApplicationResponse submitApplication(Long applicationId, Long applicantUserId) {
-        AirlineOnboardingApplication application = getApplicationOrThrow(applicationId);
-        requireOwnedByApplicant(application, applicantUserId);
+        AirlineOnboardingApplication application = support.getOrThrow(applicationId);
+        support.requireOwnedByApplicant(application, applicantUserId);
 
         if (application.getStatus() != OnboardingStatus.DRAFT) {
             throw new UserException(String.format(
@@ -110,53 +118,68 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         platformUserGuard.requireNotPlatformUser(applicantUserId, ErrorMessageUtil.ONBOARDING_PLATFORM_USER_CANNOT_APPLY);
         requireCompleteForSubmission(application);
+        documentGate.requireReadyForSubmission(applicationId);
 
         application.setStatus(OnboardingStatus.SUBMITTED);
         application.setRejectionReason(null);
         application.setSubmittedAt(Instant.now());
-        return OnboardingMapper.toResponse(applicationRepository.save(application));
+        AirlineOnboardingApplication saved = applicationRepository.save(application);
+        startFreshStageRound(saved);
+        return OnboardingMapper.toResponse(saved);
     }
 
     // ---------- Staff side ----------
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OnboardingApplicationResponse> getApplicationsForReview(OnboardingStatus status, Pageable pageable) {
+    public Page<OnboardingApplicationResponse> getApplicationsForReview(OnboardingStatus status, Long caseOwnerUserId, Pageable pageable) {
         OnboardingStatus queue = status == null ? OnboardingStatus.SUBMITTED : status;
         if (queue == OnboardingStatus.DRAFT) {
             throw new BadRequestException(ErrorMessageUtil.ONBOARDING_DRAFTS_NOT_LISTABLE);
         }
-        return applicationRepository.findByStatus(queue, pageable).map(OnboardingMapper::toResponse);
+        Page<AirlineOnboardingApplication> page = caseOwnerUserId == null
+                ? applicationRepository.findByStatus(queue, pageable)
+                : applicationRepository.findByStatusAndCaseOwnerUserId(queue, caseOwnerUserId, pageable);
+        return page.map(OnboardingMapper::toResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public OnboardingApplicationResponse getApplicationForReview(Long applicationId) {
-        return OnboardingMapper.toResponse(getVisibleApplicationOrThrow(applicationId));
+        return OnboardingMapper.toResponse(support.getVisibleOrThrow(applicationId));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<OnboardingReviewResponse> getReviewHistory(Long applicationId) {
-        getVisibleApplicationOrThrow(applicationId);
+        support.getVisibleOrThrow(applicationId);
         return OnboardingMapper.toReviewResponseList(
                 reviewRepository.findByApplicationIdOrderByCreatedAtDesc(applicationId));
     }
 
+    /** Case owner only: sends the application back to the applicant, releasing the case. */
     @Override
     @Transactional
     public OnboardingApplicationResponse returnApplication(Long applicationId, String comments, Long actorUserId) {
-        AirlineOnboardingApplication application = getReviewableOrThrow(applicationId);
+        AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
+        support.requireStatus(application, UNDER_REVIEW, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_UNDER_REVIEW);
+        support.requireCaseOwner(application, actorUserId);
+
+        support.cancelOpenInformationRequests(application);
+        support.recordOwnerChange(application, actorUserId, null, actorUserId, CaseOwnerAction.RELEASED, "Returned to the applicant");
+        application.setCaseOwnerUserId(null);
         application.setStatus(OnboardingStatus.DRAFT);
         application.setRejectionReason(comments);
         return finishReview(application, actorUserId, ReviewDecision.REQUESTED_CHANGES, comments, null);
     }
 
+    /** Final approval: only for cases the case owner has referred. */
     @Override
     @Transactional
     public OnboardingApplicationResponse approveApplication(Long applicationId, String comments, Long actorUserId) {
-        AirlineOnboardingApplication application = getReviewableOrThrow(applicationId);
-        requireNotApplicantOrNominee(application, actorUserId);
+        AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
+        support.requireStatus(application, PENDING_APPROVAL, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_PENDING_APPROVAL);
+        support.requireNotApplicantOrNominee(application, actorUserId);
         application.setStatus(OnboardingStatus.APPROVED);
         application.setApprovedByUserId(actorUserId);
         application.setRejectionReason(null);
@@ -166,7 +189,9 @@ public class OnboardingServiceImpl implements OnboardingService {
     @Override
     @Transactional
     public OnboardingApplicationResponse rejectApplication(Long applicationId, String comments, Long actorUserId) {
-        AirlineOnboardingApplication application = getReviewableOrThrow(applicationId);
+        AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
+        support.requireStatus(application, REVIEWABLE_STATUSES, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_REVIEWABLE);
+        support.cancelOpenInformationRequests(application);
         application.setStatus(OnboardingStatus.REJECTED);
         application.setRejectionReason(comments);
         return finishReview(application, actorUserId, ReviewDecision.REJECTED, comments, null);
@@ -175,11 +200,8 @@ public class OnboardingServiceImpl implements OnboardingService {
     @Override
     @Transactional
     public OnboardingApplicationResponse assignOwner(Long applicationId, OwnerAssignmentRequest request, Long actorUserId) {
-        AirlineOnboardingApplication application = getVisibleApplicationOrThrow(applicationId);
-        if (!OWNER_ASSIGNABLE_STATUSES.contains(application.getStatus())) {
-            throw new ConflictException(String.format(
-                    ErrorMessageUtil.ONBOARDING_OWNER_NOT_ASSIGNABLE, applicationId, application.getStatus()));
-        }
+        AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
+        support.requireStatus(application, OWNER_ASSIGNABLE_STATUSES, ErrorMessageUtil.ONBOARDING_OWNER_NOT_ASSIGNABLE);
 
         Long ownerUserId = request.getOwnerUserId();
         if (ownerUserId.equals(actorUserId)) {
@@ -190,7 +212,7 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         application.setInitialAdminUserId(ownerUserId);
         AirlineOnboardingApplication saved = applicationRepository.save(application);
-        recordReview(saved, actorUserId, ReviewDecision.OWNER_ASSIGNED, request.getComments(), ownerUserId);
+        support.record(saved, actorUserId, ReviewDecision.OWNER_ASSIGNED, request.getComments(), ownerUserId, null);
         return OnboardingMapper.toResponse(saved);
     }
 
@@ -203,11 +225,8 @@ public class OnboardingServiceImpl implements OnboardingService {
             @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
     })
     public OnboardingApplicationResponse provisionApplication(Long applicationId, String comments, Long actorUserId) {
-        AirlineOnboardingApplication application = getVisibleApplicationOrThrow(applicationId);
-        if (application.getStatus() != OnboardingStatus.APPROVED) {
-            throw new ConflictException(String.format(
-                    ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_APPROVED, applicationId, application.getStatus()));
-        }
+        AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
+        support.requireStatus(application, Set.of(OnboardingStatus.APPROVED), ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_APPROVED);
 
         Long ownerUserId = application.getInitialAdminUserId();
         if (ownerUserId == null) {
@@ -216,7 +235,10 @@ public class OnboardingServiceImpl implements OnboardingService {
         if (actorUserId.equals(application.getApprovedByUserId())) {
             throw new ConflictException(String.format(ErrorMessageUtil.ONBOARDING_SEGREGATION_OF_DUTIES, "approved"));
         }
-        requireNotApplicantOrNominee(application, actorUserId);
+        if (actorUserId.equals(application.getCaseOwnerUserId())) {
+            throw new ConflictException(String.format(ErrorMessageUtil.ONBOARDING_SEGREGATION_OF_DUTIES, "owned"));
+        }
+        support.requireNotApplicantOrNominee(application, actorUserId);
         platformUserGuard.requireNotPlatformUser(
                 ownerUserId, String.format(ErrorMessageUtil.ONBOARDING_PLATFORM_USER_CANNOT_OWN, ownerUserId));
 
@@ -238,50 +260,24 @@ public class OnboardingServiceImpl implements OnboardingService {
     // ---------- Helpers ----------
 
     private OnboardingApplicationResponse finishReview(AirlineOnboardingApplication application, Long actorUserId,
-                                                       ReviewDecision decision, String comments, Long ownerUserId) {
+                                                       ReviewDecision decision, String comments, Long targetUserId) {
         application.setReviewedAt(Instant.now());
         AirlineOnboardingApplication saved = applicationRepository.save(application);
-        recordReview(saved, actorUserId, decision, comments, ownerUserId);
+        support.record(saved, actorUserId, decision, comments, targetUserId, null);
         return OnboardingMapper.toResponse(saved);
     }
 
-    private void recordReview(AirlineOnboardingApplication application, Long actorUserId,
-                              ReviewDecision decision, String comments, Long ownerUserId) {
-        reviewRepository.save(OnboardingReview.builder()
-                .application(application)
-                .reviewerUserId(actorUserId)
-                .decision(decision)
-                .comments(comments)
-                .assignedOwnerUserId(ownerUserId)
-                .build());
-    }
-
-    private void requireNotApplicantOrNominee(AirlineOnboardingApplication application, Long actorUserId) {
-        if (actorUserId.equals(application.getApplicantUserId())) {
-            throw new ConflictException(String.format(ErrorMessageUtil.ONBOARDING_SEGREGATION_OF_DUTIES, "submitted"));
+    /** Every submission starts a new review round: one PENDING, unassigned stage per specialist area. */
+    private void startFreshStageRound(AirlineOnboardingApplication application) {
+        for (OnboardingStage stage : OnboardingStage.values()) {
+            OnboardingStageReview review = stageRepository.findByApplicationIdAndStage(application.getId(), stage)
+                    .orElseGet(() -> OnboardingStageReview.builder().application(application).stage(stage).build());
+            review.setStatus(StageStatus.PENDING);
+            review.setAssigneeUserId(null);
+            review.setComments(null);
+            review.setDecidedAt(null);
+            stageRepository.save(review);
         }
-        if (actorUserId.equals(application.getInitialAdminUserId())) {
-            throw new ConflictException(String.format(ErrorMessageUtil.ONBOARDING_OWNER_IS_REVIEWER, application.getId()));
-        }
-    }
-
-    /** Staff can never see a draft, even by id: it is the applicant's private working copy. */
-    private AirlineOnboardingApplication getVisibleApplicationOrThrow(Long applicationId) {
-        AirlineOnboardingApplication application = getApplicationOrThrow(applicationId);
-        if (application.getStatus() == OnboardingStatus.DRAFT) {
-            throw new ResourceNotFoundException(
-                    String.format(ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_FOUND_BY_ID, applicationId));
-        }
-        return application;
-    }
-
-    private AirlineOnboardingApplication getReviewableOrThrow(Long applicationId) {
-        AirlineOnboardingApplication application = getVisibleApplicationOrThrow(applicationId);
-        if (!REVIEWABLE_STATUSES.contains(application.getStatus())) {
-            throw new ConflictException(String.format(
-                    ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_REVIEWABLE, applicationId, application.getStatus()));
-        }
-        return application;
     }
 
     private void requireCompleteForSubmission(AirlineOnboardingApplication application) {
@@ -297,18 +293,5 @@ public class OnboardingServiceImpl implements OnboardingService {
         if (!StringUtils.hasText(application.getRegistrationNumber())) {
             throw new UserException(ErrorMessageUtil.ONBOARDING_REGISTRATION_NUMBER_MANDATORY);
         }
-    }
-
-    private void requireOwnedByApplicant(AirlineOnboardingApplication application, Long applicantUserId) {
-        if (!application.getApplicantUserId().equals(applicantUserId)) {
-            throw new OperationNotPermittedException(String.format(
-                    ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_OWNED_BY_APPLICANT, application.getId()));
-        }
-    }
-
-    private AirlineOnboardingApplication getApplicationOrThrow(Long applicationId) {
-        return applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_FOUND_BY_ID, applicationId)));
     }
 }

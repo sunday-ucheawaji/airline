@@ -13,9 +13,13 @@ public class OnboardingReviewResponse {
 
     private Long id;
     private Long applicationId;
-    private Long reviewerUserId;
+    /** Who performed the action this entry records: staff, or the applicant for INFORMATION_PROVIDED and WITHDRAWN. */
+    private Long actorUserId;
     private String decision;
     private String comments;
-    private Long assignedOwnerUserId;
+    /** The user this entry is about: the nominated airline owner, or the assignee of a stage. */
+    private Long targetUserId;
+    /** The review stage this entry belongs to (COMPLIANCE, COMMERCIAL, TECHNICAL); null when it is about the whole review. */
+    private String stage;
     private Instant createdAt;
 }

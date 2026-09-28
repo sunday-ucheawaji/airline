@@ -1,6 +1,7 @@
 package com.sunday.services.model;
 
 import com.sunday.common_lib.enums.ReviewDecision;
+import com.sunday.services.enums.OnboardingStage;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -31,21 +32,27 @@ public class OnboardingReview {
     @NotNull
     private AirlineOnboardingApplication application;
 
+    // Who performed the action this entry records (staff, or the applicant for INFORMATION_PROVIDED / WITHDRAWN).
     // Logical cross-service reference to user-service's User — not a physical FK.
-    @Column(name = "reviewer_user_id", nullable = false)
+    @Column(name = "actor_user_id", nullable = false)
     @NotNull
-    private Long reviewerUserId;
+    private Long actorUserId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private ReviewDecision decision;
 
     @Column(columnDefinition = "TEXT")
     private String comments;
 
-    // Set only on OWNER_ASSIGNED / PROVISIONED rows.
-    @Column(name = "assigned_owner_user_id")
-    private Long assignedOwnerUserId;
+    // The user the entry is about: the nominated airline owner (OWNER_ASSIGNED / PROVISIONED) or a stage assignee.
+    @Column(name = "target_user_id")
+    private Long targetUserId;
+
+    // The review stage the entry belongs to; null when it is about the whole review (e.g. the case owner acting).
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private OnboardingStage stage;
 
     @CreationTimestamp
     @Column(updatable = false, nullable = false)

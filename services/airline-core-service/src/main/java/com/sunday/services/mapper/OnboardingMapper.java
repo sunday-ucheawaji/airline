@@ -4,10 +4,16 @@ import com.sunday.common_lib.embeddable.Support;
 import com.sunday.common_lib.enums.AirlineStatus;
 import com.sunday.common_lib.payload.request.OnboardingApplicationRequest;
 import com.sunday.common_lib.payload.response.OnboardingApplicationResponse;
+import com.sunday.common_lib.payload.response.CaseOwnerHistoryResponse;
+import com.sunday.common_lib.payload.response.InformationRequestResponse;
 import com.sunday.common_lib.payload.response.OnboardingReviewResponse;
+import com.sunday.common_lib.payload.response.OnboardingStageResponse;
 import com.sunday.services.model.Airline;
 import com.sunday.services.model.AirlineOnboardingApplication;
+import com.sunday.services.model.OnboardingCaseOwnerHistory;
+import com.sunday.services.model.OnboardingInformationRequest;
 import com.sunday.services.model.OnboardingReview;
+import com.sunday.services.model.OnboardingStageReview;
 
 import java.util.List;
 
@@ -84,6 +90,7 @@ public class OnboardingMapper {
                 .status(application.getStatus().name())
                 .rejectionReason(application.getRejectionReason())
                 .airlineId(application.getAirlineId())
+                .caseOwnerUserId(application.getCaseOwnerUserId())
                 .submittedAt(application.getSubmittedAt())
                 .reviewedAt(application.getReviewedAt())
                 .createdAt(application.getCreatedAt())
@@ -101,15 +108,54 @@ public class OnboardingMapper {
         return OnboardingReviewResponse.builder()
                 .id(review.getId())
                 .applicationId(review.getApplication().getId())
-                .reviewerUserId(review.getReviewerUserId())
+                .actorUserId(review.getActorUserId())
                 .decision(review.getDecision().name())
                 .comments(review.getComments())
-                .assignedOwnerUserId(review.getAssignedOwnerUserId())
+                .targetUserId(review.getTargetUserId())
+                .stage(review.getStage() == null ? null : review.getStage().name())
                 .createdAt(review.getCreatedAt())
                 .build();
     }
 
     public static List<OnboardingReviewResponse> toReviewResponseList(List<OnboardingReview> reviews) {
         return reviews.stream().map(OnboardingMapper::toReviewResponse).toList();
+    }
+
+    public static OnboardingStageResponse toStageResponse(OnboardingStageReview stage) {
+        return OnboardingStageResponse.builder()
+                .applicationId(stage.getApplication().getId())
+                .stage(stage.getStage().name())
+                .status(stage.getStatus().name())
+                .assigneeUserId(stage.getAssigneeUserId())
+                .comments(stage.getComments())
+                .decidedAt(stage.getDecidedAt())
+                .build();
+    }
+
+    public static InformationRequestResponse toInformationRequestResponse(OnboardingInformationRequest request) {
+        return InformationRequestResponse.builder()
+                .id(request.getId())
+                .applicationId(request.getApplication().getId())
+                .stage(request.getStage() == null ? null : request.getStage().name())
+                .requestedByUserId(request.getRequestedByUserId())
+                .message(request.getMessage())
+                .status(request.getStatus().name())
+                .response(request.getResponse())
+                .createdAt(request.getCreatedAt())
+                .respondedAt(request.getRespondedAt())
+                .build();
+    }
+
+    public static CaseOwnerHistoryResponse toCaseOwnerHistoryResponse(OnboardingCaseOwnerHistory entry) {
+        return CaseOwnerHistoryResponse.builder()
+                .id(entry.getId())
+                .applicationId(entry.getApplication().getId())
+                .fromUserId(entry.getFromUserId())
+                .toUserId(entry.getToUserId())
+                .actorUserId(entry.getActorUserId())
+                .action(entry.getAction().name())
+                .reason(entry.getReason())
+                .createdAt(entry.getCreatedAt())
+                .build();
     }
 }

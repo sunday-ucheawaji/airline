@@ -640,7 +640,7 @@ For example:
 -   `ONBOARDING_REVIEW` allows an authorized GDS administrator to review
     applications.
 
-**Update (2026-09-25) — platform permissions**: 72 permissions are now seeded
+**Update (2026-09-25) — platform permissions**: 73 permissions are now seeded
 (`V8`): the applicant set (`ONBOARDING_APPLICATION_CREATE/READ_OWN/UPDATE_OWN/
 SUBMIT`), staff onboarding (`ONBOARDING_APPLICATION_READ/RETURN`,
 `ONBOARDING_FINAL_APPROVE/REJECT`, `APPROVAL_HISTORY_READ`), provisioning
@@ -1321,7 +1321,27 @@ approver ≠ applicant/nominee. The nominated owner must not be platform staff,
 and staff cannot create or submit applications. Staff cannot read `DRAFT`
 applications. `rejection_reason` is cleared on submit, approval and
 provisioning. Review history gained `OWNER_ASSIGNED` and `PROVISIONED`
-decisions and `assigned_owner_user_id`.
+decisions and a `target_user_id` (renamed from `assigned_owner_user_id`; see the staged-review update below).
+
+**Update (2026-09-25, Phase 2) — staged review with a case owner**: the status
+lifecycle is now `DRAFT → SUBMITTED → UNDER_REVIEW → PENDING_APPROVAL →
+APPROVED → PROVISIONED`, or `REJECTED` / `WITHDRAWN`. On submission three
+stage rows are created (`onboarding_stage_reviews`: `COMPLIANCE`, `COMMERCIAL`,
+`TECHNICAL`, each `PENDING`/`APPROVED`/`REJECTED`, with an `assignee_user_id`).
+An onboarding officer **claims** the case (`case_owner_user_id`; status
+`UNDER_REVIEW`) and becomes the accountable **case owner**. The owner assigns
+each stage to a specialist holding that stage's role; only the assigned
+specialist decides it or asks the applicant for information
+(`onboarding_information_requests`: `OPEN`/`ANSWERED`/`CANCELLED`, text only
+until `OnboardingDocument` exists). The owner may **refer** the case for final
+approval only when all three stages are approved and no request is open; the
+senior approver then approves, rejects, or sends it back to the owner. Only the
+owner can transfer, release, assign, return or refer; only a super admin can
+force a takeover, with a mandatory reason. Ownership changes are kept in
+`onboarding_case_owner_history` (`CLAIMED`, `TRANSFERRED`, `RELEASED`,
+`TAKEN_OVER`). The provisioner must also not be the case owner. The applicant
+can withdraw from `DRAFT`, `SUBMITTED` or `UNDER_REVIEW`. Internal comments are
+recorded in the review timeline and are never shown to the applicant.
 
 ------------------------------------------------------------------------
 
@@ -1424,6 +1444,33 @@ REJECTED
 The database should store metadata and the storage location. The actual
 binary file should remain in private object storage.
 
+**Update (2026-09-25, Phase 3) — as implemented**: documents are uploaded
+through `POST /api/onboarding/applications/{id}/documents` (multipart) and
+processed **asynchronously**. The upload answers `202` after saving the raw file
+to a private **quarantine** bucket and publishing an event to the Kafka topic
+`onboarding.document.uploaded`; a consumer then finds the file's real type from
+its own bytes (PDF, PNG and JPEG only), fully parses it (PDFs: not encrypted,
+within a page limit, no JavaScript, launch actions, embedded files or XFA;
+images: decoded and re-encoded so metadata and hidden or appended data are
+removed), scans the original with ClamAV, and either promotes a safe copy to the
+private **clean** bucket or blocks the document. The table differs from the
+suggestion above: ids are `Long`; `status` is `PROCESSING`, `CLEAN`, `BLOCKED`,
+`VERIFIED` or `REJECTED` (not just `PENDING`/`VERIFIED`/`REJECTED`);
+`uploaded_by` and `verified_by` are `uploaded_by_user_id` and
+`verified_by_user_id`; `checksum` is a SHA-256 (`checksum_sha256`); added are
+`declared_content_type` (what the uploader claimed, kept only to detect a
+mismatch), `detected_content_type` (found from the file), `blocked_reason` and
+`processing_attempts`. `storage_key` is generated (`onboarding/{applicationId}/…`
+in quarantine, `documents/{applicationId}/…` once clean), never derived from the
+file name, which is cleaned and kept for display only. Files are downloaded
+through short-lived signed links that force a download with the detected type.
+Staff only see documents that passed the checks. Submission requires the
+`CERTIFICATE_OF_INCORPORATION` and `AIR_OPERATOR_CERTIFICATE` documents to be
+clean, and approving the compliance stage requires them to be verified, counting
+only the newest upload of each type. Permissions: `DOCUMENT_UPLOAD_OWN` and
+`DOCUMENT_READ_OWN` (applicant), `DOCUMENT_READ` and `DOCUMENT_VERIFY` (onboarding
+officer and compliance officer), `DOCUMENT_REJECT` (compliance officer only).
+
 ------------------------------------------------------------------------
 
 ## 10.4 OnboardingReview
@@ -1478,6 +1525,18 @@ fails at JSON deserialization, before the controller method even runs;
 `GlobalExceptionHandler` (common-lib, repo-wide) gained a generic handler
 for that case so the client still gets the app's normal error shape
 (listing the legal values) instead of Spring Boot's default error body.
+
+**Update (2026-09-25, Phase 2) — timeline columns**: `onboarding_reviews`
+now records more than review decisions. `decision` gained `COMMENTED`,
+`INFORMATION_REQUESTED`, `INFORMATION_PROVIDED`, `STAGE_ASSIGNED`,
+`STAGE_APPROVED`, `STAGE_REJECTED`, `REFERRED`, `SENT_BACK` and `WITHDRAWN`.
+`reviewer_user_id` was renamed `actor_user_id` because the actor is not always
+a reviewer (the applicant acts on `INFORMATION_PROVIDED` and `WITHDRAWN`).
+`assigned_owner_user_id` was renamed `target_user_id`: the person the entry is
+about — the nominated airline owner (`OWNER_ASSIGNED`, `PROVISIONED`) or a
+stage's assignee (`STAGE_ASSIGNED`). `stage` is a nullable enum
+(`COMPLIANCE`/`COMMERCIAL`/`TECHNICAL`); null means the entry is about the whole
+review.
 
 ------------------------------------------------------------------------
 

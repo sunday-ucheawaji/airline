@@ -33,4 +33,19 @@ public class PlatformUserGuard {
             throw new ConflictException(conflictMessage);
         }
     }
+
+    /** Throws {@link BadRequestException} unless the user exists and holds the given platform role. */
+    public void requireHoldsRole(Long userId, String roleName, String lackingMessage) {
+        boolean holds;
+        try {
+            holds = userClient.getPlatformRolesForUser(userId).stream().anyMatch(role -> roleName.equals(role.getName()));
+        } catch (FeignException.NotFound e) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.USER_NOT_FOUND_BY_ID, userId));
+        } catch (Exception e) {
+            throw new ServiceUnavailableException(ErrorMessageUtil.USER_ROLE_CHECK_UNAVAILABLE, e);
+        }
+        if (!holds) {
+            throw new BadRequestException(lackingMessage);
+        }
+    }
 }

@@ -78,6 +78,10 @@ public class AirlineOnboardingApplication {
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
+    // The onboarding officer accountable for the review; null until claimed and again after a return or release.
+    @Column(name = "case_owner_user_id")
+    private Long caseOwnerUserId;
+
     // Who gave the final approval — the provisioner must be someone else (separation of duties).
     @Column(name = "approved_by_user_id")
     private Long approvedByUserId;

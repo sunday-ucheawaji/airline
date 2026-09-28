@@ -1,9 +1,12 @@
 package com.sunday.services.controller;
 
+import com.sunday.common_lib.payload.request.InformationResponseRequest;
 import com.sunday.common_lib.payload.request.OnboardingApplicationRequest;
+import com.sunday.common_lib.payload.response.InformationRequestResponse;
 import com.sunday.common_lib.payload.response.OnboardingApplicationResponse;
 import com.sunday.common_lib.validation.OnCreate;
 import com.sunday.services.service.OnboardingService;
+import com.sunday.services.service.OnboardingWorkflowService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +22,7 @@ import java.util.List;
 public class OnboardingController {
 
     private final OnboardingService onboardingService;
+    private final OnboardingWorkflowService workflowService;
 
     @PostMapping
     public ResponseEntity<OnboardingApplicationResponse> createDraft(
@@ -47,6 +51,29 @@ public class OnboardingController {
             @Valid @RequestBody OnboardingApplicationRequest request,
             @RequestHeader("X-User-Id") Long userId) {
         return ResponseEntity.ok(onboardingService.updateDraft(id, request, userId));
+    }
+
+    @PostMapping("/{id}/withdraw")
+    public ResponseEntity<OnboardingApplicationResponse> withdraw(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(workflowService.withdraw(id, userId));
+    }
+
+    @GetMapping("/{id}/information-requests")
+    public ResponseEntity<List<InformationRequestResponse>> getMyInformationRequests(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(workflowService.getMyInformationRequests(id, userId));
+    }
+
+    @PostMapping("/{id}/information-requests/{requestId}/respond")
+    public ResponseEntity<InformationRequestResponse> respond(
+            @PathVariable Long id,
+            @PathVariable Long requestId,
+            @Valid @RequestBody InformationResponseRequest request,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(workflowService.respond(id, requestId, userId, request));
     }
 
     @PostMapping("/{id}/submit")

@@ -51,6 +51,7 @@ public final class PlatformPermissions {
     public static final String TECHNICAL_APPROVE = "TECHNICAL_APPROVE"; // reserved
     public static final String TECHNICAL_REJECT = "TECHNICAL_REJECT"; // reserved
     public static final String TECHNICAL_REQUEST_INFORMATION = "TECHNICAL_REQUEST_INFORMATION"; // reserved
+    public static final String TECHNICAL_COMMENT = "TECHNICAL_COMMENT"; // reserved
     public static final String INTEGRATION_CONFIG_READ = "INTEGRATION_CONFIG_READ"; // reserved
     public static final String INTEGRATION_CONFIG_CREATE = "INTEGRATION_CONFIG_CREATE"; // reserved
     public static final String INTEGRATION_TEST = "INTEGRATION_TEST"; // reserved

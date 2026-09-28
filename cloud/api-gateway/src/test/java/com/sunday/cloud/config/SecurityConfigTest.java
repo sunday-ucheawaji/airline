@@ -59,16 +59,29 @@ class SecurityConfigTest {
     private static final String PROVISIONER = "AIRLINE_PROVISIONER";
     private static final String PLATFORM_ADMIN = "GDS_PLATFORM_ADMIN";
     private static final String AUDITOR = "GDS_AUDITOR";
+    private static final String COMPLIANCE = "COMPLIANCE_OFFICER";
+    private static final String COMMERCIAL = "COMMERCIAL_OFFICER";
+    private static final String TECHNICAL = "TECHNICAL_OFFICER";
 
     private static final List<String> ALL_PERSONAS =
-            List.of(APPLICANT, OFFICER, APPROVER, PROVISIONER, PLATFORM_ADMIN, AUDITOR, SUPER);
+            List.of(APPLICANT, OFFICER, APPROVER, PROVISIONER, PLATFORM_ADMIN, AUDITOR, COMPLIANCE, COMMERCIAL, TECHNICAL, SUPER);
 
     /** Mirrors the user-service seed for the permissions the gateway enforces; user-service puts them in the token next to the role. */
     private static final Map<String, List<String>> STAFF_AND_APPLICANT_PERMISSIONS = Map.of(
             "AIRLINE_APPLICANT", List.of("ONBOARDING_APPLICATION_CREATE", "ONBOARDING_APPLICATION_READ_OWN",
-                    "ONBOARDING_APPLICATION_UPDATE_OWN", "ONBOARDING_APPLICATION_SUBMIT"),
-            "ONBOARDING_OFFICER", List.of("ONBOARDING_APPLICATION_READ", "ONBOARDING_APPLICATION_RETURN"),
-            "SENIOR_APPROVER", List.of("ONBOARDING_APPLICATION_READ", "ONBOARDING_FINAL_APPROVE", "ONBOARDING_FINAL_REJECT"),
+                    "ONBOARDING_APPLICATION_UPDATE_OWN", "ONBOARDING_APPLICATION_SUBMIT", "ONBOARDING_APPLICATION_WITHDRAW",
+                    "DOCUMENT_UPLOAD_OWN", "DOCUMENT_READ_OWN"),
+            "ONBOARDING_OFFICER", List.of("ONBOARDING_APPLICATION_READ", "ONBOARDING_APPLICATION_RETURN", "ONBOARDING_APPLICATION_REVIEW",
+                    "ONBOARDING_APPLICATION_ASSIGN", "ONBOARDING_APPLICATION_COMMENT", "ONBOARDING_APPLICATION_REQUEST_INFORMATION",
+                    "DOCUMENT_READ", "DOCUMENT_VERIFY"),
+            "COMPLIANCE_OFFICER", List.of("ONBOARDING_APPLICATION_READ", "KYC_APPROVE", "KYC_REJECT", "KYC_REQUEST_INFORMATION", "COMPLIANCE_COMMENT",
+                    "DOCUMENT_READ", "DOCUMENT_VERIFY", "DOCUMENT_REJECT"),
+            "COMMERCIAL_OFFICER", List.of("ONBOARDING_APPLICATION_READ", "COMMERCIAL_APPROVE", "COMMERCIAL_REJECT",
+                    "COMMERCIAL_REQUEST_INFORMATION", "COMMERCIAL_COMMENT"),
+            "TECHNICAL_OFFICER", List.of("ONBOARDING_APPLICATION_READ", "TECHNICAL_APPROVE", "TECHNICAL_REJECT",
+                    "TECHNICAL_REQUEST_INFORMATION", "TECHNICAL_COMMENT"),
+            "SENIOR_APPROVER", List.of("ONBOARDING_APPLICATION_READ", "ONBOARDING_FINAL_APPROVE", "ONBOARDING_FINAL_REJECT",
+                    "ONBOARDING_REQUEST_INFORMATION", "ONBOARDING_COMMENT"),
             "AIRLINE_PROVISIONER", List.of("AIRLINE_CREATE", "AIRLINE_ADMIN_ASSIGN", "AIRLINE_ACTIVATE"),
             "GDS_PLATFORM_ADMIN", List.of("USER_READ", "USER_ROLE_ASSIGN", "USER_ROLE_REVOKE", "AIRLINE_READ", "AIRLINE_SUSPEND",
                     "AIRLINE_BAN", "LOCATION_MANAGE"),
@@ -147,10 +160,59 @@ class SecurityConfigTest {
                 // anything unlisted under /api/onboarding or /api/admin is denied outright, even for the super admin
                 rule("DELETE", "/api/onboarding/applications/3"),
 
+                // documents: the applicant's own
+                rule("POST", "/api/onboarding/applications/3/documents", APPLICANT, SUPER),
+                rule("GET", "/api/onboarding/applications/3/documents", APPLICANT, SUPER),
+                rule("GET", "/api/onboarding/applications/3/documents/9/download-url", APPLICANT, SUPER),
+                rule("DELETE", "/api/onboarding/applications/3/documents/9", APPLICANT, SUPER),
+                rule("PUT", "/api/onboarding/applications/3/documents/9"),
+
+                // documents: staff (officers view and verify; only compliance rejects)
+                rule("GET", "/api/admin/onboarding/applications/3/documents", OFFICER, COMPLIANCE, SUPER),
+                rule("GET", "/api/admin/onboarding/applications/3/documents/9/download-url", OFFICER, COMPLIANCE, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/documents/9/verify", OFFICER, COMPLIANCE, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/documents/9/reject", COMPLIANCE, SUPER),
+                rule("DELETE", "/api/admin/onboarding/applications/3/documents/9"),
+                rule("POST", "/api/admin/onboarding/applications/3/documents"),
+
                 // staff: onboarding
-                rule("GET", "/api/admin/onboarding/applications", OFFICER, APPROVER, PROVISIONER, AUDITOR, SUPER),
-                rule("GET", "/api/admin/onboarding/applications/3", OFFICER, APPROVER, PROVISIONER, AUDITOR, SUPER),
-                rule("GET", "/api/admin/onboarding/applications/3/reviews", OFFICER, APPROVER, AUDITOR, SUPER),
+                rule("GET", "/api/admin/onboarding/applications", OFFICER, APPROVER, PROVISIONER, AUDITOR, COMPLIANCE, COMMERCIAL, TECHNICAL, SUPER),
+                rule("GET", "/api/admin/onboarding/applications/3", OFFICER, APPROVER, PROVISIONER, AUDITOR, COMPLIANCE, COMMERCIAL, TECHNICAL, SUPER),
+                rule("GET", "/api/admin/onboarding/applications/3/reviews", OFFICER, APPROVER, AUDITOR, COMPLIANCE, COMMERCIAL, TECHNICAL, SUPER),
+                rule("POST", "/api/onboarding/applications/3/withdraw", APPLICANT, SUPER),
+                rule("GET", "/api/onboarding/applications/3/information-requests", APPLICANT, SUPER),
+                rule("POST", "/api/onboarding/applications/3/information-requests/9/respond", APPLICANT, SUPER),
+
+                // staff: case ownership (onboarding officer; the take-over's super-admin-only rule lives in the service)
+                rule("POST", "/api/admin/onboarding/applications/3/claim", OFFICER, SUPER),
+                rule("PUT", "/api/admin/onboarding/applications/3/case-owner", OFFICER, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/release", OFFICER, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/take-over", OFFICER, SUPER),
+                rule("GET", "/api/admin/onboarding/reviewers", OFFICER, SUPER),
+                rule("GET", "/api/admin/onboarding/applications/3/case-owner-history", OFFICER, APPROVER, AUDITOR, COMPLIANCE, COMMERCIAL, TECHNICAL, SUPER),
+
+                // staff: stages, information requests, comments, hand-off to final approval
+                rule("GET", "/api/admin/onboarding/applications/3/stages", OFFICER, APPROVER, AUDITOR, COMPLIANCE, COMMERCIAL, TECHNICAL, SUPER),
+                rule("GET", "/api/admin/onboarding/applications/3/information-requests", OFFICER, APPROVER, AUDITOR, COMPLIANCE, COMMERCIAL, TECHNICAL, SUPER),
+                rule("PUT", "/api/admin/onboarding/applications/3/stages/compliance/assignee", OFFICER, SUPER),
+                rule("PUT", "/api/admin/onboarding/applications/3/stages/commercial/assignee", OFFICER, SUPER),
+                rule("PUT", "/api/admin/onboarding/applications/3/stages/technical/assignee", OFFICER, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/stages/compliance/approve", COMPLIANCE, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/stages/compliance/reject", COMPLIANCE, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/stages/compliance/information-requests", COMPLIANCE, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/stages/commercial/approve", COMMERCIAL, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/stages/commercial/reject", COMMERCIAL, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/stages/commercial/information-requests", COMMERCIAL, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/stages/technical/approve", TECHNICAL, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/stages/technical/reject", TECHNICAL, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/stages/technical/information-requests", TECHNICAL, SUPER),
+                // an unknown stage is not a route
+                rule("POST", "/api/admin/onboarding/applications/3/stages/legal/approve"),
+                rule("PUT", "/api/admin/onboarding/applications/3/stages/legal/assignee"),
+                rule("POST", "/api/admin/onboarding/applications/3/information-requests", OFFICER, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/comments", OFFICER, APPROVER, COMPLIANCE, COMMERCIAL, TECHNICAL, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/refer", OFFICER, SUPER),
+                rule("POST", "/api/admin/onboarding/applications/3/send-back", APPROVER, SUPER),
                 rule("POST", "/api/admin/onboarding/applications/3/return", OFFICER, SUPER),
                 rule("POST", "/api/admin/onboarding/applications/3/approve", APPROVER, SUPER),
                 rule("POST", "/api/admin/onboarding/applications/3/reject", APPROVER, SUPER),

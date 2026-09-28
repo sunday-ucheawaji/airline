@@ -1,7 +1,13 @@
 # =============================================================================
 # DEV INFRASTRUCTURE ONLY
-# Starts Redis + Kafka with ports exposed to localhost.
-# Use this when running services locally (not in Docker).
+# Starts Redis + Kafka + SeaweedFS (S3-compatible object storage) + ClamAV (malware scanner) with
+# ports exposed to localhost. Use this when running services locally (not in Docker).
+#
+# SeaweedFS holds onboarding documents in two private buckets: "quarantine" (raw uploads
+# awaiting inspection) and "clean" (files that passed the checks). ClamAV's first start
+# downloads its virus definitions and can take a few minutes to become healthy.
+# The credentials below are dev-only defaults; override them with environment variables
+# and keep the values your services use in the gitignored application-local.yaml.
 #
 # Usage:
 #   docker compose -f docker-compose/docker-compose.dev.yml up -d
@@ -41,4 +47,64 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
 
+  # S3-compatible object storage (MinIO's community images are no longer published, so we use SeaweedFS).
+  # "weed mini" is a single-node server; setting the AWS_* variables enables S3 authentication and S3_BUCKET
+  # pre-creates the first bucket.
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: gds-seaweedfs-dev
+    command: mini -dir=/data
+    ports:
+      - "8333:8333"                # S3 API        -> http://localhost:8333
+      # Web UIs for viewing and managing the storage, reachable from this machine only (no login in dev mode).
+      - "127.0.0.1:23646:23646"    # Admin UI      -> http://localhost:23646  (browse and manage buckets and files)
+      - "127.0.0.1:8889:8888"      # Filer UI      -> http://localhost:8889   (8888 is taken by the Config Server)
+      - "127.0.0.1:9333:9333"      # Master UI     -> http://localhost:9333   (cluster and volume status)
+    environment:
+      AWS_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY:-gdsdevkey}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_SECRET_KEY:-gdsdevsecret-change-me}
+      S3_BUCKET: quarantine
+    volumes:
+      - seaweed-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9333/cluster/status || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
 
+  # One-shot job: creates the second private bucket, then exits. Safe to re-run.
+  seaweedfs-init:
+    image: amazon/aws-cli:latest
+    container_name: gds-seaweedfs-init-dev
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      AWS_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY:-gdsdevkey}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_SECRET_KEY:-gdsdevsecret-change-me}
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: >
+      /bin/sh -c "
+      (aws --endpoint-url http://seaweedfs:8333 s3 mb s3://quarantine || true) &&
+      (aws --endpoint-url http://seaweedfs:8333 s3 mb s3://clean || true) &&
+      aws --endpoint-url http://seaweedfs:8333 s3 ls"
+
+  clamav:
+    image: clamav/clamav:stable
+    container_name: gds-clamav-dev
+    ports:
+      - "3310:3310"          # clamd -> localhost:3310
+    volumes:
+      - clamav-db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 300s
+
+volumes:
+  seaweed-data:
+  clamav-db:

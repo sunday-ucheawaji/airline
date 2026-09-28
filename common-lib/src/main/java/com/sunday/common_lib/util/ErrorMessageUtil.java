@@ -94,6 +94,61 @@ public class ErrorMessageUtil {
     public static final String ONBOARDING_PLATFORM_USER_CANNOT_OWN = "User %s is platform staff and cannot own an airline";
     public static final String ONBOARDING_OWNER_USER_NOT_FOUND = "Owner user %s does not exist";
 
+    // ---------- Onboarding: case ownership and staged review ----------
+    public static final String ONBOARDING_APPLICATION_NOT_CLAIMABLE = "Application %s can only be claimed while it is SUBMITTED (current status: %s)";
+    public static final String ONBOARDING_APPLICATION_NOT_UNDER_REVIEW = "Application %s must be under review for this step (current status: %s)";
+    public static final String ONBOARDING_APPLICATION_NOT_PENDING_APPROVAL = "Application %s is not awaiting final approval (current status: %s)";
+    public static final String ONBOARDING_APPLICATION_NOT_WITHDRAWABLE = "Application %s cannot be withdrawn in its current status: %s";
+    public static final String ONBOARDING_CASE_ALREADY_CLAIMED = "Application %s already has a case owner";
+    public static final String ONBOARDING_CASE_NOT_CLAIMED = "Application %s has no case owner yet; claim it first";
+    public static final String ONBOARDING_NOT_CASE_OWNER = "Only the case owner of application %s can do this";
+    public static final String ONBOARDING_CASE_OWNER_MUST_BE_OFFICER = "User %s does not hold the %s role and cannot own a case";
+    public static final String ONBOARDING_CASE_OWNER_IS_PARTY = "The case owner cannot be the applicant or the nominated airline owner of application %s";
+    public static final String ONBOARDING_REVIEWER_IS_PARTY = "A reviewer cannot be the applicant or the nominated airline owner of application %s";
+    public static final String ONBOARDING_TAKEOVER_SUPER_ADMIN_ONLY = "Only a super admin can force a takeover of a case";
+    public static final String ONBOARDING_REASON_MANDATORY = "A reason is mandatory";
+    public static final String ONBOARDING_COMMENT_MANDATORY_FOR_SEND_BACK = "A comment is mandatory when sending a case back";
+    public static final String ONBOARDING_STAGE_UNKNOWN = "Unknown review stage: %s";
+    public static final String ONBOARDING_STAGE_NOT_ASSIGNED_TO_USER = "The %s stage of application %s is not assigned to you";
+    public static final String ONBOARDING_STAGE_ASSIGNEE_LACKS_ROLE = "User %s does not hold the %s role required for the %s stage";
+    public static final String ONBOARDING_STAGES_NOT_APPROVED = "Application %s cannot be referred for approval: stage(s) not approved: %s";
+    public static final String ONBOARDING_OPEN_INFORMATION_REQUESTS = "Application %s still has open information request(s) that must be answered first";
+    public static final String ONBOARDING_INFORMATION_REQUEST_NOT_FOUND = "Information request not found with id: %s";
+    public static final String ONBOARDING_INFORMATION_REQUEST_NOT_OPEN = "Information request %s is not open";
+    public static final String NEW_CASE_OWNER_MANDATORY = "newCaseOwnerUserId is mandatory";
+    public static final String ASSIGNEE_USER_ID_MANDATORY = "assigneeUserId is mandatory";
+    public static final String COMMENT_MESSAGE_MANDATORY = "message is mandatory";
+    public static final String INFORMATION_RESPONSE_MANDATORY = "response is mandatory";
+
+    // ---------- Onboarding documents ----------
+    public static final String DOCUMENT_NOT_FOUND_BY_ID = "Document not found with id: %s";
+    public static final String DOCUMENT_FILE_MANDATORY = "A file is required";
+    public static final String DOCUMENT_TYPE_MANDATORY = "documentType is mandatory";
+    public static final String DOCUMENT_EMPTY = "The file is empty";
+    public static final String DOCUMENT_TOO_LARGE = "The file exceeds the maximum size of %s bytes";
+    public static final String DOCUMENT_LIMIT_REACHED = "Application %s already has the maximum of %s documents";
+    public static final String DOCUMENT_UPLOAD_NOT_ALLOWED =
+            "Application %s does not accept uploads in its current status (%s); documents can be added while it is a draft, or under review while an information request is open";
+    public static final String DOCUMENT_NOT_AVAILABLE = "Document %s is not available yet (status: %s)";
+    public static final String DOCUMENT_NOT_DELETABLE = "Document %s can only be deleted while the application is a draft";
+    public static final String DOCUMENT_NOT_CLEAN = "Document %s can only be verified or rejected once it is clean (current status: %s)";
+    public static final String DOCUMENT_REJECTION_REASON_MANDATORY = "A reason is mandatory when rejecting a document";
+    public static final String DOCUMENT_REQUIRED_MISSING = "Required document(s) missing or still being checked: %s";
+    public static final String DOCUMENT_REQUIRED_NOT_VERIFIED = "Required document(s) not verified yet: %s";
+    public static final String DOCUMENT_STORAGE_UNAVAILABLE = "Document storage is unavailable right now; please try again later";
+    // Shown to the applicant as the reason a file was blocked by the automatic checks.
+    public static final String DOCUMENT_BLOCKED_TYPE_NOT_ALLOWED =
+            "The file type could not be recognised or is not allowed (only PDF, PNG and JPEG files are accepted)";
+    public static final String DOCUMENT_BLOCKED_TYPE_MISMATCH = "The file content does not match the file type it was uploaded as";
+    public static final String DOCUMENT_BLOCKED_PDF_UNREADABLE = "The PDF could not be read";
+    public static final String DOCUMENT_BLOCKED_PDF_ENCRYPTED = "The PDF is encrypted or password protected";
+    public static final String DOCUMENT_BLOCKED_PDF_TOO_MANY_PAGES = "The PDF has too many pages";
+    public static final String DOCUMENT_BLOCKED_PDF_ACTIVE_CONTENT = "The PDF contains active content (scripts, launch actions or embedded files)";
+    public static final String DOCUMENT_BLOCKED_IMAGE_UNREADABLE = "The image could not be read";
+    public static final String DOCUMENT_BLOCKED_IMAGE_TOO_LARGE = "The image dimensions are too large";
+    public static final String DOCUMENT_BLOCKED_PROCESSING_FAILED = "The file could not be checked after several attempts; please upload it again";
+    public static final String DOCUMENT_BLOCKED_MALWARE = "The file failed the malware scan";
+
     // ---------- Platform access model ----------
     public static final String ROLE_SUPER_ADMIN_ONLY = "Only a super admin can grant or revoke role %s";
     public static final String ROLE_SELF_GRANT_FORBIDDEN = "You cannot grant a platform role to yourself";

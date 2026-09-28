@@ -13,4 +13,7 @@ public interface AirlineOnboardingApplicationRepository extends JpaRepository<Ai
     List<AirlineOnboardingApplication> findByApplicantUserId(Long applicantUserId);
 
     Page<AirlineOnboardingApplication> findByStatus(OnboardingStatus status, Pageable pageable);
+
+    Page<AirlineOnboardingApplication> findByStatusAndCaseOwnerUserId(
+            OnboardingStatus status, Long caseOwnerUserId, Pageable pageable);
 }
