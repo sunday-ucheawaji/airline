@@ -52,13 +52,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
-    /** City not found. */
-    @ExceptionHandler(CityException.class)
-    public ResponseEntity<ErrorResponse> handleCity(
-            CityException ex, HttpServletRequest request) {
-        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
-    }
-
     /** Airport conflicts (duplicate IATA code) and lookups. */
     @ExceptionHandler(AirportException.class)
     public ResponseEntity<ErrorResponse> handleAirport(

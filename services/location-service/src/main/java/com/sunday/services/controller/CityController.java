@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.payload.request.CityRequest;
 import com.sunday.common_lib.payload.response.ApiResponse;
 import com.sunday.common_lib.payload.response.CityResponse;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/cities")
@@ -24,6 +26,11 @@ import java.util.List;
 public class    CityController {
 
     private final CityService cityService;
+
+    // Whitelisted so an arbitrary/misspelled field name is a clean 400, not an unmapped
+    // PropertyReferenceException surfacing as a raw 500.
+    private static final Set<String> SORTABLE_FIELDS = Set.of(
+            "name", "cityCode", "countryCode", "countryName", "regionCode", "timeZoneId");
 
     // ---------- CREATE ----------
 
@@ -55,7 +62,16 @@ public class    CityController {
             @RequestParam(defaultValue = "name") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDirection) {
 
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+        if (!SORTABLE_FIELDS.contains(sortBy)) {
+            throw new BadRequestException("sortBy must be one of " + SORTABLE_FIELDS);
+        }
+        Sort.Direction direction;
+        try {
+            direction = Sort.Direction.fromString(sortDirection);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("sortDirection must be 'asc' or 'desc'");
+        }
+        Sort sort = Sort.by(direction, sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
         return ResponseEntity.ok(cityService.getAllCities(pageable));
     }

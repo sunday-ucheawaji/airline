@@ -1,7 +1,6 @@
 package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.exception.AirportException;
-import com.sunday.common_lib.exception.CityException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AirportRequest;
 import com.sunday.common_lib.payload.response.AirportResponse;
@@ -40,7 +39,7 @@ public class AirportServiceImpl implements AirportService {
         }
 
         City city = cityRepository.findById(request.getCityId())
-                .orElseThrow(() -> new CityException("City not found with id: " + request.getCityId()));
+                .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + request.getCityId()));
 
         Airport airport = AirportMapper.toEntity(request);
         airport.setCity(city);
@@ -121,7 +120,7 @@ public class AirportServiceImpl implements AirportService {
 
         if (request.getCityId() != null) {
             City newCity = cityRepository.findById(request.getCityId())
-                    .orElseThrow(() -> new CityException("City not found with id: " + request.getCityId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + request.getCityId()));
             existingAirport.setCity(newCity);
         }
 

@@ -33,8 +33,8 @@ public class AirlineController {
 
     @GetMapping("/{id}")
     public ResponseEntity<AirlineResponse> getAirlineById(
-            @PathVariable Long id) {
-        return ResponseEntity.ok(airlineService.getAirlineById(id));
+            @PathVariable Long id, @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(airlineService.getAirlineById(id, userId));
     }
 
     @GetMapping("/{airlineId}/permissions")

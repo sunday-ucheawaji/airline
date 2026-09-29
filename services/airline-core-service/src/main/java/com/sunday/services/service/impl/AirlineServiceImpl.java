@@ -76,10 +76,15 @@ public class AirlineServiceImpl implements AirlineService {
                 .orElse(List.of());
     }
 
+    // Deliberately not @Cacheable: the permission check must run on every call. Caching this method
+    // would let the first caller's DB hit satisfy every later caller straight from cache, skipping
+    // requireActiveMembership entirely and leaking the airline's data to non-members.
     @Override
-    @Cacheable(cacheNames = "airlines", key = "#id")
-    public AirlineResponse getAirlineById(Long id) {
-        return AirlineMapper.toResponse(getAirlineOrThrow(id));
+    @Transactional(readOnly = true)
+    public AirlineResponse getAirlineById(Long id, Long userId) {
+        Airline airline = getAirlineOrThrow(id);
+        requireActiveMembership(id, userId);
+        return AirlineMapper.toResponse(airline);
     }
 
     @Override

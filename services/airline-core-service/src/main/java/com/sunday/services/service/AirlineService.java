@@ -20,7 +20,7 @@ public interface AirlineService {
      * naming every airline the caller lacks the permission on (missing membership counts as lacking it).
      */
     void requirePermission(Long userId, List<Long> airlineIds, String permission);
-    AirlineResponse getAirlineById(Long id);
+    AirlineResponse getAirlineById(Long id, Long userId);
     Page<AirlineResponse> getAllAirlines(Pageable pageable);
     AirlineResponse updateAirline(Long airlineId, AirlineRequest request, Long userId);
     void deleteAirline(Long id, Long userId);
