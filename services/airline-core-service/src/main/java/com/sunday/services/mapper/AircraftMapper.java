@@ -69,7 +69,8 @@ public class AircraftMapper {
                 .build();
     }
 
-    public static void updateEntity(Aircraft aircraft, AircraftRequest request, Airline airline) {
+    /** Never touches {@code airline} — an aircraft's airline is set once, at creation, and never moved by an update. */
+    public static void updateEntity(Aircraft aircraft, AircraftRequest request) {
         if (aircraft == null || request == null) return;
 
         aircraft.setCode(request.getCode());
@@ -88,7 +89,6 @@ public class AircraftMapper {
         aircraft.setNextMaintenanceDate(request.getNextMaintenanceDate());
         aircraft.setStatus(request.getStatus());
         aircraft.setIsAvailable(request.getIsAvailable());
-        aircraft.setAirline(airline);
         aircraft.setCurrentAirportId(request.getCurrentAirportId());
     }
 }

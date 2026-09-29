@@ -54,6 +54,12 @@ public class ErrorMessageUtil {
     public static final String AIRLINE_STATUS_UNCHANGED = "Airline %s is already %s";
     public static final String AIRLINE_CLOSED_STATUS_LOCKED = "Airline %s has been closed and its status can no longer be changed";
 
+    // ---------- Aircraft ----------
+    public static final String AIRCRAFT_NOT_FOUND_BY_ID = "Aircraft not found with id: %s";
+    public static final String AIRCRAFT_CODE_ALREADY_EXISTS = "Aircraft with code %s already exists";
+    public static final String AIRCRAFT_SEATS_EXCEED_CAPACITY = "Total specified seats exceed aircraft seating capacity";
+    public static final String AIRCRAFT_INVALID_YEAR_OF_MANUFACTURE = "Invalid year of manufacture";
+
     // ---------- Airline membership (invitations) ----------
     public static final String MEMBER_INVITE_EMAIL_MANDATORY = "A valid email is required";
     public static final String MEMBER_INVITE_ROLE_MANDATORY = "roleId is required";

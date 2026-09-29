@@ -1,9 +1,9 @@
 package com.sunday.services.controller;
 
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AircraftRequest;
 import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.services.service.AircraftService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,35 +19,35 @@ public class AircraftController {
 
     @PostMapping
     public ResponseEntity<AircraftResponse> createAircraft(
-            @RequestBody AircraftRequest request,
-            @RequestHeader("X-User-Id") Long userId) throws ResourceNotFoundException {
+            @Valid @RequestBody AircraftRequest request,
+            @RequestHeader("X-User-Id") Long userId) {
         return ResponseEntity.ok(aircraftService.createAircraft(request, userId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AircraftResponse> getAircraftById(@PathVariable Long id)
-            throws ResourceNotFoundException {
-        return ResponseEntity.ok(aircraftService.getAircraftById(id));
+    public ResponseEntity<AircraftResponse> getAircraftById(
+            @PathVariable Long id, @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(aircraftService.getAircraftById(id, userId));
     }
 
     @GetMapping
-    public ResponseEntity<List<AircraftResponse>> listAllAircrafts(
-            @RequestHeader("X-User-Id") Long userId) {
-        return ResponseEntity.ok(aircraftService.listAllAircraftsByOwner(userId));
+    public ResponseEntity<List<AircraftResponse>> listAircraftsForAirline(
+            @RequestParam Long airlineId, @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(aircraftService.listAircraftsForAirline(airlineId, userId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<AircraftResponse> updateAircraft(
             @PathVariable Long id,
-            @RequestBody AircraftRequest request,
-            @RequestHeader("X-User-Id") Long userId) throws ResourceNotFoundException {
+            @Valid @RequestBody AircraftRequest request,
+            @RequestHeader("X-User-Id") Long userId) {
         return ResponseEntity.ok(aircraftService.updateAircraft(id, request, userId));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAircraft(@PathVariable Long id)
-            throws ResourceNotFoundException {
-        aircraftService.deleteAircraft(id);
+    public ResponseEntity<Void> deleteAircraft(
+            @PathVariable Long id, @RequestHeader("X-User-Id") Long userId) {
+        aircraftService.deleteAircraft(id, userId);
         return ResponseEntity.noContent().build();
     }
 }

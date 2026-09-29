@@ -192,6 +192,10 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.PATCH, "/api/cities/**", "/api/airports/**").hasAuthority(LOCATION_MANAGE)
                         .pathMatchers(HttpMethod.DELETE, "/api/cities/**", "/api/airports/**").hasAuthority(LOCATION_MANAGE)
 
+                        // Aircraft: gateway only checks authentication — AIRCRAFT_MANAGE/AIRCRAFT_READ are
+                        // checked inside airline-core-service, same layering as /api/airlines/{id} PUT/DELETE.
+                        .pathMatchers("/api/aircrafts/**").authenticated()
+
                         // --- any signed-in user (per-airline checks happen inside the services) ---
                         .pathMatchers("/api/**").authenticated()
 

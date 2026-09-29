@@ -11,6 +11,10 @@ import java.time.LocalDate;
 @Data
 public class AircraftRequest {
 
+    // Required on create (the airline the caller is acting for); ignored on update,
+    // since an aircraft can't be moved between airlines.
+    private Long airlineId;
+
     @NotBlank(message = "Aircraft code is required")
     private String code;
 
