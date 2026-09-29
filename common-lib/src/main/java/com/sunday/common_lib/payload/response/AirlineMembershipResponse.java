@@ -16,6 +16,8 @@ public class AirlineMembershipResponse {
     private Long userId;
     private Long roleId;
     private String status;
+    private Long invitedByUserId;
+    private Instant expiresAt;
     private Instant joinedAt;
     private Instant createdAt;
     private Instant updatedAt;

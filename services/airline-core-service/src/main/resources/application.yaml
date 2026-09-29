@@ -48,6 +48,9 @@ spring:
 
 airline:
   owner-role-id: ${AIRLINE_OWNER_ROLE_ID}
+  admin-role-id: ${AIRLINE_ADMIN_ROLE_ID}
+  viewer-role-id: ${AIRLINE_VIEWER_ROLE_ID}
+  invitation-expiry: 7d
   documents:
     max-file-size-bytes: 10485760
     max-documents-per-application: 20

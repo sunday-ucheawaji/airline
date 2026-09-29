@@ -17,4 +17,8 @@ public interface UserClient {
 
     @GetMapping("/internal/users/by-role/{roleName}")
     List<ReviewerResponse> getReviewersByRole(@PathVariable String roleName);
+
+    /** 404 (surfaced as FeignException.NotFound) when no account has this email. */
+    @GetMapping("/internal/users/by-email/{email}")
+    ReviewerResponse getUserByEmail(@PathVariable String email);
 }

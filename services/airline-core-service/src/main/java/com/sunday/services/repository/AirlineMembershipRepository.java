@@ -4,6 +4,8 @@ import com.sunday.services.enums.MembershipStatus;
 import com.sunday.services.model.AirlineMembership;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,5 +19,11 @@ public interface AirlineMembershipRepository extends JpaRepository<AirlineMember
 
     boolean existsByUserIdAndStatusNot(Long userId, MembershipStatus status);
 
+    boolean existsByUserIdAndStatusIn(Long userId, Collection<MembershipStatus> statuses);
+
     boolean existsByUserIdAndAirlineIdAndStatus(Long userId, Long airlineId, MembershipStatus status);
+
+    long countByAirlineIdAndRoleIdAndStatus(Long airlineId, Long roleId, MembershipStatus status);
+
+    List<AirlineMembership> findByStatusAndExpiresAtBefore(MembershipStatus status, Instant cutoff);
 }

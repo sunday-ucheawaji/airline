@@ -54,6 +54,25 @@ public class ErrorMessageUtil {
     public static final String AIRLINE_STATUS_UNCHANGED = "Airline %s is already %s";
     public static final String AIRLINE_CLOSED_STATUS_LOCKED = "Airline %s has been closed and its status can no longer be changed";
 
+    // ---------- Airline membership (invitations) ----------
+    public static final String MEMBER_INVITE_EMAIL_MANDATORY = "A valid email is required";
+    public static final String MEMBER_INVITE_ROLE_MANDATORY = "roleId is required";
+    public static final String MEMBER_STATUS_MANDATORY = "status is required";
+    public static final String MEMBER_INVITE_TARGET_ROLE_INVALID = "Role %s cannot be invited to an airline; only ADMIN or VIEWER can";
+    public static final String MEMBER_INVITE_USER_NOT_FOUND = "No user found with email %s";
+    public static final String MEMBER_INVITE_TARGET_IS_PLATFORM_STAFF = "User %s holds a platform role and cannot join an airline";
+    public static final String MEMBER_ALREADY_ACTIVE = "User %s is already a member of airline %s";
+    public static final String MEMBER_ALREADY_INVITED = "User %s already has a pending invitation to airline %s";
+    public static final String MEMBERSHIP_NOT_FOUND = "Membership %s not found for airline %s";
+    public static final String MEMBERSHIP_NOT_PENDING = "Membership %s is not a pending invitation";
+    public static final String MEMBERSHIP_INVITATION_EXPIRED = "This invitation has expired";
+    public static final String MEMBERSHIP_ACCEPT_NOT_INVITEE = "Only the invited user can accept this invitation";
+    public static final String MEMBERSHIP_NOT_ACTIVE_OR_SUSPENDED = "Membership %s is not an active or suspended member";
+    public static final String MEMBER_ROLE_UPDATE_TARGET_INVALID = "Role %s cannot be assigned to an existing member; only ADMIN or VIEWER can";
+    public static final String MEMBER_STATUS_UPDATE_INVALID = "status must be ACTIVE or SUSPENDED";
+    public static final String MEMBER_CANNOT_REMOVE_LAST_OWNER = "Cannot remove the last OWNER of airline %s";
+    public static final String MEMBER_ROLE_UPDATE_OWNER_LOCKED = "The OWNER's role cannot be changed here";
+
     // ---------- Ancillary ----------
     public static final String AIRLINE_ID_REQUIRED = "airlineId is required";
     public static final String ANCILLARY_NOT_FOUND_BY_ID = "Ancillary not found with id: %s";

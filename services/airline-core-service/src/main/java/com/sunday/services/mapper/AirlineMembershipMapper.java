@@ -16,6 +16,8 @@ public class AirlineMembershipMapper {
                 .userId(membership.getUserId())
                 .roleId(membership.getRoleId())
                 .status(membership.getStatus().name())
+                .invitedByUserId(membership.getInvitedByUserId())
+                .expiresAt(membership.getExpiresAt())
                 .joinedAt(membership.getJoinedAt())
                 .createdAt(membership.getCreatedAt())
                 .updatedAt(membership.getUpdatedAt())

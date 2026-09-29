@@ -52,6 +52,14 @@ public class AirlineMembership {
     @Column(nullable = false, length = 20)
     private MembershipStatus status = MembershipStatus.ACTIVE;
 
+    /** Who sent the invitation; null for the OWNER row created directly at provisioning. */
+    @Column(name = "invited_by_user_id")
+    private Long invitedByUserId;
+
+    /** Only meaningful while {@code status = INVITED}; null once accepted or for a non-invitation row. */
+    @Column(name = "expires_at")
+    private Instant expiresAt;
+
     private Instant joinedAt;
 
     @CreatedDate
