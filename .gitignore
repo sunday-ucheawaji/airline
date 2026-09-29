@@ -15,6 +15,9 @@ application-local.properties
 # Build output
 target/
 
+# Tests are kept locally only, never committed (every module's src/test/)
+**/src/test/
+
 # IDE
 .idea/
 *.iml
