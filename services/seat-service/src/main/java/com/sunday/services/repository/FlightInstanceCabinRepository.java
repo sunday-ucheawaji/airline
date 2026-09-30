@@ -10,10 +10,16 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface FlightInstanceCabinRepository extends JpaRepository<FlightInstanceCabin, Long> {
     Page<FlightInstanceCabin> findByFlightInstanceId(Long flightInstanceId, Pageable pageable);
+
+    List<FlightInstanceCabin> findAllByFlightInstanceId(Long flightInstanceId);
+
+    /** Used to find which ids in a bulk-created batch already have cabins (redelivery/partial-retry guard). */
+    List<FlightInstanceCabin> findAllByFlightInstanceIdIn(List<Long> flightInstanceIds);
 
     @Query("SELECT fic FROM FlightInstanceCabin fic WHERE fic.flightInstanceId = :flightInstanceId AND fic.cabinClass.name = :cabinClass")
     Optional<FlightInstanceCabin> findByFlightInstanceIdAndCabinClassName(

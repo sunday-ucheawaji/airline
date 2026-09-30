@@ -13,15 +13,17 @@ import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Needed only so {@link FlightOpsKafkaErrorHandlingConfig}'s DeadLetterPublishingRecoverer has a
+ * KafkaTemplate to republish failed records to the .DLT topic — seat-service consumes events but
+ * didn't previously publish any of its own.
+ */
 @Configuration
 public class KafkaProducerConfig {
 
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    // Object-typed so this one producer/template serves every event type this service
-    // publishes (FlightInstanceCreatedEvent, FlightInstanceAircraftChangedEvent, ...) —
-    // JacksonJsonSerializer doesn't care about the static generic type at runtime.
     @Bean
     public ProducerFactory<String, Object> producerFactory() {
         Map<String, Object> config = new HashMap<>();

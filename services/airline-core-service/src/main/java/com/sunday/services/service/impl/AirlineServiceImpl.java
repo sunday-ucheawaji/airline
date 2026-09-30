@@ -25,6 +25,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -85,6 +87,20 @@ public class AirlineServiceImpl implements AirlineService {
         Airline airline = getAirlineOrThrow(id);
         requireActiveMembership(id, userId);
         return AirlineMapper.toResponse(airline);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AirlineResponse getAirlineByIdInternal(Long id) {
+        return AirlineMapper.toResponse(getAirlineOrThrow(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, AirlineResponse> getAirlinesByIdsInternal(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return Map.of();
+        return airlineRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Airline::getId, AirlineMapper::toResponse));
     }
 
     @Override

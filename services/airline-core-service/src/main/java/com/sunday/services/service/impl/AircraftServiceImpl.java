@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +59,20 @@ public class AircraftServiceImpl implements AircraftService {
         Aircraft aircraft = getAircraftOrThrow(id);
         airlineService.requirePermission(userId, List.of(aircraft.getAirline().getId()), AircraftPermissions.READ);
         return AircraftMapper.toResponse(aircraft);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AircraftResponse getAircraftByIdInternal(Long id) {
+        return AircraftMapper.toResponse(getAircraftOrThrow(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, AircraftResponse> getAircraftsByIdsInternal(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return Map.of();
+        return aircraftRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Aircraft::getId, AircraftMapper::toResponse));
     }
 
     @Override

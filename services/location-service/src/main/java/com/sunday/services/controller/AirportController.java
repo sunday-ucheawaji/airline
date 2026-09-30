@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/airports")
@@ -35,6 +36,12 @@ public class AirportController {
         return ResponseEntity.ok(airportService.getAirportById(id));
     }
 
+
+    /** Batch variant of {@code GET /{id}}: one round trip instead of one per airport. */
+    @PostMapping("/batch")
+    public ResponseEntity<Map<Long, AirportResponse>> getAirportsByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(airportService.getAirportsByIds(ids));
+    }
 
     @GetMapping
     public ResponseEntity<List<AirportResponse>> getAllAirports() {

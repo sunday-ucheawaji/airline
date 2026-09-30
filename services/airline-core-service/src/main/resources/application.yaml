@@ -50,6 +50,8 @@ airline:
   owner-role-id: ${AIRLINE_OWNER_ROLE_ID}
   admin-role-id: ${AIRLINE_ADMIN_ROLE_ID}
   viewer-role-id: ${AIRLINE_VIEWER_ROLE_ID}
+  flight-dispatcher-role-id: ${AIRLINE_FLIGHT_DISPATCHER_ROLE_ID}
+  fleet-assignment-officer-role-id: ${AIRLINE_FLEET_ASSIGNMENT_OFFICER_ROLE_ID}
   invitation-expiry: 7d
   documents:
     max-file-size-bytes: 10485760

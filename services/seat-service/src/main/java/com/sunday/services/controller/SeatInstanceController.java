@@ -2,6 +2,7 @@ package com.sunday.services.controller;
 
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.payload.request.SeatInstanceRequest;
+import com.sunday.common_lib.payload.response.CabinSeatStatusResponse;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
 import com.sunday.services.service.SeatInstanceService;
 import jakarta.validation.Valid;
@@ -57,6 +58,12 @@ public class SeatInstanceController {
     @GetMapping("/flight/{flightId}/available/count")
     public ResponseEntity<Long> countAvailableByFlightId(@PathVariable Long flightId) {
         return ResponseEntity.ok(seatInstanceService.countAvailableByFlightId(flightId));
+    }
+
+    /** Per-cabin count of seats already sold/held for this instance — used by flight-ops-service to validate an aircraft reassignment before committing it. No caller-identity header, same as every other endpoint here (open, service-to-service). */
+    @GetMapping("/flight-instance/{flightInstanceId}/status-summary")
+    public ResponseEntity<List<CabinSeatStatusResponse>> getSeatStatusSummary(@PathVariable Long flightInstanceId) {
+        return ResponseEntity.ok(seatInstanceService.getSeatStatusSummary(flightInstanceId));
     }
 
     @PatchMapping("/{id}/status")

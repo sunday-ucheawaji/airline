@@ -3,6 +3,7 @@ package com.sunday.common_lib.payload.request;
 
 
 import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -21,14 +22,14 @@ public class FlightSearchRequest {
     private Long departureAirportId;
     private Long arrivalAirportId;
 
-    @NotNull(message = "Departure date is required")
+    @NotNull(message = ErrorMessageUtil.SEARCH_DEPARTURE_DATE_MANDATORY)
     private LocalDate departureDate;
 
-    @NotNull(message = "Number of passengers is required")
-    @Min(value = 1, message = "At least 1 passenger is required")
+    @NotNull(message = ErrorMessageUtil.SEARCH_PASSENGERS_MANDATORY)
+    @Min(value = 1, message = ErrorMessageUtil.SEARCH_PASSENGERS_MIN)
     private Integer passengers;
 
-    @NotNull(message = "Cabin class is required")
+    @NotNull(message = ErrorMessageUtil.SEARCH_CABIN_CLASS_MANDATORY)
     private CabinClassType cabinClass;
 
     // Filter Parameters

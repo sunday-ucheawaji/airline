@@ -12,6 +12,7 @@ import java.util.Optional;
 
 public interface SeatInstanceRepository extends JpaRepository<SeatInstance, Long> {
     List<SeatInstance> findByFlightId(Long flightId);
+    List<SeatInstance> findByFlightInstanceId(Long flightInstanceId);
     List<SeatInstance> findByFlightScheduleId(Long flightScheduleId);
     List<SeatInstance> findBySeatId(Long seatId);
     List<SeatInstance> findByFlightInstanceCabinId(Long id);

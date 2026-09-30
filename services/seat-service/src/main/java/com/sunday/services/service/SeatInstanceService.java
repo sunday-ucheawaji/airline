@@ -2,6 +2,7 @@ package com.sunday.services.service;
 
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.payload.request.SeatInstanceRequest;
+import com.sunday.common_lib.payload.response.CabinSeatStatusResponse;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
 
 import java.util.List;
@@ -16,4 +17,7 @@ public interface SeatInstanceService {
     SeatInstanceResponse updateSeatInstanceStatus(Long id, SeatAvailabilityStatus status);
     Long countAvailableByFlightId(Long flightId);
     Double calculateSeatPrice(List<Long> seatInstanceId);
+
+    /** Per-cabin count of seats already sold/held (status != AVAILABLE) for one flight instance — used by flight-ops-service to validate an aircraft reassignment before committing it. */
+    List<CabinSeatStatusResponse> getSeatStatusSummary(Long flightInstanceId);
 }

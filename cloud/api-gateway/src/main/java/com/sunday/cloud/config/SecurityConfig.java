@@ -196,6 +196,10 @@ public class SecurityConfig {
                         // checked inside airline-core-service, same layering as /api/airlines/{id} PUT/DELETE.
                         .pathMatchers("/api/aircrafts/**").authenticated()
 
+                        // Flights/schedules/instances: gateway only checks authentication — FLIGHT_*/SCHEDULE_*/
+                        // INSTANCE_* permissions are checked inside flight-ops-service, same layering as /api/aircrafts/**.
+                        .pathMatchers("/api/flights/**", "/api/flight-instances/**", "/api/flight-schedules/**").authenticated()
+
                         // --- any signed-in user (per-airline checks happen inside the services) ---
                         .pathMatchers("/api/**").authenticated()
 

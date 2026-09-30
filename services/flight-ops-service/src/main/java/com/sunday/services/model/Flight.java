@@ -32,10 +32,6 @@ public class Flight {
     @Column(name = "airline_id", nullable = false)
     private Long airlineId;
 
-    // Cross-service ref: Aircraft is in airline-core-service
-    @Column(name = "aircraft_id", nullable = false)
-    private Long aircraftId;
-
     // Cross-service ref: Airport is in location-service
     @Column(name = "departure_airport_id", nullable = false)
     private Long departureAirportId;

@@ -2,6 +2,7 @@ package com.sunday.services.client;
 
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.response.CabinClassResponse;
+import com.sunday.common_lib.payload.response.CabinSeatStatusResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -17,6 +18,11 @@ public class SeatClientFallback implements SeatClient {
 
     @Override
     public CabinClassResponse getCabinClassByAircraftIdAndName(CabinClassType cabinClass, Long id) {
+        return null;
+    }
+
+    @Override
+    public List<CabinSeatStatusResponse> getSeatStatusSummary(Long flightInstanceId) {
         return null;
     }
 }

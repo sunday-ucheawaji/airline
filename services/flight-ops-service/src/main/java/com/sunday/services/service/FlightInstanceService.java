@@ -1,8 +1,10 @@
 package com.sunday.services.service;
 
-import com.sunday.common_lib.exception.AirportException;
 import com.sunday.common_lib.payload.request.FlightInstanceRequest;
+import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.common_lib.payload.response.FlightInstanceResponse;
+import com.sunday.services.model.Flight;
+import com.sunday.services.model.FlightInstance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -14,14 +16,21 @@ public interface FlightInstanceService {
 
     FlightInstanceResponse createFlightInstanceWithCabins(
             Long userId,
-            FlightInstanceRequest request)
-            throws Exception;
+            FlightInstanceRequest request);
 
-    List<FlightInstanceResponse> getFlightInstances();
+    /**
+     * Bulk creation for a caller (namely schedule generation) that has already resolved and
+     * permission-checked {@code flight}/{@code aircraft} once — skips the per-item permission
+     * check, aircraft lookup and flight lookup that {@link #createFlightInstanceWithCabins} has
+     * to do for its own direct (single-item) callers, and does one {@code saveAll} instead of N
+     * individual saves.
+     */
+    List<FlightInstance> createFlightInstancesInBulk(Flight flight, AircraftResponse aircraft, List<FlightInstanceRequest> requests);
 
-    FlightInstanceResponse getFlightInstanceById(Long id) throws AirportException;
+    FlightInstanceResponse getFlightInstanceById(Long id);
 
-    Page<FlightInstanceResponse> getByAirlineId(Long airlineId,
+    Page<FlightInstanceResponse> getByAirlineId(Long userId,
+                                                Long airlineId,
                                                 Long departureAirportId,
                                                 Long arrivalAirportId,
                                                 Long flightId,
@@ -30,9 +39,13 @@ public interface FlightInstanceService {
 
     FlightInstanceResponse updateFlightInstance(
             Long id,
-            FlightInstanceRequest request) throws AirportException;
+            FlightInstanceRequest request,
+            Long userId);
 
-    void deleteFlightInstance(Long id);
+    void deleteFlightInstance(Long id, Long userId);
 
     Map<Long, FlightInstanceResponse> getFlightInstancesByIds(List<Long> ids);
+
+    /** Reassign the aircraft on an already-created instance — validated against seat-service's already-sold seats before being committed. */
+    FlightInstanceResponse reassignAircraft(Long id, Long newAircraftId, Long userId);
 }

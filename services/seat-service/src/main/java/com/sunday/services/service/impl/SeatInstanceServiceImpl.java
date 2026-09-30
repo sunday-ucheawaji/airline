@@ -1,7 +1,9 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.payload.request.SeatInstanceRequest;
+import com.sunday.common_lib.payload.response.CabinSeatStatusResponse;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
 import com.sunday.services.mapper.SeatInstanceMapper;
 import com.sunday.services.model.FlightInstanceCabin;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -100,6 +103,24 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
     @Transactional(readOnly = true)
     public Long countAvailableByFlightId(Long flightId) {
         return seatInstanceRepository.countAvailableByFlightId(flightId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CabinSeatStatusResponse> getSeatStatusSummary(Long flightInstanceId) {
+        List<SeatInstance> instances = seatInstanceRepository.findByFlightInstanceId(flightInstanceId);
+        Map<CabinClassType, Long> counts = instances.stream()
+                .filter(si -> si.getStatus() != SeatAvailabilityStatus.AVAILABLE)
+                .filter(si -> si.getFlightInstanceCabin() != null)
+                .collect(Collectors.groupingBy(
+                        si -> si.getFlightInstanceCabin().getCabinClass().getName(),
+                        Collectors.counting()));
+        return counts.entrySet().stream()
+                .map(e -> CabinSeatStatusResponse.builder()
+                        .cabinClass(e.getKey())
+                        .nonAvailableSeatCount(e.getValue())
+                        .build())
+                .toList();
     }
 
     @Override

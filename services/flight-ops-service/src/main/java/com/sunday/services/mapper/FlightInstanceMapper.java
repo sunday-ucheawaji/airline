@@ -15,7 +15,8 @@ public class FlightInstanceMapper {
         if (request == null) return null;
         return FlightInstance.builder()
                 .flight(flight)
-                .airlineId(request.getAirlineId() != null ? request.getAirlineId() : flight.getAirlineId())
+                .airlineId(flight.getAirlineId())
+                .aircraftId(request.getAircraftId())
                 .scheduleId(request.getScheduleId())
                 .departureAirportId(request.getDepartureAirportId() != null ?
                         request.getDepartureAirportId() : flight.getDepartureAirportId())
@@ -45,7 +46,7 @@ public class FlightInstanceMapper {
                 .id(fi.getId())
                 .flightId(fi.getFlight() != null ? fi.getFlight().getId() : null)
                 .flightNumber(fi.getFlight() != null ? fi.getFlight().getFlightNumber() : null)
-                .aircraftId(fi.getFlight().getAircraftId())
+                .aircraftId(fi.getAircraftId())
                 .aircraftModal(aircraftResponse.getModel())
                 .aircraftCode(aircraftResponse.getCode())
                 .airlineId(fi.getAirlineId())

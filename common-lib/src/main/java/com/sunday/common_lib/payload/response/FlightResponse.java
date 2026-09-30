@@ -15,7 +15,6 @@ public class FlightResponse {
     private Long id;
     private String flightNumber;
     private AirlineResponse airline;
-    private AircraftResponse aircraft;
     private AirportResponse departureAirport;
     private AirportResponse arrivalAirport;
     private LocalDateTime departureTime;

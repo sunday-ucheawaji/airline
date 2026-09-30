@@ -57,6 +57,12 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
     @Value("${airline.owner-role-id}")
     private Long ownerRoleId;
 
+    @Value("${airline.flight-dispatcher-role-id}")
+    private Long flightDispatcherRoleId;
+
+    @Value("${airline.fleet-assignment-officer-role-id}")
+    private Long fleetAssignmentOfficerRoleId;
+
     @Value("${airline.invitation-expiry:7d}")
     private Duration invitationExpiry;
 
@@ -187,7 +193,8 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
     }
 
     private void requireInvitableRole(Long roleId) {
-        if (!adminRoleId.equals(roleId) && !viewerRoleId.equals(roleId)) {
+        if (!adminRoleId.equals(roleId) && !viewerRoleId.equals(roleId)
+                && !flightDispatcherRoleId.equals(roleId) && !fleetAssignmentOfficerRoleId.equals(roleId)) {
             throw new BadRequestException(String.format(ErrorMessageUtil.MEMBER_INVITE_TARGET_ROLE_INVALID, roleId));
         }
     }

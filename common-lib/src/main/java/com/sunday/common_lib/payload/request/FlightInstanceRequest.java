@@ -1,6 +1,7 @@
 package com.sunday.common_lib.payload.request;
 
 import com.sunday.common_lib.enums.FlightStatus;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -14,10 +15,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class FlightInstanceRequest {
 
-    @NotNull(message = "Flight ID is required")
+    @NotNull(message = ErrorMessageUtil.FLIGHT_ID_MANDATORY)
     private Long flightId;
 
-    private Long airlineId;
+    @NotNull(message = ErrorMessageUtil.AIRCRAFT_ID_MANDATORY)
+    private Long aircraftId;
 
     private Long scheduleId;
 
@@ -25,13 +27,13 @@ public class FlightInstanceRequest {
 
     private Long arrivalAirportId;
 
-    @NotNull(message = "Departure date-time is required")
+    @NotNull(message = ErrorMessageUtil.DEPARTURE_DATETIME_MANDATORY)
     private LocalDateTime departureDateTime;
 
-    @NotNull(message = "Arrival date-time is required")
+    @NotNull(message = ErrorMessageUtil.ARRIVAL_DATETIME_MANDATORY)
     private LocalDateTime arrivalDateTime;
 
-    @NotNull(message = "Total seats is required")
+    @NotNull(message = ErrorMessageUtil.TOTAL_SEATS_MANDATORY)
     @Positive
     private Integer totalSeats;
 

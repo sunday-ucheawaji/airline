@@ -31,6 +31,12 @@ public class FlightInstance {
     @JoinColumn(name = "flight_id", nullable = false)
     private Flight flight;
 
+    // Cross-service ref: Aircraft is in airline-core-service. Assigned at creation,
+    // independently reassignable afterward (aircraft swaps, maintenance substitutions) —
+    // this is deliberately on the instance, not the Flight route/template.
+    @Column(name = "aircraft_id")
+    private Long aircraftId;
+
     // Cross-service ref: Airport is in location-service
     @Column(name = "departure_airport_id", nullable = false)
     private Long departureAirportId;

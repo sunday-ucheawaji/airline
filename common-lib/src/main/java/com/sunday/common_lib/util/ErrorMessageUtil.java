@@ -60,6 +60,44 @@ public class ErrorMessageUtil {
     public static final String AIRCRAFT_SEATS_EXCEED_CAPACITY = "Total specified seats exceed aircraft seating capacity";
     public static final String AIRCRAFT_INVALID_YEAR_OF_MANUFACTURE = "Invalid year of manufacture";
 
+    // ---------- Flight ops: Flight ----------
+    public static final String FLIGHT_NUMBER_MANDATORY = "Flight number is required";
+    public static final String DEPARTURE_AIRPORT_ID_MANDATORY = "Departure airport ID is required";
+    public static final String ARRIVAL_AIRPORT_ID_MANDATORY = "Arrival airport ID is required";
+    public static final String FLIGHT_NUMBER_ALREADY_EXISTS = "Flight with number '%s' already exists";
+    public static final String FLIGHT_NOT_FOUND_BY_ID = "Flight not found with id: %s";
+    public static final String FLIGHT_NOT_FOUND_BY_NUMBER = "Flight not found with number: %s";
+
+    // ---------- Flight ops: FlightInstance ----------
+    public static final String FLIGHT_ID_MANDATORY = "Flight ID is required";
+    public static final String AIRCRAFT_ID_MANDATORY = "Aircraft ID is required";
+    public static final String DEPARTURE_DATETIME_MANDATORY = "Departure date-time is required";
+    public static final String ARRIVAL_DATETIME_MANDATORY = "Arrival date-time is required";
+    public static final String TOTAL_SEATS_MANDATORY = "Total seats is required";
+    public static final String FLIGHT_INSTANCE_NOT_FOUND_BY_ID = "Flight instance not found with id: %s";
+    public static final String SEAT_SERVICE_UNAVAILABLE = "Seat service unavailable";
+    public static final String AIRCRAFT_REASSIGN_CAPACITY_EXCEEDED =
+            "Cannot reassign: %d %s seat(s) already sold or held, but the new aircraft has %s";
+
+    // ---------- Flight ops: FlightSchedule ----------
+    public static final String DEPARTURE_TIME_MANDATORY = "Departure time is required";
+    public static final String ARRIVAL_TIME_MANDATORY = "Arrival time is required";
+    public static final String SCHEDULE_START_DATE_MANDATORY = "Start date is required";
+    public static final String SCHEDULE_END_DATE_MANDATORY = "End date is required";
+    public static final String SCHEDULE_END_DATE_BEFORE_START_DATE = "End date must be after start date";
+    public static final String FLIGHT_SCHEDULE_NOT_FOUND_BY_ID = "Flight schedule not found with id: %s";
+
+    // ---------- Flight ops: search ----------
+    public static final String SEARCH_DEPARTURE_DATE_MANDATORY = "Departure date is required";
+    public static final String SEARCH_PASSENGERS_MANDATORY = "Number of passengers is required";
+    public static final String SEARCH_PASSENGERS_MIN = "At least 1 passenger is required";
+    public static final String SEARCH_CABIN_CLASS_MANDATORY = "Cabin class is required";
+
+    // ---------- Flight ops: cross-service integration ----------
+    public static final String AIRLINE_SERVICE_ERROR = "Airline service error: %s";
+    public static final String AIRLINE_SERVICE_UNAVAILABLE = "Airline service unavailable";
+    public static final String AIRCRAFT_SERVICE_ERROR = "Aircraft service error: %s";
+
     // ---------- Airline membership (invitations) ----------
     public static final String MEMBER_INVITE_EMAIL_MANDATORY = "A valid email is required";
     public static final String MEMBER_INVITE_ROLE_MANDATORY = "roleId is required";

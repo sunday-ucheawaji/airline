@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 
 public interface AirlineService {
 
@@ -21,6 +22,13 @@ public interface AirlineService {
      */
     void requirePermission(Long userId, List<Long> airlineIds, String permission);
     AirlineResponse getAirlineById(Long id, Long userId);
+
+    /** No permission check — service-to-service only, for display-enrichment callers with no real caller identity (e.g. flight-ops-service building a FlightResponse). */
+    AirlineResponse getAirlineByIdInternal(Long id);
+
+    /** Batch variant of {@link #getAirlineByIdInternal}: one round trip instead of one per airline. */
+    Map<Long, AirlineResponse> getAirlinesByIdsInternal(List<Long> ids);
+
     Page<AirlineResponse> getAllAirlines(Pageable pageable);
     AirlineResponse updateAirline(Long airlineId, AirlineRequest request, Long userId);
     void deleteAirline(Long id, Long userId);

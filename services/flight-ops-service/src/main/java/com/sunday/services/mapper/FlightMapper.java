@@ -2,7 +2,6 @@ package com.sunday.services.mapper;
 
 import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.common_lib.payload.request.FlightRequest;
-import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.common_lib.payload.response.AirlineResponse;
 import com.sunday.common_lib.payload.response.AirportResponse;
 import com.sunday.common_lib.payload.response.FlightResponse;
@@ -14,7 +13,7 @@ public class FlightMapper {
         if (request == null) return null;
         return Flight.builder()
                 .flightNumber(request.getFlightNumber())
-                .aircraftId(request.getAircraftId())
+                .airlineId(request.getAirlineId())
                 .departureAirportId(request.getDepartureAirportId())
                 .arrivalAirportId(request.getArrivalAirportId())
                 .status(request.getStatus() != null ? request.getStatus() : FlightStatus.SCHEDULED)
@@ -22,7 +21,6 @@ public class FlightMapper {
     }
 
     public static FlightResponse toResponse(Flight flight,
-                                            AircraftResponse aircraft,
                                             AirlineResponse airlineResponse,
                                             AirportResponse departureAirport,
                                             AirportResponse arrivalAirport) {
@@ -31,7 +29,6 @@ public class FlightMapper {
                 .id(flight.getId())
                 .flightNumber(flight.getFlightNumber())
                 .airline(airlineResponse)
-                .aircraft(aircraft)
                 .departureAirport(departureAirport)
                 .arrivalAirport(arrivalAirport)
                 .status(flight.getStatus())
@@ -40,11 +37,10 @@ public class FlightMapper {
                 .build();
     }
 
+    /** airlineId is never reassignable via update — set once at creation, permission-checked against it forever after. */
     public static void updateEntity(FlightRequest request, Flight existing) {
         if (request == null || existing == null) return;
         if (request.getFlightNumber() != null) existing.setFlightNumber(request.getFlightNumber());
-        if (request.getAirlineId() != null) existing.setAirlineId(request.getAirlineId());
-        if (request.getAircraftId() != null) existing.setAircraftId(request.getAircraftId());
         if (request.getDepartureAirportId() != null) existing.setDepartureAirportId(request.getDepartureAirportId());
         if (request.getArrivalAirportId() != null) existing.setArrivalAirportId(request.getArrivalAirportId());
         if (request.getStatus() != null) existing.setStatus(request.getStatus());

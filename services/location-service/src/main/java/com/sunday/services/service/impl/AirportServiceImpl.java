@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -88,6 +89,14 @@ public class AirportServiceImpl implements AirportService {
         Airport airport = airportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Airport not found with id: " + id));
         return AirportMapper.toResponse(airport);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, AirportResponse> getAirportsByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return Map.of();
+        return airportRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Airport::getId, AirportMapper::toResponse));
     }
 
 
