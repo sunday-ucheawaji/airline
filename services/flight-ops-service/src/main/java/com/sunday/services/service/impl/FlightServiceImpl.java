@@ -3,6 +3,7 @@ package com.sunday.services.service.impl;
 import com.sunday.common_lib.constants.FlightOpsPermissions;
 import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.common_lib.exception.BadRequestException;
+import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightRequest;
 import com.sunday.common_lib.payload.response.AirlineResponse;
 import com.sunday.common_lib.payload.response.AirportResponse;
@@ -15,7 +16,6 @@ import com.sunday.services.mapper.FlightMapper;
 import com.sunday.services.model.Flight;
 import com.sunday.services.repository.FlightRepository;
 import com.sunday.services.service.FlightService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -99,7 +99,7 @@ public class FlightServiceImpl implements FlightService {
     @Transactional(readOnly = true)
     public FlightResponse getFlightById(Long id)  {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
 
         return getFlightResponse(flight);
@@ -109,7 +109,7 @@ public class FlightServiceImpl implements FlightService {
     @Transactional(readOnly = true)
     public FlightResponse getFlightByNumber(String flightNumber) {
         Flight flight = flightRepository.findByFlightNumber(flightNumber)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_NUMBER, flightNumber)));
         return getFlightResponse(flight);
     }
@@ -130,7 +130,7 @@ public class FlightServiceImpl implements FlightService {
     @Override
     public FlightResponse updateFlight(Long id, FlightRequest request, Long userId) {
         Flight existing = flightRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, existing.getAirlineId(), FlightOpsPermissions.FLIGHT_MANAGE);
 
         if (request.getFlightNumber() != null &&
@@ -147,7 +147,7 @@ public class FlightServiceImpl implements FlightService {
     @Override
     public FlightResponse changeStatus(Long id, FlightStatus status, Long userId) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, flight.getAirlineId(), FlightOpsPermissions.FLIGHT_MANAGE);
         flight.setStatus(status);
         return getFlightResponse(flight);
@@ -156,7 +156,7 @@ public class FlightServiceImpl implements FlightService {
     @Override
     public void deleteFlight(Long id, Long userId) {
         Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, flight.getAirlineId(), FlightOpsPermissions.FLIGHT_MANAGE);
         flightRepository.delete(flight);
     }

@@ -1,12 +1,12 @@
 package com.sunday.services.Integration.impl;
 
 import com.sunday.common_lib.exception.OperationNotPermittedException;
+import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.Integration.AirlineIntegrationService;
 import com.sunday.services.client.AirlineClient;
 import feign.FeignException;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -59,7 +59,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
         try {
             return airlineClient.getAircraftById(aircraftId, userId);
         } catch (FeignException.NotFound e) {
-            throw new EntityNotFoundException(String.format(ErrorMessageUtil.AIRCRAFT_NOT_FOUND_BY_ID, aircraftId));
+            throw new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRCRAFT_NOT_FOUND_BY_ID, aircraftId));
         } catch (FeignException e) {
             throw new RuntimeException(String.format(ErrorMessageUtil.AIRCRAFT_SERVICE_ERROR, e.getMessage()), e);
         }
@@ -70,7 +70,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
         try {
             return airlineClient.getAircraftByIdInternal(aircraftId);
         } catch (FeignException.NotFound e) {
-            throw new EntityNotFoundException(String.format(ErrorMessageUtil.AIRCRAFT_NOT_FOUND_BY_ID, aircraftId));
+            throw new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRCRAFT_NOT_FOUND_BY_ID, aircraftId));
         } catch (FeignException e) {
             throw new RuntimeException(String.format(ErrorMessageUtil.AIRCRAFT_SERVICE_ERROR, e.getMessage()), e);
         }

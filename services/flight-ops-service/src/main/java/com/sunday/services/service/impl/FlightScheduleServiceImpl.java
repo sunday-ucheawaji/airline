@@ -2,6 +2,7 @@ package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.constants.FlightOpsPermissions;
 import com.sunday.common_lib.enums.FlightStatus;
+import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightInstanceRequest;
 import com.sunday.common_lib.payload.request.FlightScheduleRequest;
 import com.sunday.common_lib.payload.response.AircraftResponse;
@@ -17,7 +18,6 @@ import com.sunday.services.repository.FlightRepository;
 import com.sunday.services.repository.FlightScheduleRepository;
 import com.sunday.services.service.FlightInstanceService;
 import com.sunday.services.service.FlightScheduleService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,7 +46,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     @Transactional
     public FlightScheduleResponse createFlightSchedule(Long userId, FlightScheduleRequest request) {
         Flight flight = flightRepository.findById(request.getFlightId())
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, request.getFlightId())));
         airlineIntegrationService.requirePermission(userId, flight.getAirlineId(), FlightOpsPermissions.SCHEDULE_MANAGE);
 
@@ -91,7 +91,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     @Transactional(readOnly = true)
     public FlightScheduleResponse getFlightScheduleById(Long id, Long userId) {
         FlightSchedule schedule = flightScheduleRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_SCHEDULE_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, schedule.getFlight().getAirlineId(), FlightOpsPermissions.SCHEDULE_READ);
         return getFlightScheduleResponse(schedule);
@@ -110,7 +110,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     @Override
     public FlightScheduleResponse updateFlightSchedule(Long id, FlightScheduleRequest request, Long userId) {
         FlightSchedule existing = flightScheduleRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_SCHEDULE_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, existing.getFlight().getAirlineId(), FlightOpsPermissions.SCHEDULE_MANAGE);
 
@@ -122,7 +122,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     @Override
     public void deleteFlightSchedule(Long id, Long userId) {
         FlightSchedule schedule = flightScheduleRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_SCHEDULE_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, schedule.getFlight().getAirlineId(), FlightOpsPermissions.SCHEDULE_MANAGE);
         flightScheduleRepository.delete(schedule);

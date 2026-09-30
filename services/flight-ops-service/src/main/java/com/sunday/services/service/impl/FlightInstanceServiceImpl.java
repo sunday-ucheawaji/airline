@@ -27,7 +27,6 @@ import com.sunday.services.model.FlightInstance;
 import com.sunday.services.repository.FlightInstanceRepository;
 import com.sunday.services.repository.FlightRepository;
 import com.sunday.services.service.FlightInstanceService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -104,7 +103,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     @Cacheable(cacheNames = "flightInstances", key = "#id")
     public FlightInstanceResponse getFlightInstanceById(Long id) {
         FlightInstance fi = flightInstanceRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
 
 
@@ -133,7 +132,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     @CacheEvict(cacheNames = "flightInstances", key = "#id")
     public FlightInstanceResponse updateFlightInstance(Long id, FlightInstanceRequest request, Long userId) {
         FlightInstance existing = flightInstanceRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, existing.getAirlineId(), FlightOpsPermissions.INSTANCE_MANAGE);
         FlightInstanceMapper.updateEntity(request, existing);
@@ -144,7 +143,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     @CacheEvict(cacheNames = "flightInstances", key = "#id")
     public void deleteFlightInstance(Long id, Long userId) {
         FlightInstance fi = flightInstanceRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, fi.getAirlineId(), FlightOpsPermissions.INSTANCE_MANAGE);
         flightInstanceRepository.delete(fi);
@@ -182,7 +181,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     @CacheEvict(cacheNames = "flightInstances", key = "#id")
     public FlightInstanceResponse reassignAircraft(Long id, Long newAircraftId, Long userId) {
         FlightInstance instance = flightInstanceRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, instance.getAirlineId(), FlightOpsPermissions.INSTANCE_AIRCRAFT_ASSIGN);
 
