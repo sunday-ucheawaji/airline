@@ -1,6 +1,5 @@
 package com.sunday.services.mapper;
 
-import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.request.CabinClassRequest;
 import com.sunday.common_lib.payload.response.CabinClassResponse;
 import com.sunday.services.model.CabinClass;
@@ -11,7 +10,7 @@ public class CabinClassMapper {
     public static CabinClass toEntity(CabinClassRequest request) {
         if (request == null) return null;
         return CabinClass.builder()
-                .name(CabinClassType.valueOf(request.getName()))
+                .name(request.getName())
                 .code(request.getCode().toUpperCase())
                 .description(request.getDescription())
                 .displayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0)
@@ -37,7 +36,7 @@ public class CabinClassMapper {
                 .isBookable(cabinClass.getIsBookable())
                 .typicalSeatPitch(cabinClass.getTypicalSeatPitch())
                 .typicalSeatWidth(cabinClass.getTypicalSeatWidth())
-                .seatType(cabinClass.getSeatType())
+                .seatType(cabinClass.getSeatType() != null ? cabinClass.getSeatType().name() : null)
                 .createdAt(cabinClass.getCreatedAt())
                 .updatedAt(cabinClass.getUpdatedAt())
                 .build();
@@ -45,7 +44,7 @@ public class CabinClassMapper {
 
     public static void updateEntity(CabinClassRequest request, CabinClass existing) {
         if (request == null || existing == null) return;
-        if (request.getName() != null) existing.setName(CabinClassType.valueOf(request.getName()));
+        if (request.getName() != null) existing.setName(request.getName());
         if (request.getCode() != null) existing.setCode(request.getCode().toUpperCase());
         if (request.getDescription() != null) existing.setDescription(request.getDescription());
         if (request.getDisplayOrder() != null) existing.setDisplayOrder(request.getDisplayOrder());

@@ -1,5 +1,8 @@
 package com.sunday.common_lib.payload.request;
 
+import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.enums.SeatType;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -9,8 +12,8 @@ import lombok.*;
 @AllArgsConstructor
 public class CabinClassRequest {
 
-    @NotBlank(message = "Name is required")
-    private String name;
+    @NotNull(message = ErrorMessageUtil.CABIN_CLASS_NAME_MANDATORY)
+    private CabinClassType name;
 
     @NotBlank
     @Size(min = 1, max = 5)
@@ -27,5 +30,5 @@ public class CabinClassRequest {
     private Boolean isBookable;
     private Integer typicalSeatPitch;
     private Integer typicalSeatWidth;
-    private String seatType;
+    private SeatType seatType;
 }

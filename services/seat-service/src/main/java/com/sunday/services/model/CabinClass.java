@@ -1,6 +1,7 @@
 package com.sunday.services.model;
 
 import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.enums.SeatType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -38,7 +39,6 @@ public class CabinClass {
     @OneToOne(mappedBy = "cabinClass", cascade = CascadeType.ALL, orphanRemoval = true)
     private SeatMap seatMap;
 
-    // Cross-service ref: Aircraft is in airline-core-service
     @Column(name = "aircraft_id")
     private Long aircraftId;
 
@@ -55,7 +55,9 @@ public class CabinClass {
 
     private Integer typicalSeatPitch;
     private Integer typicalSeatWidth;
-    private String seatType;
+
+    @Enumerated(EnumType.STRING)
+    private SeatType seatType;
 
     @CreatedDate
     @Column(updatable = false, nullable = false)
@@ -64,5 +66,4 @@ public class CabinClass {
     @LastModifiedDate
     @Column(nullable = false)
     private Instant updatedAt;
-
 }

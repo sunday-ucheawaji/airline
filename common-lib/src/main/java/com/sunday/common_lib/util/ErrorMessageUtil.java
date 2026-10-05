@@ -212,6 +212,38 @@ public class ErrorMessageUtil {
     public static final String DOCUMENT_BLOCKED_PROCESSING_FAILED = "The file could not be checked after several attempts; please upload it again";
     public static final String DOCUMENT_BLOCKED_MALWARE = "The file failed the malware scan";
 
+    // ---------- Seat service ----------
+    public static final String CABIN_CLASS_NOT_FOUND_BY_ID = "Cabin class not found with id: %s";
+    public static final String CABIN_CLASS_CODE_ALREADY_EXISTS_FOR_AIRCRAFT = "Cabin class with code '%s' already exists for this aircraft";
+    public static final String CABIN_CLASS_CODE_DUPLICATE_IN_REQUEST = "Cabin class code '%s' appears more than once in this request for the same aircraft";
+    public static final String SEAT_MAP_NOT_FOUND_BY_ID = "Seat map not found with id: %s";
+    public static final String SEAT_MAP_NOT_FOUND_BY_CABIN_CLASS_ID = "Seat map not found for cabin class id: %s";
+    public static final String SEAT_MAP_NAME_ALREADY_EXISTS = "Seat map with name '%s' already exists for this airline and cabin class";
+    public static final String SEAT_NOT_FOUND_BY_ID = "Seat not found with id: %s";
+    public static final String SEAT_INSTANCE_NOT_FOUND_BY_ID = "Seat instance not found with id: %s";
+    public static final String FLIGHT_INSTANCE_CABIN_NOT_FOUND_BY_ID = "Flight instance cabin not found with id: %s";
+    public static final String SEAT_MAP_CABIN_CLASS_ALREADY_HAS_SEAT_MAP = "Cabin class %s already has a seat map; only one is allowed per cabin class";
+    public static final String SEAT_MAP_CABIN_CLASS_DUPLICATE_IN_REQUEST = "Cabin class %s appears more than once in this request; only one seat map is allowed per cabin class";
+    public static final String SEAT_INSTANCE_ILLEGAL_STATUS_TRANSITION = "Cannot transition seat instance %s from %s to %s";
+    public static final String SEAT_INSTANCE_DUPLICATE_FOR_SEAT = "A seat instance already exists for seat %s on this flight instance";
+    public static final String NO_SEATS_IN_SEAT_MAP = "No seats found in the seat map for cabin class id %s";
+    public static final String FLIGHT_INSTANCE_CABIN_NOT_FOUND_FOR_FLIGHT_AND_CABIN_CLASS =
+            "Flight instance cabin not found for flight instance id %s and cabin class id %s";
+
+    // Seat service: request validation (Bean Validation message attributes)
+    public static final String FLIGHT_INSTANCE_ID_MANDATORY = "Flight instance ID is required";
+    public static final String CABIN_CLASS_NAME_MANDATORY = "Name is required";
+    public static final String SEAT_MAP_NAME_MANDATORY = "Seat map name is required";
+    public static final String SEAT_MAP_ID_MANDATORY = "Seat map ID is required";
+    public static final String SEAT_MAP_TOTAL_ROWS_MANDATORY = "Total rows is required";
+    public static final String SEAT_MAP_LEFT_SEATS_PER_ROW_MANDATORY = "Left seats per row is required";
+    public static final String SEAT_MAP_RIGHT_SEATS_PER_ROW_MANDATORY = "Right seats per row is required";
+    public static final String SEAT_NUMBER_MANDATORY = "Seat number is required";
+    public static final String SEAT_ROW_MANDATORY = "Seat row is required";
+    public static final String SEAT_TYPE_MANDATORY = "Seat type is required";
+    public static final String SEAT_INSTANCE_IDS_MANDATORY = "seatInstanceIds is required";
+    public static final String SEAT_INSTANCE_IDS_MAX_EXCEEDED = "A maximum of 50 seat instance ids can be priced per request";
+
     // ---------- Platform access model ----------
     public static final String ROLE_SUPER_ADMIN_ONLY = "Only a super admin can grant or revoke role %s";
     public static final String ROLE_SELF_GRANT_FORBIDDEN = "You cannot grant a platform role to yourself";

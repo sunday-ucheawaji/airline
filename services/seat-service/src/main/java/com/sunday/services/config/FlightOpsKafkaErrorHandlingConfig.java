@@ -8,13 +8,6 @@ import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
 
-/**
- * Retry + dead-letter-topic policy for the flight-instance-created / flight-instance-aircraft-changed
- * listeners in {@link com.sunday.services.event.FlightInstanceEventConsumer} — mirrors
- * airline-core-service's DocumentKafkaErrorHandlingConfig. Previously this consumer had no error
- * handling at all: a transient failure (e.g. a DB hiccup) would silently commit the offset and drop
- * the event.
- */
 @Configuration
 public class FlightOpsKafkaErrorHandlingConfig {
 

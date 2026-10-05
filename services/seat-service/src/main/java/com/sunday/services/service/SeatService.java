@@ -2,15 +2,13 @@ package com.sunday.services.service;
 
 import com.sunday.common_lib.payload.request.SeatRequest;
 import com.sunday.common_lib.payload.response.SeatResponse;
+import com.sunday.services.model.SeatMap;
 
-import java.util.List;
+import java.util.Collection;
 
 public interface SeatService {
 
-
-    void generateSeats(Long seatMapId) throws Exception;
-    SeatResponse getSeatById(Long id);
-    List<SeatResponse> getAll();
-    SeatResponse updateSeat(Long id, SeatRequest request);
-
+    void generateSeats(Collection<SeatMap> seatMaps);
+    SeatResponse getSeatById(Long userId, Long id);
+    SeatResponse updateSeat(Long userId, Long id, SeatRequest request);
 }

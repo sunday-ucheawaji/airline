@@ -13,5 +13,6 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
 
+
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_URL}

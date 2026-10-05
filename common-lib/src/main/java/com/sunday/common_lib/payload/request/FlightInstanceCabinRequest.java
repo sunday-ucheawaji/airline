@@ -1,5 +1,6 @@
 package com.sunday.common_lib.payload.request;
 
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -12,7 +13,7 @@ public class FlightInstanceCabinRequest {
     @NotNull
     private Long flightId;
 
-    @NotNull(message = "Flight instance ID is required")
+    @NotNull(message = ErrorMessageUtil.FLIGHT_INSTANCE_ID_MANDATORY)
     private Long flightInstanceId;
 
     @NotNull

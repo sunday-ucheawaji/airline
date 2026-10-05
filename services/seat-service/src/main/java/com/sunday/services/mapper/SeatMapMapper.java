@@ -1,7 +1,7 @@
 package com.sunday.services.mapper;
 
-import com.sunday.common_lib.payload.response.SeatMapResponse;
 import com.sunday.common_lib.payload.request.SeatMapRequest;
+import com.sunday.common_lib.payload.response.SeatMapResponse;
 import com.sunday.services.model.CabinClass;
 import com.sunday.services.model.Seat;
 import com.sunday.services.model.SeatMap;

@@ -1,5 +1,7 @@
 package com.sunday.common_lib.payload.request;
 
+import com.sunday.common_lib.enums.SeatAvailabilityStatus;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -9,10 +11,10 @@ import lombok.*;
 @AllArgsConstructor
 public class SeatInstanceRequest {
 
-    @NotNull(message = "Flight ID is required")
+    @NotNull(message = ErrorMessageUtil.FLIGHT_ID_MANDATORY)
     private Long flightId;
 
-    @NotNull(message = "Flight instance ID is required")
+    @NotNull(message = ErrorMessageUtil.FLIGHT_INSTANCE_ID_MANDATORY)
     private Long flightInstanceId;
 
     @NotNull
@@ -21,7 +23,7 @@ public class SeatInstanceRequest {
     @NotNull
     private Long seatId;
 
-    private String status;
+    private SeatAvailabilityStatus status;
     private String mealPreference;
     private Double fare;
     private Long flightScheduleId;

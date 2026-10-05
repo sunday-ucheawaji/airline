@@ -16,9 +16,7 @@ public class SeatInstanceMapper {
                 .seat(seat)
                 .flightInstanceCabin(flightInstanceCabin)
                 .flightInstanceId(request.getFlightInstanceId())
-                .status(request.getStatus() != null ?
-                        SeatAvailabilityStatus.valueOf(request.getStatus().toUpperCase()) :
-                        SeatAvailabilityStatus.AVAILABLE)
+                .status(request.getStatus() != null ? request.getStatus() : SeatAvailabilityStatus.AVAILABLE)
                 .mealPreference(request.getMealPreference())
                 .fare(request.getFare())
                 .flightScheduleId(request.getFlightScheduleId())
@@ -43,8 +41,6 @@ public class SeatInstanceMapper {
                 .version(si.getVersion())
                 .createdAt(si.getCreatedAt())
                 .updatedAt(si.getUpdatedAt())
-                .isAvailable(si.isAvailable())
-                .isBooked(si.isBooked())
                 .isOccupied(si.getStatus() == SeatAvailabilityStatus.OCCUPIED)
                 .seatCharacteristics(
                         si.getSeat() != null ? si.getSeat().getSeatCharacteristics() : null)

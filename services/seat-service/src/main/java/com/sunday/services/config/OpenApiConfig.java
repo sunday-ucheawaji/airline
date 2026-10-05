@@ -10,12 +10,10 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI openAPI() {
-
         return new OpenAPI()
                 .info(new Info()
                         .title("Seat Service API")
                         .description("Seat Core Management REST API")
                         .version("v1.0"));
     }
-
 }

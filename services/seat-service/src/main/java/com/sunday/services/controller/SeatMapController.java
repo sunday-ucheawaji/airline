@@ -1,6 +1,7 @@
 package com.sunday.services.controller;
 
 import com.sunday.common_lib.payload.request.SeatMapRequest;
+import com.sunday.common_lib.payload.response.SeatMapBulkCreateResponse;
 import com.sunday.common_lib.payload.response.SeatMapResponse;
 import com.sunday.services.service.SeatMapService;
 import jakarta.validation.Valid;
@@ -21,30 +22,31 @@ public class SeatMapController {
     @PostMapping
     public ResponseEntity<SeatMapResponse> createSeatMap(
             @RequestHeader("X-User-Id") Long userId,
-            @Valid @RequestBody SeatMapRequest request) throws Exception {
+            @Valid @RequestBody SeatMapRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(seatMapService.createSeatMap(userId, request));
     }
 
     @PostMapping("/create/bulk")
-    public ResponseEntity<List<SeatMapResponse>> createSeatMaps(
+    public ResponseEntity<SeatMapBulkCreateResponse> createSeatMaps(
             @RequestHeader("X-User-Id") Long userId,
-            @Valid @RequestBody List<SeatMapRequest> requests) throws Exception {
+            @Valid @RequestBody List<SeatMapRequest> requests) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(seatMapService.createSeatMaps(userId, requests));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SeatMapResponse> getSeatMapById(@PathVariable Long id) {
-        return ResponseEntity.ok(seatMapService.getSeatMapById(id));
+    public ResponseEntity<SeatMapResponse> getSeatMapById(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(seatMapService.getSeatMapById(userId, id));
     }
-
 
     @GetMapping("/cabin-class/{cabinClassId}")
     public ResponseEntity<SeatMapResponse> getSeatMapsByCabinClass(
+            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long cabinClassId) {
-        SeatMapResponse responses = seatMapService.getSeatMapsByCabinClass(cabinClassId);
-        return ResponseEntity.ok(responses);
+        return ResponseEntity.ok(seatMapService.getSeatMapsByCabinClass(userId, cabinClassId));
     }
 
     @PutMapping("/{id}")
@@ -56,10 +58,10 @@ public class SeatMapController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteSeatMap(@PathVariable Long id) throws Exception {
-        seatMapService.deleteSeatMap(id);
-        return ResponseEntity.ok("Seat map deleted");
+    public ResponseEntity<Void> deleteSeatMap(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        seatMapService.deleteSeatMap(userId, id);
+        return ResponseEntity.noContent().build();
     }
-
-
 }

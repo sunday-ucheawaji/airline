@@ -2,6 +2,7 @@ package com.sunday.services.controller;
 
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.payload.request.SeatInstanceRequest;
+import com.sunday.common_lib.payload.request.SeatPriceRequest;
 import com.sunday.common_lib.payload.response.CabinSeatStatusResponse;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
 import com.sunday.services.service.SeatInstanceService;
@@ -22,45 +23,54 @@ public class SeatInstanceController {
 
     @PostMapping
     public ResponseEntity<SeatInstanceResponse> createSeatInstance(
+            @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody SeatInstanceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(seatInstanceService.createSeatInstance(request));
+                .body(seatInstanceService.createSeatInstance(userId, request));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SeatInstanceResponse> getSeatInstanceById(@PathVariable Long id) {
-        return ResponseEntity.ok(seatInstanceService.getSeatInstanceById(id));
+    public ResponseEntity<SeatInstanceResponse> getSeatInstanceById(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(seatInstanceService.getSeatInstanceById(userId, id));
     }
 
     @PostMapping("/price/total")
-    public ResponseEntity<Double> calculateSeatPrice(@RequestBody List<Long> seatInstanceIds) {
-        return ResponseEntity.ok(seatInstanceService.calculateSeatPrice(seatInstanceIds));
+    public ResponseEntity<Double> calculateSeatPrice(
+            @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody SeatPriceRequest request) {
+        return ResponseEntity.ok(seatInstanceService.calculateSeatPrice(userId, request.getSeatInstanceIds()));
     }
 
     @GetMapping("/flight/{flightId}")
     public ResponseEntity<List<SeatInstanceResponse>> getSeatInstancesByFlightId(
+            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long flightId) {
-        return ResponseEntity.ok(seatInstanceService.getSeatInstancesByFlightId(flightId));
+        return ResponseEntity.ok(seatInstanceService.getSeatInstancesByFlightId(userId, flightId));
     }
 
     @GetMapping("/all")
     public ResponseEntity<List<SeatInstanceResponse>> getAllByIds(
+            @RequestHeader("X-User-Id") Long userId,
             @RequestParam List<Long> Ids) {
-        return ResponseEntity.ok(seatInstanceService.getAllByIds(Ids));
+        return ResponseEntity.ok(seatInstanceService.getAllByIds(userId, Ids));
     }
 
     @GetMapping("/flight/{flightId}/available")
     public ResponseEntity<List<SeatInstanceResponse>> getAvailableSeatsByFlightId(
+            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long flightId) {
-        return ResponseEntity.ok(seatInstanceService.getAvailableSeatsByFlightId(flightId));
+        return ResponseEntity.ok(seatInstanceService.getAvailableSeatsByFlightId(userId, flightId));
     }
 
     @GetMapping("/flight/{flightId}/available/count")
-    public ResponseEntity<Long> countAvailableByFlightId(@PathVariable Long flightId) {
-        return ResponseEntity.ok(seatInstanceService.countAvailableByFlightId(flightId));
+    public ResponseEntity<Long> countAvailableByFlightId(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long flightId) {
+        return ResponseEntity.ok(seatInstanceService.countAvailableByFlightId(userId, flightId));
     }
 
-    /** Per-cabin count of seats already sold/held for this instance — used by flight-ops-service to validate an aircraft reassignment before committing it. No caller-identity header, same as every other endpoint here (open, service-to-service). */
     @GetMapping("/flight-instance/{flightInstanceId}/status-summary")
     public ResponseEntity<List<CabinSeatStatusResponse>> getSeatStatusSummary(@PathVariable Long flightInstanceId) {
         return ResponseEntity.ok(seatInstanceService.getSeatStatusSummary(flightInstanceId));
@@ -68,8 +78,16 @@ public class SeatInstanceController {
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<SeatInstanceResponse> updateSeatInstanceStatus(
+            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long id,
             @RequestParam SeatAvailabilityStatus status) {
-        return ResponseEntity.ok(seatInstanceService.updateSeatInstanceStatus(id, status));
+        return ResponseEntity.ok(seatInstanceService.updateSeatInstanceStatus(userId, id, status));
+    }
+
+    @PostMapping("/{id}/release")
+    public ResponseEntity<SeatInstanceResponse> releaseSeatInstance(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(seatInstanceService.releaseSeatInstance(userId, id));
     }
 }

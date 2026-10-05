@@ -17,6 +17,6 @@ public class LogEmailService implements EmailService {
         log.info("Verification email queued for {} <{}>", firstName, toEmail);
         // DEV ONLY: the raw token is only ever logged here because there's no real email
         // provider wired in yet. Do not let this survive into a build with real delivery.
-        log.debug("DEV ONLY - verification token for {}: {}", toEmail, rawToken);
+        log.info("DEV ONLY - verification token for {}: {}", toEmail, rawToken);
     }
 }

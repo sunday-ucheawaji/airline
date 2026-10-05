@@ -9,15 +9,19 @@ import java.util.List;
 
 public interface SeatInstanceService {
 
-    SeatInstanceResponse createSeatInstance(SeatInstanceRequest request);
-    SeatInstanceResponse getSeatInstanceById(Long id);
-    List<SeatInstanceResponse> getSeatInstancesByFlightId(Long flightId);
-    List<SeatInstanceResponse> getAvailableSeatsByFlightId(Long flightId);
-    List<SeatInstanceResponse> getAllByIds(List<Long> Ids);
-    SeatInstanceResponse updateSeatInstanceStatus(Long id, SeatAvailabilityStatus status);
-    Long countAvailableByFlightId(Long flightId);
-    Double calculateSeatPrice(List<Long> seatInstanceId);
+    SeatInstanceResponse createSeatInstance(Long userId, SeatInstanceRequest request);
+    SeatInstanceResponse getSeatInstanceById(Long userId, Long id);
+    List<SeatInstanceResponse> getSeatInstancesByFlightId(Long userId, Long flightId);
+    List<SeatInstanceResponse> getAvailableSeatsByFlightId(Long userId, Long flightId);
+    List<SeatInstanceResponse> getAllByIds(Long userId, List<Long> ids);
+    Long countAvailableByFlightId(Long userId, Long flightId);
+    Double calculateSeatPrice(Long userId, List<Long> seatInstanceIds);
 
-    /** Per-cabin count of seats already sold/held (status != AVAILABLE) for one flight instance — used by flight-ops-service to validate an aircraft reassignment before committing it. */
+    SeatInstanceResponse updateSeatInstanceStatus(Long userId, Long id, SeatAvailabilityStatus status);
+
+    SeatInstanceResponse updateSeatInstanceStatusInternal(Long id, SeatAvailabilityStatus status);
+
+    SeatInstanceResponse releaseSeatInstance(Long userId, Long id);
+
     List<CabinSeatStatusResponse> getSeatStatusSummary(Long flightInstanceId);
 }

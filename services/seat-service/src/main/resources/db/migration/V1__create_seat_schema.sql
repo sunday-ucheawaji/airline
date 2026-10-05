@@ -1,0 +1,118 @@
+-- Baseline schema for seat-service, captured after the RBAC/exception/state-machine hardening
+-- pass (no pre-existing dev data to migrate — dev DBs are dropped and recreated, same convention
+-- as every other service's V1 baseline in this repo). Formalizes what Hibernate was previously
+-- auto-generating, now that ddl-auto is `validate`.
+--
+-- Dropped versus the pre-hardening shape: FlightInstanceCabin.bookedSeats/getAvailableSeats()
+-- (dead counter, never incremented — real availability is tracked per-SeatInstance.status) and
+-- SeatInstance.isAvailable/isBooked (legacy booleans, superseded by status, went stale on
+-- OCCUPIED/BLOCKED transitions).
+
+CREATE TABLE IF NOT EXISTS cabin_classes (
+    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name                ENUM('ECONOMY','PREMIUM_ECONOMY','BUSINESS','FIRST') NOT NULL,
+    code                VARCHAR(5) NOT NULL,
+    description         VARCHAR(255),
+    -- Cross-service ref: Aircraft is in airline-core-service, no FK.
+    aircraft_id         BIGINT,
+    display_order       INT NOT NULL,
+    is_active           BOOLEAN NOT NULL,
+    is_bookable         BOOLEAN NOT NULL,
+    typical_seat_pitch  INT,
+    typical_seat_width  INT,
+    seat_type           ENUM('WINDOW','MIDDLE','AISLE'),
+    created_at          DATETIME(6) NOT NULL,
+    updated_at          DATETIME(6) NOT NULL
+);
+
+CREATE INDEX idx_cabin_classes_aircraft_id ON cabin_classes (aircraft_id);
+CREATE UNIQUE INDEX uk_cabin_classes_code_aircraft ON cabin_classes (code, aircraft_id);
+
+CREATE TABLE IF NOT EXISTS seat_maps (
+    id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name                    VARCHAR(255) NOT NULL,
+    total_rows              INT NOT NULL,
+    right_seats_per_row     INT NOT NULL,
+    left_seats_per_row      INT NOT NULL,
+    -- Cross-service ref: Airline is in airline-core-service, no FK.
+    airline_id              BIGINT NOT NULL,
+    cabin_class_id          BIGINT,
+    CONSTRAINT uk_seat_maps_cabin_class UNIQUE (cabin_class_id),
+    CONSTRAINT fk_seat_maps_cabin_class FOREIGN KEY (cabin_class_id) REFERENCES cabin_classes (id)
+);
+
+CREATE INDEX idx_seat_maps_airline_id ON seat_maps (airline_id);
+
+CREATE TABLE IF NOT EXISTS seats (
+    id                          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    seat_number                 VARCHAR(10) NOT NULL,
+    seat_row                    INT NOT NULL,
+    column_letter               CHAR(1),
+    seat_type                   VARCHAR(20) NOT NULL,
+    base_price                  DOUBLE,
+    premium_surcharge           DOUBLE,
+    is_available                BOOLEAN NOT NULL,
+    is_blocked                  BOOLEAN NOT NULL,
+    is_emergency_exit           BOOLEAN NOT NULL,
+    is_active                   BOOLEAN NOT NULL,
+    has_extra_legroom           BOOLEAN NOT NULL,
+    has_bassinet                BOOLEAN NOT NULL,
+    is_near_lavatory            BOOLEAN NOT NULL,
+    is_near_galley              BOOLEAN NOT NULL,
+    has_power_outlet            BOOLEAN NOT NULL,
+    has_tv_screen               BOOLEAN NOT NULL,
+    is_wheelchair_accessible    BOOLEAN NOT NULL,
+    has_extra_width             BOOLEAN NOT NULL,
+    seat_pitch                  INT,
+    seat_width                  INT,
+    recline_angle               INT,
+    seat_map_id                 BIGINT NOT NULL,
+    cabin_class_id              BIGINT,
+    created_at                  DATETIME(6) NOT NULL,
+    updated_at                  DATETIME(6) NOT NULL,
+    created_by                  VARCHAR(255),
+    updated_by                  VARCHAR(255),
+    version                     BIGINT,
+    CONSTRAINT fk_seats_seat_map FOREIGN KEY (seat_map_id) REFERENCES seat_maps (id),
+    CONSTRAINT fk_seat_cabinclass FOREIGN KEY (cabin_class_id) REFERENCES cabin_classes (id)
+);
+
+CREATE INDEX idx_seats_seat_map_id ON seats (seat_map_id);
+CREATE INDEX idx_seats_cabin_class_id ON seats (cabin_class_id);
+
+CREATE TABLE IF NOT EXISTS flight_instance_cabins (
+    id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
+    -- Cross-service ref: FlightInstance is in flight-ops-service, no FK.
+    flight_instance_id   BIGINT NOT NULL,
+    cabin_class_id       BIGINT NOT NULL,
+    total_seats          INT NOT NULL,
+    CONSTRAINT fk_flight_instance_cabins_cabin_class FOREIGN KEY (cabin_class_id) REFERENCES cabin_classes (id)
+);
+
+CREATE INDEX idx_flight_instance_cabins_flight_instance_id ON flight_instance_cabins (flight_instance_id);
+CREATE INDEX idx_flight_instance_cabins_cabin_class_id ON flight_instance_cabins (cabin_class_id);
+
+CREATE TABLE IF NOT EXISTS seat_instances (
+    id                          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    -- Cross-service refs: Flight/FlightInstance/FlightSchedule are in flight-ops-service, no FK.
+    flight_id                   BIGINT NOT NULL,
+    flight_instance_cabin_id    BIGINT,
+    flight_instance_id          BIGINT,
+    seat_id                     BIGINT NOT NULL,
+    status                      ENUM('AVAILABLE','BOOKED','OCCUPIED','BLOCKED') NOT NULL,
+    meal_preference              VARCHAR(255),
+    fare                         DOUBLE,
+    premium_surcharge            DOUBLE,
+    version                      BIGINT,
+    flight_schedule_id           BIGINT,
+    created_at                   DATETIME(6),
+    updated_at                   DATETIME(6),
+    CONSTRAINT fk_seat_instances_flight_instance_cabin FOREIGN KEY (flight_instance_cabin_id) REFERENCES flight_instance_cabins (id),
+    CONSTRAINT fk_seat_instances_seat FOREIGN KEY (seat_id) REFERENCES seats (id),
+    CONSTRAINT uk_seat_instances_seat_flight_instance UNIQUE (seat_id, flight_instance_id)
+);
+
+CREATE INDEX idx_seat_instances_flight_id ON seat_instances (flight_id);
+CREATE INDEX idx_seat_instances_flight_instance_id ON seat_instances (flight_instance_id);
+CREATE INDEX idx_seat_instances_flight_instance_cabin_id ON seat_instances (flight_instance_cabin_id);
+CREATE INDEX idx_seat_instances_status ON seat_instances (status);

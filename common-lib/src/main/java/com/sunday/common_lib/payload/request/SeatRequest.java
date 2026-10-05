@@ -1,6 +1,7 @@
 package com.sunday.common_lib.payload.request;
 
 import com.sunday.common_lib.enums.SeatType;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -10,20 +11,20 @@ import lombok.*;
 @AllArgsConstructor
 public class SeatRequest {
 
-    @NotBlank(message = "Seat number is required")
+    @NotBlank(message = ErrorMessageUtil.SEAT_NUMBER_MANDATORY)
     @Size(min = 2, max = 10)
     private String seatNumber;
 
-    @NotNull(message = "Seat row is required")
+    @NotNull(message = ErrorMessageUtil.SEAT_ROW_MANDATORY)
     @Positive
     private Integer seatRow;
 
     private Character columnLetter;
 
-    @NotNull(message = "Seat type is required")
+    @NotNull(message = ErrorMessageUtil.SEAT_TYPE_MANDATORY)
     private SeatType seatType;
 
-    @NotNull(message = "Seat map ID is required")
+    @NotNull(message = ErrorMessageUtil.SEAT_MAP_ID_MANDATORY)
     private Long seatMapId;
 
     private Long cabinClassId;

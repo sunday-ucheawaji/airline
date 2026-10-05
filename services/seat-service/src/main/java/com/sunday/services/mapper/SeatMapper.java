@@ -8,7 +8,6 @@ import com.sunday.services.model.SeatMap;
 
 public class SeatMapper {
 
-
     public static void updateEntity(SeatRequest request, Seat seat, SeatMap seatMap, CabinClass cabinClass) {
         seat.setSeatNumber(request.getSeatNumber());
         seat.setSeatRow(request.getSeatRow());

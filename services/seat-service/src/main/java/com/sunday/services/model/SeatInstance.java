@@ -21,7 +21,6 @@ public class SeatInstance {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Cross-service ref: Flight is in flight-ops-service
     @Column(name = "flight_id", nullable = false)
     private Long flightId;
 
@@ -29,7 +28,6 @@ public class SeatInstance {
     @JoinColumn(name = "flight_instance_cabin_id")
     private FlightInstanceCabin flightInstanceCabin;
 
-    // Cross-service ref: FlightInstance is in flight-ops-service
     @Column(name = "flight_instance_id")
     private Long flightInstanceId;
 
@@ -41,9 +39,6 @@ public class SeatInstance {
     @Column(nullable = false)
     private SeatAvailabilityStatus status = SeatAvailabilityStatus.AVAILABLE;
 
-    private boolean isBooked = false;
-    private boolean isAvailable = true;
-
     private String mealPreference;
     private Double fare;
     private Double premiumSurcharge;
@@ -51,7 +46,6 @@ public class SeatInstance {
     @Version
     private Long version;
 
-    // Cross-service ref
     @Column(name = "flight_schedule_id")
     private Long flightScheduleId;
 

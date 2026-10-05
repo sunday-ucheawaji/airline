@@ -21,7 +21,6 @@ public class FlightInstanceCabin {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Cross-service ref: FlightInstance is in flight-ops-service
     @Column(name = "flight_instance_id", nullable = false)
     private Long flightInstanceId;
 
@@ -32,15 +31,9 @@ public class FlightInstanceCabin {
     @Column(nullable = false)
     private Integer totalSeats;
 
-    private Integer bookedSeats = 0;
-
     @Builder.Default
     @OneToMany(
             mappedBy = "flightInstanceCabin",
             cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<SeatInstance> seats = new ArrayList<>();
-
-    public Integer getAvailableSeats() {
-        return totalSeats - bookedSeats;
-    }
 }

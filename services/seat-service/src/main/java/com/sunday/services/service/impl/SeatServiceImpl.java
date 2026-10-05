@@ -1,8 +1,12 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.constants.SeatPermissions;
 import com.sunday.common_lib.enums.SeatType;
+import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.SeatRequest;
 import com.sunday.common_lib.payload.response.SeatResponse;
+import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.integration.AirlineIntegrationService;
 import com.sunday.services.mapper.SeatMapper;
 import com.sunday.services.model.CabinClass;
 import com.sunday.services.model.Seat;
@@ -11,15 +15,13 @@ import com.sunday.services.repository.CabinClassRepository;
 import com.sunday.services.repository.SeatMapRepository;
 import com.sunday.services.repository.SeatRepository;
 import com.sunday.services.service.SeatService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,30 +31,24 @@ public class SeatServiceImpl implements SeatService {
     private final SeatRepository seatRepository;
     private final SeatMapRepository seatMapRepository;
     private final CabinClassRepository cabinClassRepository;
+    private final AirlineIntegrationService airlineIntegrationService;
 
-
-    public void generateSeats(Long seatMapId
-    ) throws Exception {
-
-        boolean exists = seatRepository.existsBySeatMapId(seatMapId);
-
-        if (exists) {
-            throw new Exception("Seats already created for seat map id " + seatMapId);
+    @Override
+    public void generateSeats(Collection<SeatMap> seatMaps) {
+        List<Seat> seats = new ArrayList<>();
+        for (SeatMap seatMap : seatMaps) {
+            seats.addAll(buildSeats(seatMap));
         }
+        seatRepository.saveAll(seats);
+    }
 
-
-        SeatMap seatMap=seatMapRepository.findById(seatMapId).orElseThrow(
-                ()->  new ResourceNotFoundException("seat map not found")
-        );
-
-        int leftSeatsPerRow=seatMap.getLeftSeatsPerRow();
-        int rightSeatsPerRow=seatMap.getRightSeatsPerRow();
-        int rows=seatMap.getTotalRows();
+    private List<Seat> buildSeats(SeatMap seatMap) {
+        int leftSeatsPerRow = seatMap.getLeftSeatsPerRow();
+        int rightSeatsPerRow = seatMap.getRightSeatsPerRow();
+        int rows = seatMap.getTotalRows();
         int seatsPerRow = leftSeatsPerRow + rightSeatsPerRow;
 
-
         List<Seat> seats = new ArrayList<>();
-
 
         for (int row = 1; row <= rows; row++) {
             for (int col = 0; col < seatsPerRow; col++) {
@@ -69,11 +65,9 @@ public class SeatServiceImpl implements SeatService {
             }
         }
 
-        seatRepository.saveAll(seats);
-
+        return seats;
     }
 
-    // 🚀 seat letter handling
     private String getSeatLetter(int col) {
         StringBuilder sb = new StringBuilder();
         while (col >= 0) {
@@ -86,54 +80,46 @@ public class SeatServiceImpl implements SeatService {
     private SeatType getSeatType(int seatIndex, int leftBlockSeats, int rightBlockSeats) {
         int totalSeats = leftBlockSeats + rightBlockSeats;
 
-        // Windows
         if (seatIndex == 0 || seatIndex == totalSeats - 1) return SeatType.WINDOW;
-
-        // Left aisle
         if (seatIndex == leftBlockSeats - 1) return SeatType.AISLE;
-
-        // Right aisle
         if (seatIndex == leftBlockSeats) return SeatType.AISLE;
-
-        // Everything else
         return SeatType.MIDDLE;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public SeatResponse getSeatById(Long id) {
+    public SeatResponse getSeatById(Long userId, Long id) {
         Seat seat = seatRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Seat not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_NOT_FOUND_BY_ID, id)));
+        airlineIntegrationService.requirePermission(userId, seat.getSeatMap().getAirlineId(), SeatPermissions.SEAT_READ);
         return SeatMapper.toResponse(seat);
     }
 
     @Override
-    public List<SeatResponse> getAll() {
-        return seatRepository.findAll().stream()
-                .map(SeatMapper::toResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public SeatResponse updateSeat(Long id, SeatRequest request) {
+    public SeatResponse updateSeat(Long userId, Long id, SeatRequest request) {
         Seat existing = seatRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Seat not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_NOT_FOUND_BY_ID, id)));
+
+        Long currentAirlineId = existing.getSeatMap().getAirlineId();
+        airlineIntegrationService.requirePermission(userId, currentAirlineId, SeatPermissions.SEAT_CONFIG_MANAGE);
 
         SeatMap seatMap = seatMapRepository.findById(request.getSeatMapId())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Seat map not found with id: " + request.getSeatMapId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(ErrorMessageUtil.SEAT_MAP_NOT_FOUND_BY_ID, request.getSeatMapId())));
+
+        if (!seatMap.getId().equals(existing.getSeatMap().getId())) {
+            airlineIntegrationService.requirePermission(userId, seatMap.getAirlineId(), SeatPermissions.SEAT_CONFIG_MANAGE);
+        }
 
         CabinClass cabinClass = null;
         if (request.getCabinClassId() != null) {
             cabinClass = cabinClassRepository.findById(request.getCabinClassId())
-                    .orElseThrow(() -> new EntityNotFoundException(
-                            "Cabin class not found with id: " + request.getCabinClassId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            String.format(ErrorMessageUtil.CABIN_CLASS_NOT_FOUND_BY_ID, request.getCabinClassId())));
         }
 
         SeatMapper.updateEntity(request, existing, seatMap, cabinClass);
         Seat saved = seatRepository.save(existing);
         return SeatMapper.toResponse(saved);
     }
-
-
 }

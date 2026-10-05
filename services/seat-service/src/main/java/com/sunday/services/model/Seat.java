@@ -140,7 +140,6 @@ public class Seat {
     }
 
     public boolean isPremiumSeat() {
-
         return hasExtraLegroom || isEmergencyExit || hasExtraWidth;
     }
 

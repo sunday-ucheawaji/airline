@@ -26,8 +26,6 @@ public class SeatInstanceResponse {
 
     private Long flightInstanceId;
 
-    private Boolean isBooked;
-
     private Long flightCabinId;
     private CabinClassType flightCabinClassType;
 
@@ -38,7 +36,6 @@ public class SeatInstanceResponse {
     private Instant createdAt;
     private Instant updatedAt;
 
-    private Boolean isAvailable;
     private Boolean isOccupied;
     private String seatCharacteristics;
 }

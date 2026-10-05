@@ -1,6 +1,5 @@
 package com.sunday.services.repository;
 
-import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.services.model.FlightInstanceCabin;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
@@ -14,17 +13,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FlightInstanceCabinRepository extends JpaRepository<FlightInstanceCabin, Long> {
+
     Page<FlightInstanceCabin> findByFlightInstanceId(Long flightInstanceId, Pageable pageable);
 
     List<FlightInstanceCabin> findAllByFlightInstanceId(Long flightInstanceId);
 
-    /** Used to find which ids in a bulk-created batch already have cabins (redelivery/partial-retry guard). */
     List<FlightInstanceCabin> findAllByFlightInstanceIdIn(List<Long> flightInstanceIds);
-
-    @Query("SELECT fic FROM FlightInstanceCabin fic WHERE fic.flightInstanceId = :flightInstanceId AND fic.cabinClass.name = :cabinClass")
-    Optional<FlightInstanceCabin> findByFlightInstanceIdAndCabinClassName(
-            @Param("flightInstanceId") Long flightInstanceId,
-            @Param("cabinClass") CabinClassType cabinClass);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT fc FROM FlightInstanceCabin fc WHERE fc.id = :id")

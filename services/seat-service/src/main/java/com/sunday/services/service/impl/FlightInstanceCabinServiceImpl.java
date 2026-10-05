@@ -1,10 +1,13 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.constants.SeatPermissions;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.enums.SeatType;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightInstanceCabinRequest;
 import com.sunday.common_lib.payload.response.FlightInstanceCabinResponse;
+import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.integration.AirlineIntegrationService;
 import com.sunday.services.mapper.FlightInstanceCabinMapper;
 import com.sunday.services.model.CabinClass;
 import com.sunday.services.model.FlightInstanceCabin;
@@ -12,7 +15,6 @@ import com.sunday.services.model.SeatInstance;
 import com.sunday.services.model.SeatMap;
 import com.sunday.services.repository.*;
 import com.sunday.services.service.FlightInstanceCabinService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,31 +30,27 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
 
     private final FlightInstanceCabinRepository flightInstanceCabinRepository;
     private final CabinClassRepository cabinClassRepository;
-    private final SeatRepository seatRepository;
     private final SeatMapRepository seatMapRepository;
     private final SeatInstanceRepository seatInstanceRepository;
+    private final AirlineIntegrationService airlineIntegrationService;
 
     @Override
-    public FlightInstanceCabinResponse createFlightInstanceCabin(FlightInstanceCabinRequest request)
-            throws ResourceNotFoundException {
+    public FlightInstanceCabinResponse createFlightInstanceCabin(Long userId, FlightInstanceCabinRequest request) {
         CabinClass cabinClass = cabinClassRepository.findById(request.getCabinClassId())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Cabin class not found with id: " + request.getCabinClassId())
-                );
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(ErrorMessageUtil.CABIN_CLASS_NOT_FOUND_BY_ID, request.getCabinClassId())));
 
-        // Set total seats from the seat map
         SeatMap seatMap = seatMapRepository.findByCabinClassId(cabinClass.getId());
-
         if (seatMap == null) {
-            throw new EntityNotFoundException(
-                    "seat map not found with cabin class id: " + cabinClass.getId()
-            );
+            throw new ResourceNotFoundException(
+                    String.format(ErrorMessageUtil.SEAT_MAP_NOT_FOUND_BY_CABIN_CLASS_ID, cabinClass.getId()));
         }
+
+        airlineIntegrationService.requirePermission(userId, seatMap.getAirlineId(), SeatPermissions.SEAT_INSTANCE_CONFIG_MANAGE);
 
         if (seatMap.getSeats() == null || seatMap.getSeats().isEmpty()) {
             throw new ResourceNotFoundException(
-                    "No seats found in the seat map for cabin class id " + cabinClass.getId()
-            );
+                    String.format(ErrorMessageUtil.NO_SEATS_IN_SEAT_MAP, cabinClass.getId()));
         }
         int totalSeats = seatMap.getSeats().size();
 
@@ -60,27 +58,19 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
                 .flightInstanceId(request.getFlightInstanceId())
                 .cabinClass(cabinClass)
                 .totalSeats(totalSeats)
-                .bookedSeats(0)
                 .build();
 
         FlightInstanceCabin savedFlightInstanceCabin = flightInstanceCabinRepository.save(fic);
 
-//      generate SeatInstances
         List<SeatInstance> seatInstances = seatMap.getSeats().stream()
                 .map(seat -> {
-                    Double premiumSurcharge = getPremiumSurcharge(
-                            seat.getSeatType(),
-                            1000.0,
-                            500.0
-                    );
+                    Double premiumSurcharge = getPremiumSurcharge(seat.getSeatType(), 1000.0, 500.0);
                     return SeatInstance.builder()
                             .flightId(request.getFlightId())
                             .status(SeatAvailabilityStatus.AVAILABLE)
                             .flightInstanceId(request.getFlightInstanceId())
                             .flightInstanceCabin(savedFlightInstanceCabin)
                             .seat(seat)
-                            .isAvailable(true)
-                            .isBooked(false)
                             .premiumSurcharge(premiumSurcharge)
                             .build();
                 })
@@ -93,39 +83,60 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
 
     @Override
     @Transactional(readOnly = true)
-    public FlightInstanceCabinResponse getFlightInstanceCabinById(Long id) {
+    public FlightInstanceCabinResponse getFlightInstanceCabinById(Long userId, Long id) {
         FlightInstanceCabin fic = flightInstanceCabinRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Flight instance cabin not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(ErrorMessageUtil.FLIGHT_INSTANCE_CABIN_NOT_FOUND_BY_ID, id)));
+        airlineIntegrationService.requirePermission(
+                userId, fic.getCabinClass().getSeatMap().getAirlineId(), SeatPermissions.SEAT_READ);
         return FlightInstanceCabinMapper.toResponse(fic);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<FlightInstanceCabinResponse> getByFlightInstanceId(Long flightInstanceId, Pageable pageable) {
-        return flightInstanceCabinRepository.findByFlightInstanceId(flightInstanceId, pageable)
-                .map(FlightInstanceCabinMapper::toResponse);
+    public Page<FlightInstanceCabinResponse> getByFlightInstanceId(Long userId, Long flightInstanceId, Pageable pageable) {
+        Page<FlightInstanceCabin> page = flightInstanceCabinRepository.findByFlightInstanceId(flightInstanceId, pageable);
+        if (page.hasContent()) {
+            FlightInstanceCabin first = page.getContent().get(0);
+            airlineIntegrationService.requirePermission(
+                    userId, first.getCabinClass().getSeatMap().getAirlineId(), SeatPermissions.SEAT_READ);
+        }
+        return page.map(FlightInstanceCabinMapper::toResponse);
     }
 
     @Override
-    public FlightInstanceCabinResponse getByFlightInstanceIdAndCabinClassId(Long flightInstanceId, Long cabinClassId) {
-       FlightInstanceCabin cabin= flightInstanceCabinRepository.findByFlightInstanceIdAndCabinClassId(
-                flightInstanceId,
-                cabinClassId
-       );
-       return FlightInstanceCabinMapper.toResponse(cabin);
+    @Transactional(readOnly = true)
+    public FlightInstanceCabinResponse getByFlightInstanceIdAndCabinClassId(Long userId, Long flightInstanceId, Long cabinClassId) {
+        FlightInstanceCabin cabin = flightInstanceCabinRepository.findByFlightInstanceIdAndCabinClassId(
+                flightInstanceId, cabinClassId);
+        if (cabin == null) {
+            throw new ResourceNotFoundException(String.format(
+                    ErrorMessageUtil.FLIGHT_INSTANCE_CABIN_NOT_FOUND_FOR_FLIGHT_AND_CABIN_CLASS,
+                    flightInstanceId, cabinClassId));
+        }
+        airlineIntegrationService.requirePermission(
+                userId, cabin.getCabinClass().getSeatMap().getAirlineId(), SeatPermissions.SEAT_READ);
+        return FlightInstanceCabinMapper.toResponse(cabin);
     }
 
     @Override
-    public FlightInstanceCabinResponse updateFlightInstanceCabin(Long id, FlightInstanceCabinRequest request) {
+    public FlightInstanceCabinResponse updateFlightInstanceCabin(Long userId, Long id, FlightInstanceCabinRequest request) {
         FlightInstanceCabin existing = flightInstanceCabinRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Flight instance cabin not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(ErrorMessageUtil.FLIGHT_INSTANCE_CABIN_NOT_FOUND_BY_ID, id)));
 
-        if (request.getCabinClassId() != null) {
+        airlineIntegrationService.requirePermission(
+                userId, existing.getCabinClass().getSeatMap().getAirlineId(), SeatPermissions.SEAT_INSTANCE_CONFIG_MANAGE);
+
+        if (request.getCabinClassId() != null && !request.getCabinClassId().equals(existing.getCabinClass().getId())) {
             CabinClass cabinClass = cabinClassRepository.findById(request.getCabinClassId())
-                    .orElseThrow(() -> new EntityNotFoundException(
-                            "Cabin class not found with id: " + request.getCabinClassId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            String.format(ErrorMessageUtil.CABIN_CLASS_NOT_FOUND_BY_ID, request.getCabinClassId())));
+            SeatMap destinationSeatMap = seatMapRepository.findByCabinClassId(cabinClass.getId());
+            if (destinationSeatMap != null) {
+                airlineIntegrationService.requirePermission(
+                        userId, destinationSeatMap.getAirlineId(), SeatPermissions.SEAT_INSTANCE_CONFIG_MANAGE);
+            }
             existing.setCabinClass(cabinClass);
         }
 
@@ -134,17 +145,17 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
     }
 
     @Override
-    public void deleteFlightInstanceCabin(Long id) {
+    public void deleteFlightInstanceCabin(Long userId, Long id) {
         FlightInstanceCabin fic = flightInstanceCabinRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Flight instance cabin not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(ErrorMessageUtil.FLIGHT_INSTANCE_CABIN_NOT_FOUND_BY_ID, id)));
+        airlineIntegrationService.requirePermission(
+                userId, fic.getCabinClass().getSeatMap().getAirlineId(), SeatPermissions.SEAT_INSTANCE_CONFIG_MANAGE);
         flightInstanceCabinRepository.delete(fic);
     }
-    private Double getPremiumSurcharge(SeatType seatType,
-                                       Double windowSurcharge,
-                                       Double aisleSurcharge) {
-        if (seatType == null) return 0.0;
 
+    private Double getPremiumSurcharge(SeatType seatType, Double windowSurcharge, Double aisleSurcharge) {
+        if (seatType == null) return 0.0;
         return switch (seatType) {
             case WINDOW -> windowSurcharge != null ? windowSurcharge : 0.0;
             case AISLE -> aisleSurcharge != null ? aisleSurcharge : 0.0;
