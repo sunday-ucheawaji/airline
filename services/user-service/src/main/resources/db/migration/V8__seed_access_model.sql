@@ -1,7 +1,8 @@
 -- Access model seed: roles, permissions and their grants.
 -- Role ids 3/4/5 (OWNER/ADMIN/VIEWER) are explicit on purpose: airline-core-service reads the OWNER id from
 -- the airline.owner-role-id config value (3), so it must not depend on insertion order.
--- SUPER_ADMIN holds every permission: a migration that adds a permission must grant it to SUPER_ADMIN too.
+-- SUPER_ADMIN holds every platform permission. Airline-scoped permissions are never granted to SUPER_ADMIN:
+-- they are checked against an AirlineMembership, which a platform user never has. VIEWER holds no permissions.
 -- Permissions marked reserved in PlatformPermissions are seeded here but not yet enforced by any endpoint.
 
 INSERT INTO permissions (name, created_at, updated_at) VALUES
@@ -108,14 +109,7 @@ SELECT r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN 
     ('SUPER_ADMIN', 'DOCUMENT_READ_OWN'),
     ('SUPER_ADMIN', 'AIRLINE_READ'),
     ('SUPER_ADMIN', 'AIRLINE_UPDATE'),
-    ('SUPER_ADMIN', 'MEMBER_READ'),
-    ('SUPER_ADMIN', 'MEMBER_INVITE'),
-    ('SUPER_ADMIN', 'MEMBER_UPDATE_ROLE'),
-    ('SUPER_ADMIN', 'MEMBER_UPDATE_STATUS'),
-    ('SUPER_ADMIN', 'MEMBER_REMOVE'),
     ('SUPER_ADMIN', 'USER_READ'),
-    ('SUPER_ADMIN', 'ANCILLARY_MANAGE'),
-    ('SUPER_ADMIN', 'ANCILLARY_INSURANCE_MANAGE'),
     ('SUPER_ADMIN', 'ONBOARDING_APPLICATION_READ'),
     ('SUPER_ADMIN', 'ONBOARDING_APPLICATION_RETURN'),
     ('SUPER_ADMIN', 'ONBOARDING_APPLICATION_REVIEW'),
@@ -196,9 +190,6 @@ SELECT r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN 
     ('ADMIN', 'MEMBER_UPDATE_STATUS'),
     ('ADMIN', 'USER_READ'),
     ('ADMIN', 'ANCILLARY_MANAGE'),
-    ('VIEWER', 'AIRLINE_READ'),
-    ('VIEWER', 'MEMBER_READ'),
-    ('VIEWER', 'USER_READ'),
     ('ONBOARDING_OFFICER', 'ONBOARDING_APPLICATION_READ'),
     ('ONBOARDING_OFFICER', 'ONBOARDING_APPLICATION_RETURN'),
     ('ONBOARDING_OFFICER', 'ONBOARDING_APPLICATION_REVIEW'),

@@ -17,8 +17,6 @@ public class FareRulesRequest {
     @NotNull(message = "Fare ID is required")
     private Long fareId;
 
-    private Long airlineId;
-
     private Boolean isRefundable;
 
     @PositiveOrZero(message = "Change fee must be positive or zero")

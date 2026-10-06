@@ -1,5 +1,7 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.payload.response.FareQuoteResponse;
+import java.time.LocalDate;
 import com.sunday.common_lib.enums.BookingStatus;
 import com.sunday.common_lib.enums.PaymentGateway;
 import com.sunday.common_lib.exception.PaymentException;
@@ -99,7 +101,19 @@ public class BookingServiceImpl implements BookingService {
         // Calculate total amount
 
         int passengerCount = booking.getPassengers().size();
-        Double fareTotal = pricingIntegrationService.calculateFareTotal(booking.getFareId()) * passengerCount;
+        LocalDate departureDate = flightClient.getFlightInstanceResponse(booking.getFlightInstanceId())
+                .getDepartureDateTime().toLocalDate();
+        FareQuoteResponse quote = pricingIntegrationService.quoteFare(booking.getFareId(), departureDate);
+        booking.setFareVersion(quote.getVersion());
+        booking.setFareCurrency(quote.getCurrency());
+        booking.setFareBaseAmount(quote.getBaseFare());
+        booking.setFareTaxAmount(quote.getTaxesAndFees());
+        booking.setFareFeeAmount(quote.getAirlineFees());
+        booking.setFareRulesId(quote.getFareRulesId());
+        booking.setFareBaggagePolicyId(quote.getBaggagePolicyId());
+        booking.setFareTravelDate(departureDate);
+        bookingRepository.save(booking);
+        Double fareTotal = quote.getTotalPrice() * passengerCount;
         Double seatPrice= seatClient.calculateSeatPrice(booking.getSeatInstanceIds());
         // Skip the call when nothing was selected: a missing list sends no request body, which
         // ancillary-service rejects with a 4xx (no longer masked by a 0.0 fallback).

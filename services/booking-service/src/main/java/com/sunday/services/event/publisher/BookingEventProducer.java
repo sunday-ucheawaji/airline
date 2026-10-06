@@ -126,7 +126,7 @@ public class BookingEventProducer {
                 .flexibleTicket(booking.isFlexibleTicket())
                 // Contact
                 .userId(booking.getUserId())
-                .userName(user != null ? user.getFullName() : "Valued Customer")
+                .userName(user != null ? (user.getFirstName() + " " + user.getLastName()).trim() : "Valued Customer")
                 .contactEmail(contactEmail)
                 .contactPhone(contactPhone)
                 // Passengers

@@ -1,6 +1,6 @@
 -- seat-service gets real permission-based gating (CabinClass/SeatMap/Seat configuration,
 -- FlightInstanceCabin/SeatInstance provisioning, SeatInstance status transitions), same shape as
--- AncillaryPermissions/FlightOpsPermissions. SUPER_ADMIN must hold every permission.
+-- AncillaryPermissions/FlightOpsPermissions. Airline-scoped, so granted to airline roles only.
 --
 -- Two new AIRLINE-scope roles, explicit ids (16/17), same precedent as OWNER/ADMIN/VIEWER = 3/4/5
 -- and FLIGHT_DISPATCHER/FLEET_ASSIGNMENT_OFFICER = 14/15: real airline PSS systems (Amadeus Altéa,
@@ -26,10 +26,6 @@ INSERT INTO permissions (name, created_at, updated_at) VALUES
 
 INSERT INTO role_permissions (role_id, permission_id, created_at)
 SELECT r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN (
-    ('SUPER_ADMIN', 'SEAT_CONFIG_MANAGE'), ('SUPER_ADMIN', 'SEAT_READ'),
-    ('SUPER_ADMIN', 'SEAT_INSTANCE_CONFIG_MANAGE'), ('SUPER_ADMIN', 'SEAT_INSTANCE_STATUS_MANAGE'),
-    ('SUPER_ADMIN', 'SEAT_INSTANCE_RELEASE'),
-
     -- OWNER/ADMIN: fallback superset, same as every other airline-scoped domain
     ('OWNER', 'SEAT_CONFIG_MANAGE'), ('OWNER', 'SEAT_READ'),
     ('OWNER', 'SEAT_INSTANCE_CONFIG_MANAGE'), ('OWNER', 'SEAT_INSTANCE_STATUS_MANAGE'),

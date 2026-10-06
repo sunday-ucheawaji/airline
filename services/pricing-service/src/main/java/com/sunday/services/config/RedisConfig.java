@@ -1,88 +1,51 @@
 package com.sunday.services.config;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.sunday.common_lib.payload.response.FareResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.interceptor.CacheErrorHandler;
-import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import java.lang.reflect.Method;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Configuration
 public class RedisConfig implements CachingConfigurer {
 
+    public static final String FARES = "fares";
+
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory factory) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.activateDefaultTyping(
-                LaissezFaireSubTypeValidator.instance,
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY
-        );
-
-        GenericJackson2JsonRedisSerializer jsonSerializer =
-                new GenericJackson2JsonRedisSerializer(mapper);
+        ObjectMapper mapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         RedisCacheConfiguration defaults = RedisCacheConfiguration.defaultCacheConfig()
-                .serializeKeysWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(new StringRedisSerializer()))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(jsonSerializer))
-                .disableCachingNullValues();
+                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+                .disableCachingNullValues()
+                .entryTtl(Duration.ofMinutes(2));
 
-        Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
-                // Individual fare lookups — 2 min (airlines can reprice any time)
-                "fares", defaults.entryTtl(Duration.ofMinutes(2)),
-                // Fare list per flight — 2 min
-                "faresByFlight", defaults.entryTtl(Duration.ofMinutes(2))
-        );
+        // Typed to the response class: nothing about the stored type is read from the payload itself.
+        RedisCacheConfiguration fares = defaults.serializeValuesWith(
+                RedisSerializationContext.SerializationPair.fromSerializer(
+                        new Jackson2JsonRedisSerializer<>(mapper, FareResponse.class)));
 
         return RedisCacheManager.builder(factory)
-                .cacheDefaults(defaults.entryTtl(Duration.ofMinutes(2)))
-                .withInitialCacheConfigurations(cacheConfigs)
+                .cacheDefaults(defaults)
+                .withInitialCacheConfigurations(Map.of(FARES, fares))
                 .build();
-    }
-
-    /**
-     * Generates a stable cache key where any Collection parameter is sorted first.
-     * Ensures ["AI","6E"]+cabinId and ["6E","AI"]+cabinId produce the same key.
-     */
-    @Bean
-    public KeyGenerator sortedListKeyGenerator() {
-        return (Object target, Method method, Object... params) -> {
-            StringBuilder key = new StringBuilder(method.getName()).append(':');
-            for (Object param : params) {
-                if (param instanceof Collection<?> col) {
-                    key.append(col.stream()
-                            .map(Object::toString)
-                            .sorted()
-                            .collect(Collectors.joining(",")));
-                } else {
-                    key.append(param);
-                }
-                key.append('|');
-            }
-            return key.toString();
-        };
     }
 
     @Override

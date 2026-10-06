@@ -7,10 +7,13 @@ import com.sunday.services.model.Fare;
 
 public class BaggagePolicyMapper {
 
-    public static BaggagePolicy toEntity(BaggagePolicyRequest request, Fare fare) {
+    public static BaggagePolicy toEntity(BaggagePolicyRequest request, Fare fare, Long userId) {
         if (request == null) return null;
         return BaggagePolicy.builder()
                 .fare(fare)
+                .airlineId(fare.getAirlineId())
+                .createdBy(userId)
+                .updatedBy(userId)
                 .name(request.getName())
                 .description(request.getDescription())
                 .cabinBaggageMaxWeight(request.getCabinBaggageMaxWeight())
@@ -49,8 +52,9 @@ public class BaggagePolicyMapper {
                 .build();
     }
 
-    public static void updateEntity(BaggagePolicyRequest request, BaggagePolicy existing) {
+    public static void updateEntity(BaggagePolicyRequest request, BaggagePolicy existing, Long userId) {
         if (request == null || existing == null) return;
+        existing.setUpdatedBy(userId);
         if (request.getName() != null) existing.setName(request.getName());
         if (request.getDescription() != null) existing.setDescription(request.getDescription());
         if (request.getCabinBaggageMaxWeight() != null) existing.setCabinBaggageMaxWeight(request.getCabinBaggageMaxWeight());

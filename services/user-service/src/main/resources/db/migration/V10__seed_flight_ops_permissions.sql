@@ -3,7 +3,7 @@
 -- require account-level staff: FLIGHT_DISPATCHER (routine flight/schedule/instance management)
 -- and FLEET_ASSIGNMENT_OFFICER (only the aircraft-reassignment action). Explicit ids (14/15),
 -- same precedent as OWNER/ADMIN/VIEWER = 3/4/5 in V8 — airline-core-service references them by
--- fixed id from config, same as airline.owner-role-id.
+-- fixed id from config, same as airline.owner-role-id. Airline-scoped, so granted to airline roles only.
 
 INSERT INTO roles (id, name, description, status, scope, created_at, updated_at) VALUES
     (14, 'FLIGHT_DISPATCHER', 'Manages an airline''s flights, schedules and flight instances day to day', 'ACTIVE', 'AIRLINE', NOW(), NOW()),
@@ -20,11 +20,6 @@ INSERT INTO permissions (name, created_at, updated_at) VALUES
 
 INSERT INTO role_permissions (role_id, permission_id, created_at)
 SELECT r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN (
-    ('SUPER_ADMIN', 'FLIGHT_MANAGE'), ('SUPER_ADMIN', 'FLIGHT_READ'),
-    ('SUPER_ADMIN', 'FLIGHT_SCHEDULE_MANAGE'), ('SUPER_ADMIN', 'FLIGHT_SCHEDULE_READ'),
-    ('SUPER_ADMIN', 'FLIGHT_INSTANCE_MANAGE'), ('SUPER_ADMIN', 'FLIGHT_INSTANCE_READ'),
-    ('SUPER_ADMIN', 'FLIGHT_INSTANCE_AIRCRAFT_ASSIGN'),
-
     -- OWNER/ADMIN: fallback superset, same as every other airline-scoped domain
     ('OWNER', 'FLIGHT_MANAGE'), ('OWNER', 'FLIGHT_READ'),
     ('OWNER', 'FLIGHT_SCHEDULE_MANAGE'), ('OWNER', 'FLIGHT_SCHEDULE_READ'),
@@ -34,7 +29,6 @@ SELECT r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN 
     ('ADMIN', 'FLIGHT_SCHEDULE_MANAGE'), ('ADMIN', 'FLIGHT_SCHEDULE_READ'),
     ('ADMIN', 'FLIGHT_INSTANCE_MANAGE'), ('ADMIN', 'FLIGHT_INSTANCE_READ'),
     ('ADMIN', 'FLIGHT_INSTANCE_AIRCRAFT_ASSIGN'),
-    ('VIEWER', 'FLIGHT_READ'), ('VIEWER', 'FLIGHT_SCHEDULE_READ'), ('VIEWER', 'FLIGHT_INSTANCE_READ'),
 
     -- FLIGHT_DISPATCHER: routine flight-ops management, not aircraft reassignment.
     -- Needs AIRCRAFT_READ (already seeded by V9) to browse the fleet when picking an

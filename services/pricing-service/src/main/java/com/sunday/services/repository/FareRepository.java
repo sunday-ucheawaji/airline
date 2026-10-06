@@ -1,52 +1,67 @@
 package com.sunday.services.repository;
 
+import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.enums.FareStatus;
+import com.sunday.common_lib.enums.PassengerType;
 import com.sunday.services.model.Fare;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 public interface FareRepository extends JpaRepository<Fare, Long> {
 
     List<Fare> findByFlightId(Long flightId);
     Page<Fare> findByFlightId(Long flightId, Pageable pageable);
 
-    List<Fare> findByCabinClassId(Long cabinClassId);
+    @EntityGraph(attributePaths = {"fareRules", "baggagePolicy"})
+    Page<Fare> findByAirlineId(Long airlineId, Pageable pageable);
 
     List<Fare> findByFlightIdAndCabinClassId(Long flightId, Long cabinClassId);
 
-    @Query("SELECT f FROM Fare f LEFT JOIN FETCH f.fareRules LEFT JOIN FETCH f.baggagePolicy WHERE f.id = :id")
-    Optional<Fare> findByIdWithDetails(@Param("id") Long id);
+    boolean existsByAirlineIdAndFlightIdAndCabinClassAndRbdCodeAndPassengerTypeAndName(
+            Long airlineId, Long flightId, CabinClassType cabinClass, Character rbdCode, PassengerType passengerType, String name);
 
-    @Query(""" 
+    boolean existsByAirlineIdAndFlightIdAndCabinClassAndRbdCodeAndPassengerTypeAndNameAndIdNot(
+            Long airlineId, Long flightId, CabinClassType cabinClass, Character rbdCode, PassengerType passengerType,
+            String name, Long id);
+
+    /**
+     * Search candidates for a page of flight departures, in one query. Keeps published fares of the cabin whose
+     * sales window contains {@code now} and whose travel window overlaps the requested dates. The per-departure
+     * travel and advance-purchase rules are applied in memory by FareValidityPolicy. Rules and baggage are fetched
+     * here, because the search response includes them and loading them per fare would query inside a loop.
+     */
+    @Query("""
         SELECT f FROM Fare f
         LEFT JOIN FETCH f.fareRules
         LEFT JOIN FETCH f.baggagePolicy
-        WHERE f.flightId = :flightId
+        WHERE f.flightId IN :flightIds
+          AND f.cabinClass = :cabinClass
+          AND f.status = :status
+          AND f.salesFrom <= :now
+          AND f.salesTo >= :now
+          AND f.travelFrom <= :lastDate
+          AND f.travelTo >= :firstDate
     """)
-    List<Fare> findByFlightIdWithDetails(@Param("flightId") Long flightId);
-
-    boolean existsByFlightIdAndCabinClassIdAndName(Long flightId, Long cabinClassId, String name);
-    boolean existsByFlightIdAndCabinClassIdAndNameAndIdNot(Long flightId, Long cabinClassId, String name, Long id);
-
-    /**
-     * Batch query used by flight search: returns all fares for a set of flight IDs
-     * filtered by cabin class type, so the search layer can apply price range filtering
-     * without additional cross-service calls.
-     */
-    List<Fare> findByFlightIdInAndCabinClassId(Collection<Long> flightIds, Long cabinClassId);
+    List<Fare> findSearchCandidates(@Param("flightIds") Collection<Long> flightIds,
+                                    @Param("cabinClass") CabinClassType cabinClass,
+                                    @Param("status") FareStatus status,
+                                    @Param("now") Instant now,
+                                    @Param("firstDate") LocalDate firstDate,
+                                    @Param("lastDate") LocalDate lastDate);
 
     /**
-     * Returns composite keys "flightId:cabinClassId:name" for existing fares
-     * whose flightId is in the given collection. Used by bulk create to detect
-     * duplicates with a single DB round-trip.
+     * All fares on the given flights, in one query. Bulk create compares natural keys in memory against this,
+     * so duplicate detection costs one database round trip per batch, not one per row.
      */
-    @Query("SELECT CONCAT(f.flightId, ':', f.cabinClassId, ':', f.name) FROM Fare f WHERE f.flightId IN :flightIds")
-    Set<String> findExistingFareKeys(@Param("flightIds") Collection<Long> flightIds);
+    List<Fare> findByFlightIdIn(Collection<Long> flightIds);
 }

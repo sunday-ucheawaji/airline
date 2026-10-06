@@ -7,12 +7,14 @@ import com.sunday.services.model.FareRules;
 
 public class FareRulesMapper {
 
-    public static FareRules toEntity(FareRulesRequest request, Fare fare) {
+    public static FareRules toEntity(FareRulesRequest request, Fare fare, Long userId) {
         if (request == null) return null;
         return FareRules.builder()
                 .ruleName(request.getRuleName())
                 .fare(fare)
-                .airlineId(request.getAirlineId())
+                .airlineId(fare.getAirlineId())
+                .createdBy(userId)
+                .updatedBy(userId)
                 .isRefundable(request.getIsRefundable())
                 .changeFee(request.getChangeFee())
                 .cancellationFee(request.getCancellationFee())
@@ -40,10 +42,10 @@ public class FareRulesMapper {
                 .build();
     }
 
-    public static void updateEntity(FareRulesRequest request, FareRules existing) {
+    public static void updateEntity(FareRulesRequest request, FareRules existing, Long userId) {
         if (request == null || existing == null) return;
         if (request.getRuleName() != null) existing.setRuleName(request.getRuleName());
-        if (request.getAirlineId() != null) existing.setAirlineId(request.getAirlineId());
+        existing.setUpdatedBy(userId);
         if (request.getIsRefundable() != null) existing.setIsRefundable(request.getIsRefundable());
         if (request.getChangeFee() != null) existing.setChangeFee(request.getChangeFee());
         if (request.getCancellationFee() != null) existing.setCancellationFee(request.getCancellationFee());

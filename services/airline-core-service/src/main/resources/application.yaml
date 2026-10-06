@@ -54,6 +54,7 @@ airline:
   fleet-assignment-officer-role-id: ${AIRLINE_FLEET_ASSIGNMENT_OFFICER_ROLE_ID}
   seat-config-officer-role-id: ${AIRLINE_SEAT_CONFIG_OFFICER_ROLE_ID}
   inventory-control-officer-role-id: ${AIRLINE_INVENTORY_CONTROL_OFFICER_ROLE_ID}
+  revenue-manager-role-id: ${AIRLINE_REVENUE_MANAGER_ROLE_ID}
   invitation-expiry: 7d
   documents:
     max-file-size-bytes: 10485760

@@ -58,9 +58,19 @@ public class BaggagePolicy {
     @Column(nullable = false)
     private Boolean extraBaggageAllowance = false;
 
-    // Cross-service ref: Airline
-    @Column(name = "airline_id")
+    // Cross-service ref: Airline. Copied from the fare on write, never taken from the request.
+    @Column(name = "airline_id", nullable = false)
     private Long airlineId;
+
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
+    @Column(name = "created_by")
+    private Long createdBy;
+
+    @Column(name = "updated_by")
+    private Long updatedBy;
 
     // Audit
     @Column(updatable = false, nullable = false)

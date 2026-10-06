@@ -1,24 +1,36 @@
 package com.sunday.services.integration.impl;
 
-import com.sunday.common_lib.payload.response.FareResponse;
+import com.sunday.common_lib.exception.ConflictException;
+import com.sunday.common_lib.exception.ServiceUnavailableException;
+import com.sunday.common_lib.payload.response.FareQuoteResponse;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.clients.PricingClient;
 import com.sunday.services.integration.PricingIntegrationService;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-@RequiredArgsConstructor
+import java.time.LocalDate;
+
 @Service
+@RequiredArgsConstructor
 public class PriceIntegrationServiceImpl implements PricingIntegrationService {
 
     private final PricingClient pricingClient;
 
     @Override
-    public Double calculateFareTotal(Long fareId) {
-        FareResponse fare=pricingClient.getFareById(fareId);
-        Double baseFare = fare.getBaseFare();
-        Double taxesAndFees = fare.getTaxesAndFees() != null ? fare.getTaxesAndFees() : 0.0;
-        Double airlineFees = fare.getAirlineFees() != null ? fare.getAirlineFees() : 0.0;
-        return baseFare+taxesAndFees+airlineFees;
-
+    public FareQuoteResponse quoteFare(Long fareId, LocalDate departureDate) {
+        FareQuoteResponse quote;
+        try {
+            quote = pricingClient.quoteFare(fareId, departureDate);
+        } catch (FeignException.Conflict e) {
+            throw new ConflictException(ErrorMessageUtil.FARE_UNAVAILABLE_FOR_DEPARTURE);
+        } catch (FeignException e) {
+            throw new ServiceUnavailableException(String.format(ErrorMessageUtil.FARE_SERVICE_ERROR, e.getMessage()), e);
+        }
+        if (quote == null) {
+            throw new ServiceUnavailableException(ErrorMessageUtil.FARE_SERVICE_UNAVAILABLE);
+        }
+        return quote;
     }
 }

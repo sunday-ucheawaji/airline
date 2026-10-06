@@ -1,6 +1,9 @@
 package com.sunday.services.repository;
 
 import com.sunday.services.model.BaggagePolicy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,7 +16,8 @@ import java.util.Set;
 public interface BaggagePolicyRepository extends JpaRepository<BaggagePolicy, Long> {
 
     Optional<BaggagePolicy> findByFareId(Long fareId);
-    List<BaggagePolicy> findByAirlineId(Long airlineId);
+    @EntityGraph(attributePaths = "fare")
+    Page<BaggagePolicy> findByAirlineId(Long airlineId, Pageable pageable);
     boolean existsByFareId(Long fareId);
 
     @Query("SELECT b.fare.id FROM BaggagePolicy b WHERE b.fare.id IN :fareIds")

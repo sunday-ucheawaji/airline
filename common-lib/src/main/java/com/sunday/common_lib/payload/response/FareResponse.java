@@ -1,9 +1,12 @@
 package com.sunday.common_lib.payload.response;
 
 import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.enums.FareStatus;
+import com.sunday.common_lib.enums.PassengerType;
 import lombok.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -14,17 +17,28 @@ public class FareResponse {
     private Long id;
     private String name;
     private Character rbdCode;
+    private Long airlineId;
+    private FareStatus status;
     private Long flightId;
     private Long cabinClassId;
     private CabinClassType cabinClass;
+    private PassengerType passengerType;
+    private String fareBasisCode;
 
-    // Pricing
+    // Pricing (amounts are in `currency`)
+    private String currency;
     private Double baseFare;
     private Double taxesAndFees;
     private Double airlineFees;
-    private Double currentPrice;
     private Double totalPrice;
     private String fareLabel;
+
+    // Sales and travel windows
+    private Instant salesFrom;
+    private Instant salesTo;
+    private LocalDate travelFrom;
+    private LocalDate travelTo;
+    private Integer advancePurchaseDays;
 
     // Seat benefits
     private Boolean extraSeatSpace;

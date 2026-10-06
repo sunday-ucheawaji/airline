@@ -1,13 +1,13 @@
 package com.sunday.services.service.impl;
 
-import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.payload.request.FareSearchRequest;
+import com.sunday.common_lib.payload.request.FareSearchRequest.FlightDeparture;
 import com.sunday.common_lib.payload.request.FlightSearchRequest;
 import com.sunday.common_lib.payload.response.*;
 import com.sunday.services.Integration.AirlineIntegrationService;
 import com.sunday.services.client.AirlineClient;
 import com.sunday.services.client.LocationClient;
 import com.sunday.services.client.PricingClient;
-import com.sunday.services.client.SeatClient;
 import com.sunday.services.mapper.FlightInstanceMapper;
 import com.sunday.services.model.FlightInstance;
 import com.sunday.services.repository.FlightInstanceRepository;
@@ -35,7 +35,6 @@ public class FlightSearchServiceImpl implements FlightSearchService {
     private final AirlineClient airlineClient;
     private final AirlineIntegrationService airlineIntegrationService;
     private final PricingClient pricingClient;
-    private final SeatClient seatClient;
 
     @Override
     @Transactional(readOnly = true)
@@ -49,10 +48,10 @@ public class FlightSearchServiceImpl implements FlightSearchService {
         }
 
         List<FlightInstance> instances = new ArrayList<>(dbPage.getContent());
-        Map<Long, FareResponse> fareMap = Collections.emptyMap();
+        Map<FlightDeparture, FareResponse> fareMap = Collections.emptyMap();
 
         if (request.getCabinClass() != null) {
-            CabinClassPriceFilterResult filterResult = filterByCabinClassAndPrice(instances, request);
+            CabinFareResult filterResult = filterByCabinAndPrice(instances, request);
             instances = filterResult.instances();
             fareMap = filterResult.fareMap();
             if (instances.isEmpty()) {
@@ -64,33 +63,32 @@ public class FlightSearchServiceImpl implements FlightSearchService {
         return new PageImpl<>(responses, sortedPageable, dbPage.getTotalElements());
     }
 
-    private record CabinClassPriceFilterResult(List<FlightInstance> instances, Map<Long, FareResponse> fareMap) {}
+    private record CabinFareResult(List<FlightInstance> instances, Map<FlightDeparture, FareResponse> fareMap) {}
 
-    private CabinClassPriceFilterResult filterByCabinClassAndPrice(List<FlightInstance> instances, FlightSearchRequest request) {
-        Map<Long, Long> cabinClassIdByAircraftId = new HashMap<>();
-        for (Long aircraftId : instances.stream().map(FlightInstance::getAircraftId).distinct().toList()) {
-            cabinClassIdByAircraftId.put(aircraftId, resolveCabinClassId(request.getCabinClass(), aircraftId));
-        }
+    /** One pricing call for the whole page: the cheapest sellable fare per flight departure in the requested cabin. */
+    private CabinFareResult filterByCabinAndPrice(List<FlightInstance> instances, FlightSearchRequest request) {
+        List<FlightDeparture> departures = instances.stream()
+                .map(FlightSearchServiceImpl::departureOf)
+                .distinct()
+                .toList();
 
-        Map<Long, List<FlightInstance>> instancesByCabinClassId = instances.stream()
-                .filter(fi -> cabinClassIdByAircraftId.get(fi.getAircraftId()) != null)
-                .collect(Collectors.groupingBy(fi -> cabinClassIdByAircraftId.get(fi.getAircraftId())));
-
-        Map<Long, FareResponse> fareMap = new HashMap<>();
-        for (Map.Entry<Long, List<FlightInstance>> entry : instancesByCabinClassId.entrySet()) {
-            List<Long> flightIds = entry.getValue().stream()
-                    .map(fi -> fi.getFlight().getId())
-                    .distinct()
-                    .toList();
-            fareMap.putAll(pricingClient.getLowestFarePerFlight(flightIds, entry.getKey()));
-        }
+        Map<FlightDeparture, FareResponse> fareMap = pricingClient
+                .searchFares(new FareSearchRequest(request.getCabinClass(), departures))
+                .stream()
+                .collect(Collectors.toMap(
+                        result -> new FlightDeparture(result.getFlightId(), result.getDepartureDate()),
+                        FareSearchResult::getFare));
 
         boolean hasPriceFilter = request.getMinPrice() != null || request.getMaxPrice() != null;
         List<FlightInstance> filtered = instances.stream()
-                .filter(fi -> passesFareAndPriceFilter(fareMap.get(fi.getFlight().getId()), request, hasPriceFilter))
+                .filter(fi -> passesFareAndPriceFilter(fareMap.get(departureOf(fi)), request, hasPriceFilter))
                 .toList();
 
-        return new CabinClassPriceFilterResult(filtered, fareMap);
+        return new CabinFareResult(filtered, fareMap);
+    }
+
+    private static FlightDeparture departureOf(FlightInstance fi) {
+        return new FlightDeparture(fi.getFlight().getId(), fi.getDepartureDateTime().toLocalDate());
     }
 
     private boolean passesFareAndPriceFilter(FareResponse fare, FlightSearchRequest request, boolean hasPriceFilter) {
@@ -102,19 +100,9 @@ public class FlightSearchServiceImpl implements FlightSearchService {
         return request.getMaxPrice() == null || price <= request.getMaxPrice();
     }
 
-    private Long resolveCabinClassId(CabinClassType cabinClassName, Long aircraftId) {
-        try {
-            CabinClassResponse cabin = seatClient.getCabinClassByAircraftIdAndName(cabinClassName, aircraftId);
-            return cabin != null ? cabin.getId() : null;
-        } catch (Exception e) {
-            log.warn("seat-service call failed for aircraftId={}: {}", aircraftId, e.getMessage());
-            return null;
-        }
-    }
-
     private List<FlightInstanceResponse> enrichWithExternalData(
             List<FlightInstance> instances,
-            Map<Long, FareResponse> fareMap) {
+            Map<FlightDeparture, FareResponse> fareMap) {
 
         List<Long> distinctAirlineIds = instances.stream().map(FlightInstance::getAirlineId).distinct().toList();
         List<Long> distinctAircraftIds = instances.stream().map(FlightInstance::getAircraftId).distinct().toList();
@@ -134,7 +122,7 @@ public class FlightSearchServiceImpl implements FlightSearchService {
                         airlines.get(fi.getAirlineId()),
                         airports.get(fi.getDepartureAirportId()),
                         airports.get(fi.getArrivalAirportId()));
-                response.setFare(fareMap.get(fi.getFlight().getId()));
+                response.setFare(fareMap.get(departureOf(fi)));
                 results.add(response);
             } catch (Exception e) {
                 log.error("searchFlights: enrichment failed for FlightInstance id={} – skipping: {}",

@@ -1,16 +1,24 @@
 package com.sunday.services.controller;
 
 import com.sunday.common_lib.payload.request.FareRequest;
+import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.payload.response.FareBulkCreateResponse;
+import com.sunday.common_lib.payload.response.FareOfferResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
+import com.sunday.services.service.FareLifecycleService;
+import com.sunday.services.service.FareOfferService;
 import com.sunday.services.service.FareService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/fares")
@@ -18,104 +26,84 @@ import java.util.Map;
 public class FareController {
 
     private final FareService fareService;
+    private final FareLifecycleService fareLifecycleService;
+    private final FareOfferService fareOfferService;
 
     @PostMapping
     public ResponseEntity<FareResponse> createFare(
+            @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody FareRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(fareService.createFare(request));
+                .body(fareService.createFare(userId, request));
     }
 
     @PostMapping("/bulk")
-    public ResponseEntity<List<FareResponse>> createFares(
+    public ResponseEntity<FareBulkCreateResponse> createFares(
+            @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody List<FareRequest> requests) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(fareService.createFares(requests));
+                .body(fareService.createFares(userId, requests));
     }
 
     @GetMapping
-    public ResponseEntity<?> getFares() {
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(fareService.getFares());
+    public ResponseEntity<Page<FareResponse>> getFaresByAirline(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam Long airlineId,
+            Pageable pageable) {
+        return ResponseEntity.ok(fareService.getFaresByAirline(userId, airlineId, pageable));
+    }
+
+    // Public customer read: published, in-window fares on one flight and cabin. No airline permission is needed.
+    @GetMapping("/offers")
+    public ResponseEntity<List<FareOfferResponse>> offers(
+            @RequestParam Long flightId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate,
+            @RequestParam CabinClassType cabinClass) {
+        return ResponseEntity.ok(fareOfferService.offers(flightId, departureDate, cabinClass));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<FareResponse> getFareById(@PathVariable Long id) {
-        return ResponseEntity.ok(fareService.getFareById(id));
+    public ResponseEntity<FareResponse> getFareById(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(fareService.getFareById(userId, id));
     }
-
-//    @GetMapping("/{id}/details")
-//    public ResponseEntity<FareResponse> getFareByIdWithDetails(@PathVariable Long id) {
-//        return ResponseEntity.ok(fareService.getFareByIdWithDetails(id));
-//    }
-//
-//    @GetMapping("/flight/{flightId}")
-//    public ResponseEntity<List<FareResponse>> getFaresByFlightId(
-//            @PathVariable Long flightId) {
-//        return ResponseEntity.ok(fareService.getFaresByFlightId(flightId));
-//    }
-
-
-
-//    @GetMapping("/flight/{flightId}/details")
-//    public ResponseEntity<List<FareResponse>> getFaresByFlightIdWithDetails(
-//            @PathVariable Long flightId) {
-//        return ResponseEntity.ok(fareService.getFaresByFlightIdWithDetails(flightId));
-//    }
 
     @GetMapping("/flight/{flightId}/cabin-class/{cabinClassId}")
     public ResponseEntity<List<FareResponse>> getFaresByFlightAndCabinClass(
+            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long flightId,
             @PathVariable Long cabinClassId) {
-        return ResponseEntity.ok(fareService.getFaresByFlightIdAndCabinClassId(flightId, cabinClassId));
+        return ResponseEntity.ok(fareService.getFaresByFlightIdAndCabinClassId(userId, flightId, cabinClassId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<FareResponse> updateFare(
+            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long id,
             @Valid @RequestBody FareRequest request) {
-        return ResponseEntity.ok(fareService.updateFare(id, request));
+        return ResponseEntity.ok(fareService.updateFare(userId, id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteFare(@PathVariable Long id) {
-        fareService.deleteFare(id);
+    public ResponseEntity<Void> deleteFare(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        fareService.deleteFare(userId, id);
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Returns the cheapest fare per flight for the requested cabin class.
-     * Called internally by flight-ops-service during flight search to support
-     * price range filtering across a page of results in a single batch call.
-     *
-     * <p>Request body: list of flight IDs (e.g. {@code [1, 2, 3]})<br>
-     * Query param: {@code cabinClass=ECONOMY}
-     *
-     * @return map of {@code flightId → cheapest FareResponse} for that cabin class;
-     *         flights with no matching fare are absent from the map
-     */
-    @PostMapping("/batch-by-ids")
-    public ResponseEntity<Map<Long, FareResponse>> getFaresByIds(@RequestBody List<Long> ids) {
-        return ResponseEntity.ok(fareService.getFaresByIds(ids));
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<FareResponse> publishFare(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(fareLifecycleService.publishFare(userId, id));
     }
 
-    @PostMapping("/search")
-    public ResponseEntity<Map<Long, FareResponse>> getLowestFarePerFlight(
-            @RequestBody List<Long> flightIds,
-            @RequestParam Long cabinClassId) {
-        Map<Long, FareResponse> res= fareService.getLowestFarePerFlight(flightIds, cabinClassId);
-        System.out.println("search fare response ------ "+res.toString());
-        return ResponseEntity.ok(res);
+    @PostMapping("/{id}/withdraw")
+    public ResponseEntity<FareResponse> withdrawFare(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(fareLifecycleService.withdrawFare(userId, id));
     }
-
-    @GetMapping("/lowest/flight/{flightId}/cabin-class/{cabinClassId}")
-    public ResponseEntity<FareResponse> getLowestFareForFlightAndCabinClass(
-            @PathVariable Long flightId,
-            @PathVariable Long cabinClassId) {
-        return ResponseEntity.ok(
-                fareService.getLowestFareForFlightAndCabin(flightId, cabinClassId)
-        );
-    }
-
-
 }

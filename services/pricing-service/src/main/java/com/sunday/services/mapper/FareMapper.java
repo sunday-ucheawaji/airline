@@ -1,13 +1,18 @@
 package com.sunday.services.mapper;
 
 import com.sunday.common_lib.embeddable.*;
+import com.sunday.common_lib.enums.FareStatus;
+import com.sunday.common_lib.enums.PassengerType;
 import com.sunday.common_lib.payload.request.FareRequest;
 import com.sunday.common_lib.payload.response.FareResponse;
 import com.sunday.services.model.Fare;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 public class FareMapper {
 
-    public static Fare toEntity(FareRequest request) {
+    public static Fare toEntity(FareRequest request, Long airlineId, Long userId) {
         if (request == null) return null;
 
         SeatBenefits seatBenefits = SeatBenefits.builder()
@@ -42,47 +47,63 @@ public class FareMapper {
                 .airportTransfer(bool(request.getAirportTransfer()))
                 .build();
 
-        Double calculatedPrice = request.getCurrentPrice();
-        if (calculatedPrice == null) {
-            calculatedPrice = request.getBaseFare()
-                    + (request.getTaxesAndFees() != null ? request.getTaxesAndFees() : 0.0)
-                    + (request.getAirlineFees() != null ? request.getAirlineFees() : 0.0);
-        }
-
-        return Fare.builder()
+        Fare fare = Fare.builder()
                 .name(request.getName())
                 .rbdCode(request.getRbdCode())
                 .flightId(request.getFlightId())
                 .cabinClassId(request.getCabinClassId())
+                .cabinClass(request.getCabinClass())
+                .passengerType(passengerTypeOf(request))
+                .fareBasisCode(request.getFareBasisCode())
+                .airlineId(airlineId)
+                .status(FareStatus.DRAFT)
+                .createdBy(userId)
+                .updatedBy(userId)
 
-                .baseFare(request.getBaseFare())
-                .taxesAndFees(request.getTaxesAndFees())
-                .airlineFees(request.getAirlineFees())
-                .currentPrice(calculatedPrice)
+                .currency(request.getCurrency())
+                .baseFare(money(request.getBaseFare()))
+                .taxesAndFees(money(request.getTaxesAndFees()))
+                .airlineFees(money(request.getAirlineFees()))
                 .fareLabel(request.getFareLabel())
+                .salesFrom(request.getSalesFrom())
+                .salesTo(request.getSalesTo())
+                .travelFrom(request.getTravelFrom())
+                .travelTo(request.getTravelTo())
+                .advancePurchaseDays(request.getAdvancePurchaseDays())
                 .seatBenefits(seatBenefits)
                 .boardingBenefits(boardingBenefits)
                 .inFlightBenefits(inFlightBenefits)
                 .flexibilityBenefits(flexibilityBenefits)
                 .premiumServiceBenefits(premiumServiceBenefits)
                 .build();
+        fare.recalculateTotal();
+        return fare;
     }
 
     public static FareResponse toResponse(Fare fare) {
         if (fare == null) return null;
         return FareResponse.builder()
                 .id(fare.getId())
+                .airlineId(fare.getAirlineId())
+                .status(fare.getStatus())
                 .name(fare.getName())
                 .rbdCode(fare.getRbdCode())
                 .flightId(fare.getFlightId())
                 .cabinClassId(fare.getCabinClassId())
                 .cabinClass(fare.getCabinClass())
-                .baseFare(fare.getBaseFare())
-                .taxesAndFees(fare.getTaxesAndFees())
-                .airlineFees(fare.getAirlineFees())
-                .currentPrice(fare.getCurrentPrice())
-                .totalPrice(fare.getTotalPrice())
+                .passengerType(fare.getPassengerType())
+                .fareBasisCode(fare.getFareBasisCode())
+                .currency(fare.getCurrency())
+                .baseFare(asDouble(fare.getBaseFare()))
+                .taxesAndFees(asDouble(fare.getTaxesAndFees()))
+                .airlineFees(asDouble(fare.getAirlineFees()))
+                .totalPrice(asDouble(fare.getTotalAmount()))
                 .fareLabel(fare.getFareLabel())
+                .salesFrom(fare.getSalesFrom())
+                .salesTo(fare.getSalesTo())
+                .travelFrom(fare.getTravelFrom())
+                .travelTo(fare.getTravelTo())
+                .advancePurchaseDays(fare.getAdvancePurchaseDays())
                 .fareRulesId(fare.getFareRules() != null ? fare.getFareRules().getId() : null)
                 // Seat benefits
                 .extraSeatSpace(fare.getSeatBenefits() != null ? fare.getSeatBenefits().getExtraSeatSpace() : false)
@@ -114,18 +135,28 @@ public class FareMapper {
                 .build();
     }
 
-    public static void updateEntity(FareRequest request, Fare existing) {
+    /** flightId and airlineId are not updatable: a fare stays on the flight and airline it was created for. */
+    public static void updateEntity(FareRequest request, Fare existing, Long userId) {
         if (request == null || existing == null) return;
-        if (request.getName() != null) existing.setName(request.getName());
-        if (request.getRbdCode() != null) existing.setRbdCode(request.getRbdCode());
-        if (request.getFlightId() != null) existing.setFlightId(request.getFlightId());
-        if (request.getCabinClassId() != null) existing.setCabinClassId(request.getCabinClassId());
+        existing.setName(request.getName());
+        existing.setRbdCode(request.getRbdCode());
+        existing.setCabinClassId(request.getCabinClassId());
+        existing.setCabinClass(request.getCabinClass());
+        existing.setPassengerType(passengerTypeOf(request));
+        existing.setFareBasisCode(request.getFareBasisCode());
+        existing.setUpdatedBy(userId);
 
-        if (request.getBaseFare() != null) existing.setBaseFare(request.getBaseFare());
-        if (request.getTaxesAndFees() != null) existing.setTaxesAndFees(request.getTaxesAndFees());
-        if (request.getAirlineFees() != null) existing.setAirlineFees(request.getAirlineFees());
-        if (request.getCurrentPrice() != null) existing.setCurrentPrice(request.getCurrentPrice());
-        if (request.getFareLabel() != null) existing.setFareLabel(request.getFareLabel());
+        existing.setCurrency(request.getCurrency());
+        existing.setBaseFare(money(request.getBaseFare()));
+        existing.setTaxesAndFees(money(request.getTaxesAndFees()));
+        existing.setAirlineFees(money(request.getAirlineFees()));
+        existing.setFareLabel(request.getFareLabel());
+        existing.setSalesFrom(request.getSalesFrom());
+        existing.setSalesTo(request.getSalesTo());
+        existing.setTravelFrom(request.getTravelFrom());
+        existing.setTravelTo(request.getTravelTo());
+        existing.setAdvancePurchaseDays(request.getAdvancePurchaseDays());
+        existing.recalculateTotal();
 
         // Update embedded benefits
         SeatBenefits sb = existing.getSeatBenefits();
@@ -154,6 +185,18 @@ public class FareMapper {
         PremiumServiceBenefits psb = existing.getPremiumServiceBenefits();
         if (request.getLoungeAccess() != null) psb.setLoungeAccess(request.getLoungeAccess());
         if (request.getAirportTransfer() != null) psb.setAirportTransfer(request.getAirportTransfer());
+    }
+
+    public static PassengerType passengerTypeOf(FareRequest request) {
+        return request.getPassengerType() != null ? request.getPassengerType() : PassengerType.ADT;
+    }
+
+    private static BigDecimal money(Double value) {
+        return value == null ? null : BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private static Double asDouble(BigDecimal value) {
+        return value == null ? null : value.doubleValue();
     }
 
     private static boolean bool(Boolean value) {

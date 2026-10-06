@@ -22,8 +22,8 @@ public class FareRules {
 
     private String ruleName;
 
-    // Cross-service ref: Airline is in airline-core-service
-    @Column(name = "airline_id")
+    // Cross-service ref: Airline is in airline-core-service. Copied from the fare, never from the request.
+    @Column(name = "airline_id", nullable = false)
     private Long airlineId;
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -47,6 +47,16 @@ public class FareRules {
 
     @Builder.Default
     private Boolean isChangeable = false;
+
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
+    @Column(name = "created_by")
+    private Long createdBy;
+
+    @Column(name = "updated_by")
+    private Long updatedBy;
 
     @Column(updatable = false)
     private Instant createdAt;

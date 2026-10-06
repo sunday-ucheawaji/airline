@@ -9,6 +9,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -53,6 +54,16 @@ public class Booking {
     // Cross-service ref: Fare (pricing-service)
     @Column(name = "fare_id")
     private Long fareId;
+
+    // Fare as priced at purchase time, so a later repricing or rule edit does not change this booking.
+    private Long fareVersion;
+    private String fareCurrency;
+    private Double fareBaseAmount;
+    private Double fareTaxAmount;
+    private Double fareFeeAmount;
+    private Long fareRulesId;
+    private Long fareBaggagePolicyId;
+    private LocalDate fareTravelDate;
 
     private boolean flexibleTicket;
     private LocalDateTime ticketTimeLimit;

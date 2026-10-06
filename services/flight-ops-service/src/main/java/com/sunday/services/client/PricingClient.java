@@ -1,39 +1,22 @@
 package com.sunday.services.client;
 
-import com.sunday.common_lib.payload.response.FareResponse;
+import com.sunday.common_lib.payload.request.FareSearchRequest;
+import com.sunday.common_lib.payload.response.FareSearchResult;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Feign client for the pricing-service.
  *
- * <p>Used during flight search to fetch the cheapest fare per flight
- * for a given cabin class, enabling price-range filtering across
- * the result page in a single network call.
+ * <p>Used during flight search: one call per page returns the cheapest sellable fare for each requested
+ * flight departure in the requested cabin.
  */
 @FeignClient(name = "pricing-service", fallbackFactory = PricingClientFallbackFactory.class)
 public interface PricingClient {
 
-    /**
-     * Returns a map of {@code flightId → cheapest FareResponse} for each flight
-     * that has at least one fare for the requested cabin class.
-     *
-     * <p>Flights with no fare for the given cabin class are absent from the map.
-     *
-     * @param flightIds  list of flight IDs to query
-     * @param cabinClassId the requested cabin class
-     */
-    @PostMapping("/api/fares/search")
-    Map<Long, FareResponse> getLowestFarePerFlight(
-            @RequestBody List<Long> flightIds,
-            @RequestParam("cabinClassId") Long cabinClassId);
-
-    @GetMapping("/api/fares/lowest/flight/{flightId}/cabin-class/{cabinClassId}")
-    FareResponse getLowestFareForFlightAndCabinClass(
-            @PathVariable Long flightId,
-            @PathVariable Long cabinClassId
-    );
+    @PostMapping("/internal/fares/search")
+    List<FareSearchResult> searchFares(@RequestBody FareSearchRequest request);
 }

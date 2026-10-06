@@ -2,15 +2,15 @@ package com.sunday.services.service;
 
 import com.sunday.common_lib.payload.request.FareRulesRequest;
 import com.sunday.common_lib.payload.response.FareRulesResponse;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface FareRulesService {
 
-    FareRulesResponse createFareRules(FareRulesRequest request);
-    FareRulesResponse getFareRulesById(Long id);
-    FareRulesResponse getFareRulesByFareId(Long fareId);
-    List<FareRulesResponse> getFareRulesByAirlineId(Long airlineId);
-    FareRulesResponse updateFareRules(Long id, FareRulesRequest request);
-    void deleteFareRules(Long id);
+    FareRulesResponse createFareRules(Long userId, FareRulesRequest request);
+    FareRulesResponse getFareRulesById(Long userId, Long id);
+    FareRulesResponse getFareRulesByFareId(Long userId, Long fareId);
+    Page<FareRulesResponse> getFareRulesByAirlineId(Long userId, Long airlineId, Pageable pageable);
+    FareRulesResponse updateFareRules(Long userId, Long id, FareRulesRequest request);
+    void deleteFareRules(Long userId, Long id);
 }

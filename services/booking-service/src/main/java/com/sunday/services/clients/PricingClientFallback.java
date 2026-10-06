@@ -1,8 +1,10 @@
 package com.sunday.services.clients;
 
+import com.sunday.common_lib.payload.response.FareQuoteResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -18,5 +20,10 @@ public class PricingClientFallback implements PricingClient {
     @Override
     public Map<Long, FareResponse> getFaresByIds(List<Long> ids) {
         return Collections.emptyMap();
+    }
+
+    @Override
+    public FareQuoteResponse quoteFare(Long id, LocalDate departureDate) {
+        return null;
     }
 }

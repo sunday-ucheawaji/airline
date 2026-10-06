@@ -200,6 +200,10 @@ public class SecurityConfig {
                         // INSTANCE_* permissions are checked inside flight-ops-service, same layering as /api/aircrafts/**.
                         .pathMatchers("/api/flights/**", "/api/flight-instances/**", "/api/flight-schedules/**").authenticated()
 
+                        // Fares/rules/baggage: gateway only checks authentication — FARE_* permissions are checked
+                        // inside pricing-service against the fare's own airline. /internal/fares/** is never routed.
+                        .pathMatchers("/api/fares/**", "/api/fare-rules/**", "/api/baggage-policies/**").authenticated()
+
                         // --- any signed-in user (per-airline checks happen inside the services) ---
                         .pathMatchers("/api/**").authenticated()
 

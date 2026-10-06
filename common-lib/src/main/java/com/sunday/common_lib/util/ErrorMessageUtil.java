@@ -96,7 +96,38 @@ public class ErrorMessageUtil {
     // ---------- Flight ops: cross-service integration ----------
     public static final String AIRLINE_SERVICE_ERROR = "Airline service error: %s";
     public static final String AIRLINE_SERVICE_UNAVAILABLE = "Airline service unavailable";
+    public static final String FLIGHT_SERVICE_ERROR = "Flight service error: %s";
+    public static final String FLIGHT_SERVICE_UNAVAILABLE = "Flight service unavailable";
     public static final String AIRCRAFT_SERVICE_ERROR = "Aircraft service error: %s";
+
+    // ---------- Pricing ----------
+    public static final String FARE_NOT_FOUND_BY_ID = "Fare not found with id: %s";
+    public static final String FARE_ALREADY_EXISTS = "Fare '%s' already exists for this flight and cabin class";
+    public static final String FARE_RULES_NOT_FOUND_BY_ID = "Fare rules not found with id: %s";
+    public static final String FARE_RULES_NOT_FOUND_FOR_FARE = "Fare rules not found for fare id: %s";
+    public static final String FARE_RULES_ALREADY_EXIST = "Fare rules already exist for fare id: %s";
+    public static final String BAGGAGE_POLICY_NOT_FOUND_BY_ID = "Baggage policy not found with id: %s";
+    public static final String BAGGAGE_POLICY_NOT_FOUND_FOR_FARE = "Baggage policy not found for fare id: %s";
+    public static final String BAGGAGE_POLICY_ALREADY_EXISTS = "Baggage policy already exists for fare id: %s";
+    public static final String FARE_SALES_WINDOW_INVALID = "Sales start must be on or before sales end";
+    public static final String FARE_SERVICE_ERROR = "Fare service error: %s";
+    public static final String FARE_SERVICE_UNAVAILABLE = "Fare service unavailable";
+    public static final String FARE_UNAVAILABLE_FOR_DEPARTURE = "The selected fare is not available for this departure";
+    public static final String FARE_TRAVEL_WINDOW_INVALID = "Travel start date must be on or before travel end date";
+    public static final String FARE_CURRENCY_INVALID = "Currency '%s' is not a valid ISO-4217 code";
+    public static final String FARE_RBD_INVALID = "RBD code must be a letter A to Z";
+    public static final String FARE_NOT_PUBLISHED = "Fare is not published";
+    public static final String FARE_OUTSIDE_SALES_WINDOW = "Fare is not on sale at this time";
+    public static final String FARE_OUTSIDE_TRAVEL_WINDOW = "Fare does not apply to this departure date";
+    public static final String FARE_ADVANCE_PURCHASE_NOT_MET = "Fare must be bought at least %s days before departure";
+    public static final String FARE_INVALID_STATUS_TRANSITION = "Fare cannot move from %s to %s";
+    public static final String FARE_SALES_WINDOW_ENDED = "Fare sales window has already ended";
+    public static final String FARE_TRAVEL_WINDOW_ENDED = "Fare travel window has already ended";
+    public static final String FARE_TERMS_MISSING = "Fare needs both fare rules and a baggage policy before it can be published";
+    public static final String FARE_SEARCH_TOO_LARGE = "A search can cover at most %s flight departures";
+    public static final String FARE_DUPLICATE_IN_REQUEST = "The same fare appears more than once in this request";
+    public static final String BAGGAGE_POLICY_DUPLICATE_IN_REQUEST = "A baggage policy for this fare appears more than once in this request";
+    public static final String BULK_TOO_LARGE = "A bulk request can contain at most %s rows";
 
     // ---------- Airline membership (invitations) ----------
     public static final String MEMBER_INVITE_EMAIL_MANDATORY = "A valid email is required";
