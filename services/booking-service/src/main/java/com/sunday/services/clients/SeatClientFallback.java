@@ -1,21 +1,25 @@
 package com.sunday.services.clients;
 
+import com.sunday.common_lib.exception.ServiceUnavailableException;
+import com.sunday.common_lib.payload.request.SeatHoldRequest;
+import com.sunday.common_lib.payload.response.SeatHoldResponse;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.List;
 
+/** Fails closed: a seat outage must not hold a booking's seats at a phantom price or show a booking with no seats. */
 @Component
 public class SeatClientFallback implements SeatClient {
 
     @Override
-    public Double calculateSeatPrice(List<Long> seatInstanceIds) {
-        return 0.0;
+    public SeatHoldResponse holdSeats(SeatHoldRequest request) {
+        throw new ServiceUnavailableException(ErrorMessageUtil.SEAT_SERVICE_UNAVAILABLE);
     }
 
     @Override
-    public List<SeatInstanceResponse> getAllByIds(List<Long> Ids) {
-        return Collections.emptyList();
+    public List<SeatInstanceResponse> getAllByIds(List<Long> ids) {
+        throw new ServiceUnavailableException(ErrorMessageUtil.SEAT_SERVICE_UNAVAILABLE);
     }
 }

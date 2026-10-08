@@ -1,33 +1,52 @@
 package com.sunday.services.service.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.sunday.common_lib.constants.PaymentPermissions;
 import com.sunday.common_lib.dto.UserDTO;
+import com.sunday.common_lib.enums.BookingStatus;
 import com.sunday.common_lib.enums.PaymentGateway;
 import com.sunday.common_lib.enums.PaymentStatus;
+import com.sunday.common_lib.exception.BadRequestException;
+import com.sunday.common_lib.exception.ConflictException;
+import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.PaymentException;
+import com.sunday.common_lib.exception.ResourceNotFoundException;
+import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.payload.request.PaymentInitiateRequest;
-import com.sunday.common_lib.payload.request.PaymentVerifyRequest;
 import com.sunday.common_lib.payload.response.PaymentDTO;
 import com.sunday.common_lib.payload.response.PaymentInitiateResponse;
-import com.sunday.common_lib.payload.response.PaymentLinkResponse;
+import com.sunday.common_lib.payload.response.PayableBookingResponse;
+import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.client.BookingClient;
 import com.sunday.services.client.UserClient;
 import com.sunday.services.event.PaymentEventProducer;
 import com.sunday.services.mapper.PaymentMapper;
 import com.sunday.services.model.Payment;
+import com.sunday.services.model.ProcessedWebhookEvent;
 import com.sunday.services.repository.PaymentRepository;
+import com.sunday.services.repository.ProcessedWebhookEventRepository;
+import com.sunday.services.service.PaymentAccessService;
 import com.sunday.services.service.PaymentService;
-import com.sunday.services.service.gateway.RazorpayService;
+import com.sunday.services.service.gateway.PaymentGatewayProvider;
+import com.sunday.services.service.gateway.PaymentGatewayRegistry;
+import com.sunday.services.service.gateway.ProviderCheckoutResult;
+import com.sunday.services.service.gateway.ProviderPaymentStatus;
+import com.sunday.services.service.gateway.ProviderRefundResult;
+import com.sunday.services.service.gateway.ProviderWebhookEvent;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.json.JSONObject;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -37,40 +56,75 @@ import java.util.stream.Collectors;
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final ProcessedWebhookEventRepository processedWebhookEventRepository;
     private final PaymentEventProducer paymentEventProducer;
-    private final RazorpayService razorpayService;
+    private final PaymentGatewayRegistry gatewayRegistry;
+    private final PaymentAccessService paymentAccessService;
     private final UserClient userClient;
+    private final BookingClient bookingClient;
 
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Override
     @Transactional
-    public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request) throws PaymentException {
+    public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request) {
+        if (request.getIdempotencyKey() != null) {
+            Optional<PaymentInitiateResponse> replay = paymentRepository.findByIdempotencyKey(request.getIdempotencyKey())
+                    .map(this::readStoredInitiateResponse);
+            if (replay.isPresent()) {
+                log.info("Idempotency-Key {} already initiated a payment, returning the original response", request.getIdempotencyKey());
+                return replay.get();
+            }
+        }
+
+        PayableBookingResponse booking = fetchPayableBooking(request.getBookingId());
+        if (!request.getUserId().equals(booking.getUserId())) {
+            throw new OperationNotPermittedException(ErrorMessageUtil.BOOKING_PAYMENT_NOT_OWNED);
+        }
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new ConflictException(String.format(
+                    ErrorMessageUtil.BOOKING_NOT_PAYABLE, booking.getBookingId(), booking.getStatus()));
+        }
+        if (booking.getTotalAmount() == null || amountsDiffer(request.getAmount(), booking.getTotalAmount())) {
+            throw new ConflictException(String.format(
+                    ErrorMessageUtil.BOOKING_AMOUNT_MISMATCH, request.getAmount(), booking.getTotalAmount()));
+        }
+        paymentRepository.findFirstByBookingIdOrderByIdDesc(request.getBookingId())
+                .filter(existing -> existing.getStatus() == PaymentStatus.SUCCESS)
+                .ifPresent(existing -> {
+                    throw new ConflictException(ErrorMessageUtil.PAYMENT_ALREADY_COMPLETED);
+                });
+
         try {
             log.info("Initiating payment for user: {} with gateway: {}",
                     request.getUserId(), request.getGateway());
 
-            // Check if payment already exists for this booking
-            paymentRepository.findByBookingId(request.getBookingId())
-                    .ifPresent(existingPayment -> {
-                        if (existingPayment.getStatus() == PaymentStatus.SUCCESS) {
-                            throw new RuntimeException("Payment already completed for this booking");
-                        }
-                    });
-
-            // Create payment entity
             Payment payment = Payment.builder()
                     .userId(request.getUserId())
                     .bookingId(request.getBookingId())
+                    .airlineId(booking.getAirlineId())
                     .amount(request.getAmount())
                     .provider(request.getGateway())
                     .status(PaymentStatus.PENDING)
                     .transactionId(generateTransactionId())
+                    .idempotencyKey(request.getIdempotencyKey())
                     .build();
 
-            payment = paymentRepository.save(payment);
+            try {
+                payment = paymentRepository.saveAndFlush(payment);
+            } catch (DataIntegrityViolationException e) {
+                // Lost a race with a concurrent call carrying the same Idempotency-Key — the winner's
+                // row is the authoritative one; return its already-computed response instead of erroring.
+                return paymentRepository.findByIdempotencyKey(request.getIdempotencyKey())
+                        .map(this::readStoredInitiateResponse)
+                        .orElseThrow(() -> e);
+            }
 
-            // Create response based on gateway
+            PaymentGatewayProvider provider = gatewayRegistry.resolve(request.getGateway());
+            UserDTO payer = userClient.getUserById(payment.getUserId());
+            ProviderCheckoutResult checkout = provider.createCheckout(payment, payer);
+            payment.setProviderPaymentId(checkout.providerReference());
+
             PaymentInitiateResponse response = PaymentInitiateResponse.builder()
                     .paymentId(payment.getId())
                     .gateway(request.getGateway())
@@ -79,96 +133,76 @@ public class PaymentServiceImpl implements PaymentService {
                     .description(request.getDescription())
                     .success(true)
                     .message("Payment initiated successfully")
+                    .checkoutUrl(checkout.checkoutUrl())
+                    // Historically Razorpay-only; now holds whichever provider's own checkout reference.
+                    .razorpayOrderId(checkout.providerReference())
                     .build();
 
-            if (request.getGateway() == PaymentGateway.RAZORPAY) {
-
-
-                UserDTO user=userClient.getUserById(payment.getUserId());
-
-                PaymentLinkResponse paymentLinkResponse=razorpayService.createPaymentLink(
-                        user, payment
-                );
-                response.setCheckoutUrl(paymentLinkResponse.getPayment_link_url());
-                response.setRazorpayOrderId(paymentLinkResponse.getPayment_link_id());
-
-
-            } else if (request.getGateway() == PaymentGateway.STRIPE) {
-                String checkoutUrl = "https://checkout.stripe.com/pay/" + payment.getTransactionId();
-                response.setCheckoutUrl(checkoutUrl);
-                // TODO: Integrate with Stripe gateway service
+            if (payment.getIdempotencyKey() != null) {
+                payment.setInitiateResponseJson(writeJson(response));
             }
+            paymentRepository.save(payment);
 
             log.info("Payment initiated successfully with ID: {}", payment.getId());
             return response;
 
+        } catch (PaymentException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error initiating payment: {}", e.getMessage(), e);
-            throw new PaymentException("Failed to initiate payment: " + e.getMessage());
+            throw new PaymentException(String.format(ErrorMessageUtil.PAYMENT_INITIATION_FAILED, e.getMessage()));
         }
     }
 
     @Override
     @Transactional
-    public PaymentDTO verifyPayment(String payload, String signature) throws PaymentException
-    {
-
-        PaymentVerifyRequest request = handleRazorpayWebhook(payload, signature);
-
-        System.out.println("verify payment request: " + request);
-
-        // gateway payment
-        JSONObject paymentDetails = razorpayService
-                .fetchPaymentDetails(request.getRazorpayPaymentId());
-
-        System.out.println("gatway payment details: " + paymentDetails);
-
-
-        String status = paymentDetails.optString("status");
-        long amount = paymentDetails.optLong("amount");
-        long amountInRupees = amount / 100;
-
-
-        // Extract 'notes' object
-        JSONObject notes = paymentDetails.getJSONObject("notes");
-
-        Long paymentId = Long.parseLong(notes.optString("payment_id"));
-
-
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new PaymentException("Payment not found with ID: " + paymentId));
-
-
-        boolean isValid = "captured".equalsIgnoreCase(status);
-
-        if (payment.getProvider() == PaymentGateway.RAZORPAY) {
-
-            if (isValid) {
-                payment.setProviderPaymentId(request.getRazorpayPaymentId());
-
-            }
-        } else if (payment.getProvider() == PaymentGateway.STRIPE) {
-//            isValid = stripeService.verifyPayment(request.getStripePaymentIntentId());
-//
-//            if (isValid) {
-//                payment.setProviderPaymentId(request.getStripePaymentIntentId());
-//            }
+    public PaymentDTO handleWebhook(PaymentGateway gateway, byte[] rawBody, String signatureHeaderValue) {
+        PaymentGatewayProvider provider = gatewayRegistry.resolve(gateway);
+        if (!provider.verifySignature(rawBody, signatureHeaderValue)) {
+            log.warn("Rejected {} webhook: signature verification failed", gateway);
+            throw new BadRequestException(ErrorMessageUtil.WEBHOOK_SIGNATURE_INVALID);
         }
 
+        ProviderWebhookEvent event = provider.parseWebhookEvent(rawBody);
+        if (event.internalPaymentId() == null) {
+            throw new PaymentException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_BY_ID, "unknown"));
+        }
+
+        // Deliberately not REQUIRES_NEW: the claim must commit atomically with the payment-status
+        // update that follows it, in the same transaction, so a redelivery after a genuine failure can
+        // still retry — see booking-service's BookingSagaServiceImpl.claimPaymentEvent for the rationale.
+        if (!claimWebhookEvent(gateway.name(), event.internalPaymentId() + ":" + event.eventType())) {
+            log.info("Duplicate {} webhook for payment {} event {}, skipping reprocessing",
+                    gateway, event.internalPaymentId(), event.eventType());
+            return paymentRepository.findById(event.internalPaymentId()).map(PaymentMapper::toDTO).orElse(null);
+        }
+
+        Payment payment = paymentRepository.findById(event.internalPaymentId())
+                .orElseThrow(() -> new PaymentException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_BY_ID, event.internalPaymentId())));
+
+        // Authoritative server-to-server cross-check — never trust the webhook body's status/amount alone.
+        ProviderPaymentStatus authoritative = provider.fetchStatus(event.providerReference());
+
+        String failureReason = null;
+        if (authoritative.status() != PaymentStatus.SUCCESS) {
+            failureReason = ErrorMessageUtil.PAYMENT_VERIFICATION_FAILED;
+        } else if (amountsDiffer(authoritative.capturedAmount(), payment.getAmount())) {
+            failureReason = ErrorMessageUtil.PAYMENT_CAPTURED_AMOUNT_MISMATCH;
+            log.error("Payment {} captured {} via {}, expected {}", payment.getId(), authoritative.capturedAmount(), gateway, payment.getAmount());
+        }
+        boolean isValid = failureReason == null;
+
         if (isValid) {
+            payment.setProviderPaymentId(event.providerReference());
             payment.setStatus(PaymentStatus.SUCCESS);
             payment.setPaidAt(LocalDateTime.now());
-
-            // Save payment first
             payment = paymentRepository.save(payment);
-            System.out.println("send payment event and payment status is : "+status);
             paymentEventProducer.sendPaymentCompleted(payment);
         } else {
             payment.setStatus(PaymentStatus.FAILED);
-            payment.setFailureReason("Payment verification failed");
-            log.error("Payment verification failed: {}", payment.getId());
+            payment.setFailureReason(failureReason);
+            log.error("Payment verification failed for payment {}: {}", payment.getId(), failureReason);
             payment = paymentRepository.save(payment);
-
             paymentEventProducer.sendPaymentFailed(payment);
         }
 
@@ -177,19 +211,88 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PaymentDTO> getAllPayments(Pageable pageable) {
-        return paymentRepository.findAll(pageable)
-                .map(PaymentMapper::toDTO);
+    public PaymentDTO getPaymentForBooking(Long bookingId, Long userId) {
+        Payment payment = paymentRepository.findFirstByBookingIdOrderByIdDesc(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_FOR_BOOKING, bookingId)));
+        paymentAccessService.requireOwnerOrPermission(payment, userId, PaymentPermissions.PAYMENT_READ);
+        return PaymentMapper.toDTO(payment);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PaymentDTO> getPaymentsForAirline(Long airlineId, Long userId, Pageable pageable) {
+        paymentAccessService.requireAirlinePermission(airlineId, userId, PaymentPermissions.PAYMENT_READ);
+        return paymentRepository.findByAirlineId(airlineId, pageable).map(PaymentMapper::toDTO);
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentDTO getPaymentForSupport(Long bookingId) {
+        // Permission (PAYMENT_SUPPORT_READ) is checked at the gateway, same as booking-service's
+        // getBookingForSupport — no sensitive field exists on Payment today, so nothing to mask.
+        return paymentRepository.findFirstByBookingIdOrderByIdDesc(bookingId)
+                .map(PaymentMapper::toDTO)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_FOR_BOOKING, bookingId)));
+    }
+
+    @Override
+    @Transactional
+    public PaymentDTO refundPayment(Long paymentId, Long userId, BigDecimal amount) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_BY_ID, paymentId)));
+
+        // Never owner-or-permission: a customer must never execute their own refund.
+        paymentAccessService.requireAirlinePermission(payment.getAirlineId(), userId, PaymentPermissions.PAYMENT_REFUND_EXECUTE);
+
+        if (payment.getStatus() != PaymentStatus.SUCCESS) {
+            throw new ConflictException(String.format(ErrorMessageUtil.PAYMENT_NOT_REFUNDABLE, paymentId, payment.getStatus()));
+        }
+
+        BigDecimal refundAmount = amount != null ? amount : payment.getAmount();
+        PaymentGatewayProvider provider = gatewayRegistry.resolve(payment.getProvider());
+        try {
+            ProviderRefundResult result = provider.initiateRefund(payment, refundAmount);
+            payment.setStatus(PaymentStatus.REFUNDED);
+            payment.setRefundId(result.providerRefundId());
+            payment = paymentRepository.save(payment);
+            paymentEventProducer.sendPaymentRefunded(payment);
+            log.info("Payment {} refunded via {} (provider refund id {})", paymentId, payment.getProvider(), result.providerRefundId());
+            return PaymentMapper.toDTO(payment);
+        } catch (PaymentException e) {
+            // Do not flip status on a provider-side failure — the money never moved; a retry is safe.
+            throw new PaymentException(String.format(ErrorMessageUtil.PAYMENT_REFUND_FAILED, paymentId, e.getMessage()));
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentDTO getPaymentByBookingId(Long bookingId) {
+        return paymentRepository.findFirstByBookingIdOrderByIdDesc(bookingId)
+                .map(PaymentMapper::toDTO)
+                .orElse(null);
+    }
 
     @Override
     @Transactional(readOnly = true)
     public Map<Long, PaymentDTO> getPaymentsByBookingIds(List<Long> bookingIds) {
         if (bookingIds == null || bookingIds.isEmpty()) return Map.of();
         return paymentRepository.findByBookingIdIn(bookingIds).stream()
-                .collect(Collectors.toMap(Payment::getBookingId, PaymentMapper::toDTO));
+                .collect(Collectors.toMap(Payment::getBookingId, PaymentMapper::toDTO,
+                        (earlier, later) -> earlier.getId() > later.getId() ? earlier : later));
+    }
+
+    private boolean amountsDiffer(BigDecimal a, BigDecimal b) {
+        return a.setScale(2, RoundingMode.HALF_EVEN).compareTo(b.setScale(2, RoundingMode.HALF_EVEN)) != 0;
+    }
+
+    private PayableBookingResponse fetchPayableBooking(Long bookingId) {
+        try {
+            return bookingClient.getPayableBooking(bookingId);
+        } catch (FeignException.NotFound e) {
+            throw new ResourceNotFoundException(String.format(ErrorMessageUtil.BOOKING_NOT_FOUND_BY_ID, bookingId));
+        } catch (FeignException e) {
+            throw new ServiceUnavailableException(ErrorMessageUtil.BOOKING_SERVICE_UNAVAILABLE, e);
+        }
     }
 
     private String generateTransactionId() {
@@ -197,58 +300,39 @@ public class PaymentServiceImpl implements PaymentService {
                 UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-
-    private PaymentVerifyRequest handleRazorpayWebhook(
-            String payload,
-            String signature) throws PaymentException {
-
+    /**
+     * Deliberately not REQUIRES_NEW: the claim must commit atomically with the business update that
+     * follows it, in the same transaction — see BookingSagaServiceImpl.claimPaymentEvent (booking-service)
+     * for the full rationale behind this exact shape.
+     */
+    private boolean claimWebhookEvent(String provider, String eventReference) {
         try {
+            processedWebhookEventRepository.saveAndFlush(
+                    ProcessedWebhookEvent.builder().provider(provider).eventReference(eventReference).build());
+            return true;
+        } catch (DataIntegrityViolationException e) {
+            return false;
+        }
+    }
 
-            JsonNode root = objectMapper.readTree(payload);
-
-            String event = root.path("event").asText();
-
-            JsonNode paymentEntity = root
-                    .path("payload")
-                    .path("payment")
-                    .path("entity");
-
-            String razorpayPaymentId =
-                    paymentEntity.path("id").asText();
-
-            String razorpayOrderId =
-                    paymentEntity.path("order_id").asText();
-
-            String status =
-                    paymentEntity.path("status").asText();
-
-            String internalPaymentId =
-                    paymentEntity
-                            .path("notes")
-                            .path("payment_id")
-                            .asText();
-
-            PaymentVerifyRequest request = new PaymentVerifyRequest();
-
-            request.setRazorpayPaymentId(razorpayPaymentId);
-            request.setRazorpayOrderId(razorpayOrderId);
-            request.setRazorpaySignature(signature);
-
-            log.info(
-                    "Razorpay webhook: event={}, paymentId={}, orderId={}, status={}, internalPaymentId={}",
-                    event,
-                    razorpayPaymentId,
-                    razorpayOrderId,
-                    status,
-                    internalPaymentId
-            );
-
-           return request;
-
+    private PaymentInitiateResponse readStoredInitiateResponse(Payment payment) {
+        if (payment.getInitiateResponseJson() == null) {
+            // A concurrent call with the same key is still mid-flight (hasn't reached the gateway
+            // checkout step yet) — a narrow, accepted race; the caller should retry shortly.
+            throw new ConflictException(String.format(ErrorMessageUtil.IDEMPOTENCY_REQUEST_IN_PROGRESS, payment.getIdempotencyKey()));
+        }
+        try {
+            return objectMapper.readValue(payment.getInitiateResponseJson(), PaymentInitiateResponse.class);
         } catch (Exception e) {
-            throw new PaymentException(
-                    "Failed to process Razorpay webhook: " + e.getMessage()
-            );
+            throw new PaymentException("Unable to read stored initiate response for payment " + payment.getId());
+        }
+    }
+
+    private String writeJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            throw new PaymentException("Unable to snapshot initiate response: " + e.getMessage());
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.request.FareSearchRequest;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
@@ -42,8 +43,10 @@ public class InternalFareController {
     @GetMapping("/{id}/quote")
     public FareQuoteResponse quote(
             @PathVariable Long id,
+            @RequestParam Long flightId,
+            @RequestParam CabinClassType cabinClass,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate) {
-        return fareQuoteService.quote(id, departureDate);
+        return fareQuoteService.quote(id, flightId, cabinClass, departureDate);
     }
 
     @PostMapping("/search")

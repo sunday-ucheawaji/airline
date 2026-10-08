@@ -58,4 +58,6 @@ public final class GatewayPermissions {
     public static final String USER_ROLE_REVOKE = "USER_ROLE_REVOKE";
     public static final String ACCESS_MANAGE = "ACCESS_MANAGE";
     public static final String LOCATION_MANAGE = "LOCATION_MANAGE";
+    public static final String BOOKING_SUPPORT_READ = "BOOKING_SUPPORT_READ";
+    public static final String PAYMENT_SUPPORT_READ = "PAYMENT_SUPPORT_READ";
 }

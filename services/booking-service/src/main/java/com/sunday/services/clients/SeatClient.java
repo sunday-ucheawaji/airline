@@ -1,19 +1,23 @@
 package com.sunday.services.clients;
 
+import com.sunday.common_lib.payload.request.SeatHoldRequest;
+import com.sunday.common_lib.payload.response.SeatHoldResponse;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
+/** Internal seat-service endpoints: a booking's own seats are held and shown without a caller airline permission. */
 @FeignClient(name = "seat-service", fallback = SeatClientFallback.class)
 public interface SeatClient {
 
-    @PostMapping("/api/seat-instances/price/total")
-    Double calculateSeatPrice(@RequestBody List<Long> seatInstanceIds);
+    @PostMapping("/internal/seat-instances/hold")
+    SeatHoldResponse holdSeats(@RequestBody SeatHoldRequest request);
 
-    @GetMapping("/api/seat-instances/all")
-    List<SeatInstanceResponse> getAllByIds(
-            @RequestParam List<Long> Ids);
-
+    @GetMapping("/internal/seat-instances/all")
+    List<SeatInstanceResponse> getAllByIds(@RequestParam List<Long> Ids);
 }

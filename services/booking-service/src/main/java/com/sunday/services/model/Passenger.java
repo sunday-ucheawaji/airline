@@ -43,7 +43,7 @@ public class Passenger {
     @Column(nullable = false)
     private Gender gender;
 
-    @Column(unique = true)
+    @Column
     private String passportNumber;
 
     private String nationality;

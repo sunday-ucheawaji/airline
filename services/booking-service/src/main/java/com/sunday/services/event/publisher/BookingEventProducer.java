@@ -1,6 +1,7 @@
 package com.sunday.services.event.publisher;
 
 import com.sunday.common_lib.dto.UserDTO;
+import com.sunday.common_lib.event.BookingCancelledEvent;
 import com.sunday.common_lib.event.BookingConfirmedEvent;
 import com.sunday.common_lib.event.PassengerNotificationData;
 import com.sunday.common_lib.payload.response.AirportResponse;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -106,9 +108,11 @@ public class BookingEventProducer {
         String arrCountry       = arrCity != null ? arrCity.getCountryName() : "N/A";
 
         // ── Fare & Baggage ────────────────────────────────────────────────────
+        // BookingConfirmedEvent is a display payload for notification-service's email/SMS templates, not part of
+        // the settlement ledger, so it stays Double; the BigDecimal source values are converted here, once.
         String fareName         = fare != null ? fare.getName()                     : null;
-        Double baseFare         = fare != null ? fare.getBaseFare()                 : null;
-        Double taxes            = fare != null ? fare.getTaxesAndFees()             : null;
+        BigDecimal baseFare     = fare != null ? fare.getBaseFare()                 : null;
+        BigDecimal taxes        = fare != null ? fare.getTaxesAndFees()             : null;
         BaggagePolicyResponse bag = fare != null ? fare.getBaggagePolicy()          : null;
         Integer ciPieces        = bag  != null ? bag.getCheckInBaggagePieces()     : null;
         Double  ciWeightPer     = bag  != null ? bag.getCheckInBaggageWeightPerPiece() : null;
@@ -151,7 +155,7 @@ public class BookingEventProducer {
                 .arrivalDateTime(arrTime)
                 .flightDuration(duration)
                 // Payment
-                .totalAmount(payment.getAmount())
+                .totalAmount(payment.getAmount() != null ? payment.getAmount().doubleValue() : null)
                 .currency("INR")
                 .transactionId(payment.getTransactionId())
                 .providerPaymentId(payment.getProviderPaymentId())
@@ -159,8 +163,8 @@ public class BookingEventProducer {
                 .paidAt(payment.getPaidAt())
                 // Fare breakdown
                 .fareName(fareName)
-                .baseFare(baseFare)
-                .taxesAndFees(taxes)
+                .baseFare(baseFare != null ? baseFare.doubleValue() : null)
+                .taxesAndFees(taxes != null ? taxes.doubleValue() : null)
                 // Baggage
                 .checkinBaggagePieces(ciPieces)
                 .checkinBaggageWeightPerPiece(ciWeightPer)
@@ -179,5 +183,25 @@ public class BookingEventProducer {
 
         kafkaTemplate.send("booking.confirmed", event);
         log.info("Published enriched BookingConfirmedEvent for booking={}", booking.getBookingReference());
+    }
+
+    /** A prompt-release optimization on top of seat-service's hold-expiry sweeper, not a substitute for it. */
+    public void sendBookingCancelled(Booking booking) {
+        sendBookingCancelled(booking.getId(), booking.getBookingReference(), booking.getSeatInstanceIds());
+    }
+
+    /** Overload for compensation paths (e.g. BookingSagaRecoverySweeper) that only have the saga's own
+     *  record of what was held, not a persisted Booking row. */
+    public void sendBookingCancelled(Long bookingId, String bookingReference, List<Long> seatInstanceIds) {
+        if (seatInstanceIds == null || seatInstanceIds.isEmpty()) {
+            return;
+        }
+        BookingCancelledEvent event = BookingCancelledEvent.builder()
+                .bookingId(bookingId)
+                .bookingReference(bookingReference)
+                .seatInstanceIds(seatInstanceIds)
+                .build();
+        kafkaTemplate.send("booking.cancelled", event);
+        log.info("Published BookingCancelledEvent for booking={}", bookingReference);
     }
 }

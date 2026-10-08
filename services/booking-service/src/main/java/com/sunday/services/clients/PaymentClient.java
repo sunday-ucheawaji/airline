@@ -22,9 +22,9 @@ public interface PaymentClient {
             @Valid @RequestBody PaymentInitiateRequest request,
             @RequestHeader("X-User-Id") Long userId);
 
-    @GetMapping("/api/payments/booking/{bookingId}")
+    @GetMapping("/internal/payments/booking/{bookingId}")
     PaymentDTO getPaymentByBookingId(@PathVariable Long bookingId);
 
-    @PostMapping("/api/payments/batch/bookings")
+    @PostMapping("/internal/payments/batch/bookings")
     Map<Long, PaymentDTO> getPaymentsByBookingIds(@RequestBody List<Long> bookingIds);
 }

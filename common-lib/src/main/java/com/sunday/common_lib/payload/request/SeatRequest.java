@@ -5,6 +5,8 @@ import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -34,8 +36,8 @@ public class SeatRequest {
     private Boolean isEmergencyExit;
     private Boolean isActive;
 
-    private Double basePrice;
-    private Double premiumSurcharge;
+    private BigDecimal basePrice;
+    private BigDecimal premiumSurcharge;
 
     private Boolean hasExtraLegroom;
     private Boolean hasBassinet;

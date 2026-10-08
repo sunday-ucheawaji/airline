@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,18 +20,29 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, Booking
 
     List<Booking> findByUserId(Long userId);
 
+    long countByFlightInstanceIdAndAirlineId(Long flightInstanceId, Long airlineId);
 
+    long countByAirlineId(Long airlineId);
 
-    long countByFlightInstanceId(Long flightInstanceId);
+    long countByAirlineIdAndBookingDateBetween(Long airlineId, LocalDateTime from, LocalDateTime to);
 
+    @Query("SELECT COALESCE(SUM(b.totalAmount), 0) FROM Booking b " +
+            "WHERE b.airlineId = :airlineId AND b.bookingDate BETWEEN :from AND :to " +
+            "AND b.status = BookingStatus.CONFIRMED")
+    BigDecimal sumTotalAmountByAirlineIdAndBookingDateBetween(
+            @Param("airlineId") Long airlineId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    @Query("SELECT COALESCE(SUM(b.totalAmount), 0) FROM Booking b " +
+            "WHERE b.airlineId = :airlineId AND b.status = BookingStatus.CONFIRMED")
+    BigDecimal sumTotalAmountByAirlineId(@Param("airlineId") Long airlineId);
 
     @Query("SELECT b FROM Booking b " +
             "LEFT JOIN FETCH b.passengers " +
-//            "LEFT JOIN FETCH b.payment " +
             "LEFT JOIN FETCH b.tickets " +
             "WHERE b.id = :id")
     Optional<Booking> findByIdWithDetails(@Param("id") Long id);
-
 
     @Query("SELECT DISTINCT b FROM Booking b " +
             "LEFT JOIN FETCH b.passengers p " +

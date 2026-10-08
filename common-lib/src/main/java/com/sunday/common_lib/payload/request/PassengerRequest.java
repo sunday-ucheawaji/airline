@@ -1,6 +1,7 @@
 package com.sunday.common_lib.payload.request;
 
 import com.sunday.common_lib.enums.Gender;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,32 +16,32 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class PassengerRequest {
 
-    @NotBlank(message = "First name is required")
-    @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
+    @NotBlank(message = ErrorMessageUtil.PASSENGER_FIRST_NAME_MANDATORY)
+    @Size(min = 2, max = 50, message = ErrorMessageUtil.PASSENGER_FIRST_NAME_SIZE)
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
-    @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
+    @NotBlank(message = ErrorMessageUtil.PASSENGER_LAST_NAME_MANDATORY)
+    @Size(min = 2, max = 50, message = ErrorMessageUtil.PASSENGER_LAST_NAME_SIZE)
     private String lastName;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
+    @NotBlank(message = ErrorMessageUtil.PASSENGER_EMAIL_MANDATORY)
+    @Email(message = ErrorMessageUtil.EMAIL_INVALID)
     private String email;
 
-    @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^\\+[0-9]{1,3}[0-9]{4,14}$", message = "Phone number should be in international format")
+    @NotBlank(message = ErrorMessageUtil.PASSENGER_PHONE_MANDATORY)
+    @Pattern(regexp = "^\\+[0-9]{1,3}[0-9]{4,14}$", message = ErrorMessageUtil.PASSENGER_PHONE_FORMAT_INVALID)
     private String phone;
 
-    @NotNull(message = "Date of birth is required")
-    @Past(message = "Date of birth must be in the past")
+    @NotNull(message = ErrorMessageUtil.PASSENGER_DOB_MANDATORY)
+    @Past(message = ErrorMessageUtil.PASSENGER_DOB_PAST)
     private LocalDate dateOfBirth;
 
-    @NotNull(message = "Gender is required")
+    @NotNull(message = ErrorMessageUtil.PASSENGER_GENDER_MANDATORY)
     private Gender gender;
 
     private String seatNumber;
 
-    @NotNull(message = "Seat instance ID is required")
+    @NotNull(message = ErrorMessageUtil.PASSENGER_SEAT_INSTANCE_ID_MANDATORY)
     private Long seatInstanceId;
 
     private String passportNumber;

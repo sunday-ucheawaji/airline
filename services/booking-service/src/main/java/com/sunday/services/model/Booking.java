@@ -9,6 +9,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -58,12 +59,15 @@ public class Booking {
     // Fare as priced at purchase time, so a later repricing or rule edit does not change this booking.
     private Long fareVersion;
     private String fareCurrency;
-    private Double fareBaseAmount;
-    private Double fareTaxAmount;
-    private Double fareFeeAmount;
+    private BigDecimal fareBaseAmount;
+    private BigDecimal fareTaxAmount;
+    private BigDecimal fareFeeAmount;
     private Long fareRulesId;
     private Long fareBaggagePolicyId;
     private LocalDate fareTravelDate;
+
+    // What the customer owes for this booking, fixed at creation. Payment must match it.
+    private BigDecimal totalAmount;
 
     private boolean flexibleTicket;
     private LocalDateTime ticketTimeLimit;
@@ -107,4 +111,7 @@ public class Booking {
     private boolean ticketIssued;
 
     private ContactInfo contactInfo;
+
+    @Version
+    private Long version;
 }

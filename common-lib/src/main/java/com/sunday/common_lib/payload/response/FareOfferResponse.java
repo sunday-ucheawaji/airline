@@ -4,6 +4,7 @@ import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.enums.PassengerType;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -26,10 +27,10 @@ public class FareOfferResponse {
     private LocalDate travelTo;
 
     private String currency;
-    private Double baseFare;
-    private Double taxesAndFees;
-    private Double airlineFees;
-    private Double totalPrice;
+    private BigDecimal baseFare;
+    private BigDecimal taxesAndFees;
+    private BigDecimal airlineFees;
+    private BigDecimal totalPrice;
 
     private Benefits benefits;
     private Rules rules;
@@ -63,10 +64,10 @@ public class FareOfferResponse {
     public static class Rules {
         private String ruleName;
         private Boolean isRefundable;
-        private Double cancellationFee;
+        private BigDecimal cancellationFee;
         private Integer refundDeadlineDays;
         private Boolean isChangeable;
-        private Double changeFee;
+        private BigDecimal changeFee;
         private Integer changeDeadlineHours;
     }
 

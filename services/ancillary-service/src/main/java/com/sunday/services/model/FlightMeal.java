@@ -3,6 +3,8 @@ package com.sunday.services.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "flight_meals", indexes = {
         @Index(name = "idx_flight_meal_flight", columnList = "flight_id"),
@@ -34,7 +36,7 @@ public class FlightMeal {
     @Builder.Default
     private Boolean available = true;
 
-    private Double price;
+    private BigDecimal price;
 
     @Builder.Default
     private Integer displayOrder = 0;

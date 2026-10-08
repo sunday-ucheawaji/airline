@@ -69,6 +69,15 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
     @Value("${airline.inventory-control-officer-role-id}")
     private Long inventoryControlOfficerRoleId;
 
+    @Value("${airline.reservations-officer-role-id}")
+    private Long reservationsOfficerRoleId;
+
+    @Value("${airline.ticketing-officer-role-id}")
+    private Long ticketingOfficerRoleId;
+
+    @Value("${airline.refund-approver-role-id}")
+    private Long refundApproverRoleId;
+
     @Value("${airline.revenue-manager-role-id}")
     private Long revenueManagerRoleId;
 
@@ -205,7 +214,9 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
         if (!adminRoleId.equals(roleId) && !viewerRoleId.equals(roleId)
                 && !flightDispatcherRoleId.equals(roleId) && !fleetAssignmentOfficerRoleId.equals(roleId)
                 && !seatConfigOfficerRoleId.equals(roleId) && !inventoryControlOfficerRoleId.equals(roleId)
-                && !revenueManagerRoleId.equals(roleId)) {
+                && !revenueManagerRoleId.equals(roleId)
+                && !reservationsOfficerRoleId.equals(roleId) && !ticketingOfficerRoleId.equals(roleId)
+                && !refundApproverRoleId.equals(roleId)) {
             throw new BadRequestException(String.format(ErrorMessageUtil.MEMBER_INVITE_TARGET_ROLE_INVALID, roleId));
         }
     }

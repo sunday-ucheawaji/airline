@@ -6,6 +6,7 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -40,8 +41,12 @@ public class SeatInstance {
     private SeatAvailabilityStatus status = SeatAvailabilityStatus.AVAILABLE;
 
     private String mealPreference;
-    private Double fare;
-    private Double premiumSurcharge;
+    private BigDecimal fare;
+    private BigDecimal premiumSurcharge;
+
+    // Set while status is HELD; cleared when the hold is confirmed, released, or swept.
+    private Instant heldUntil;
+    private String heldByBookingReference;
 
     @Version
     private Long version;

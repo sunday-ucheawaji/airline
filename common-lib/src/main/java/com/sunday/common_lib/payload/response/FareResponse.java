@@ -5,6 +5,7 @@ import com.sunday.common_lib.enums.FareStatus;
 import com.sunday.common_lib.enums.PassengerType;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -27,10 +28,10 @@ public class FareResponse {
 
     // Pricing (amounts are in `currency`)
     private String currency;
-    private Double baseFare;
-    private Double taxesAndFees;
-    private Double airlineFees;
-    private Double totalPrice;
+    private BigDecimal baseFare;
+    private BigDecimal taxesAndFees;
+    private BigDecimal airlineFees;
+    private BigDecimal totalPrice;
     private String fareLabel;
 
     // Sales and travel windows

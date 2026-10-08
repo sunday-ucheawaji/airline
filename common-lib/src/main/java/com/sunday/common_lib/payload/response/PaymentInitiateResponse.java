@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,7 +21,7 @@ public class PaymentInitiateResponse {
     // Razorpay specific fields
     private String razorpayOrderId;
 
-    private Double amount;
+    private BigDecimal amount;
     private String currency;
     private String description;
 

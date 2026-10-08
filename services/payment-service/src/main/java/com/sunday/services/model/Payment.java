@@ -7,6 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -30,7 +31,13 @@ public class Payment {
     @Column(name = "booking_id")
     private Long bookingId;
 
-    private Double amount;
+    // Cross-service ref: Airline (airline-core-service). Denormalized at initiatePayment time from the
+    // booking's own airlineId (same snapshot-at-creation pattern as Booking's fare fields) so every
+    // airline-scoped permission check has it in hand without a Feign round trip per check.
+    @Column(name = "airline_id")
+    private Long airlineId;
+
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     private PaymentGateway provider;
@@ -45,6 +52,18 @@ public class Payment {
     private String failureReason;
     private LocalDateTime paidAt;
     private String refundId;
+
+    // Correlates back to the caller's own saga/attempt (booking-service passes its bookingReference).
+    // Lets a retried initiatePayment Feign call return the original response instead of a second row.
+    @Column(name = "idempotency_key", unique = true)
+    private String idempotencyKey;
+
+    @Lob
+    @Column(name = "initiate_response_json")
+    private String initiateResponseJson;
+
+    @Version
+    private Long version;
 
     @CreationTimestamp
     @Column(updatable = false)

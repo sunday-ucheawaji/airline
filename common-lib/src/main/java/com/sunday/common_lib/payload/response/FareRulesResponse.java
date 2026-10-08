@@ -2,6 +2,7 @@ package com.sunday.common_lib.payload.response;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Data
@@ -15,8 +16,8 @@ public class FareRulesResponse {
     private Long fareId;
     private Long airlineId;
     private Boolean isRefundable;
-    private Double changeFee;
-    private Double cancellationFee;
+    private BigDecimal changeFee;
+    private BigDecimal cancellationFee;
     private Integer refundDeadlineDays;
     private Integer changeDeadlineHours;
     private Boolean isChangeable;

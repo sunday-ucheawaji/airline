@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -37,7 +38,7 @@ public class SeatInstanceController {
     }
 
     @PostMapping("/price/total")
-    public ResponseEntity<Double> calculateSeatPrice(
+    public ResponseEntity<BigDecimal> calculateSeatPrice(
             @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody SeatPriceRequest request) {
         return ResponseEntity.ok(seatInstanceService.calculateSeatPrice(userId, request.getSeatInstanceIds()));

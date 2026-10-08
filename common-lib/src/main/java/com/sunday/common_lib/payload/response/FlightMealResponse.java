@@ -2,6 +2,8 @@ package com.sunday.common_lib.payload.response;
 
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -11,7 +13,7 @@ public class FlightMealResponse {
     private Long flightId;
     private MealResponse meal;
     private Boolean available;
-    private Double price;
+    private BigDecimal price;
     private String currency;
     private Integer maxQuantity;
     private String serviceClassRestriction;

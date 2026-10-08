@@ -5,8 +5,10 @@ import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
+import com.sunday.common_lib.payload.request.SeatHoldRequest;
 import com.sunday.common_lib.payload.request.SeatInstanceRequest;
 import com.sunday.common_lib.payload.response.CabinSeatStatusResponse;
+import com.sunday.common_lib.payload.response.SeatHoldResponse;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.integration.AirlineIntegrationService;
@@ -19,21 +21,30 @@ import com.sunday.services.repository.SeatInstanceRepository;
 import com.sunday.services.repository.SeatRepository;
 import com.sunday.services.service.SeatInstanceService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     private static final Map<SeatAvailabilityStatus, Set<SeatAvailabilityStatus>> LEGAL_FORWARD_TRANSITIONS = Map.of(
-            SeatAvailabilityStatus.AVAILABLE, Set.of(SeatAvailabilityStatus.BOOKED, SeatAvailabilityStatus.BLOCKED),
+            SeatAvailabilityStatus.AVAILABLE, Set.of(SeatAvailabilityStatus.HELD, SeatAvailabilityStatus.BOOKED, SeatAvailabilityStatus.BLOCKED),
+            SeatAvailabilityStatus.HELD, Set.of(SeatAvailabilityStatus.BOOKED, SeatAvailabilityStatus.AVAILABLE),
             SeatAvailabilityStatus.BOOKED, Set.of(SeatAvailabilityStatus.OCCUPIED),
             SeatAvailabilityStatus.OCCUPIED, Set.of(),
             SeatAvailabilityStatus.BLOCKED, Set.of()
@@ -43,6 +54,9 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
     private final SeatRepository seatRepository;
     private final FlightInstanceCabinRepository flightInstanceCabinRepository;
     private final AirlineIntegrationService airlineIntegrationService;
+
+    @Value("${seat.hold-duration-minutes:20}")
+    private long holdDurationMinutes;
 
     @Override
     public SeatInstanceResponse createSeatInstance(Long userId, SeatInstanceRequest request) {
@@ -113,16 +127,29 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Double calculateSeatPrice(Long userId, List<Long> seatInstanceIds) {
+    public BigDecimal calculateSeatPrice(Long userId, List<Long> seatInstanceIds) {
         List<SeatInstance> seatInstances = seatInstanceRepository.findAllById(seatInstanceIds);
         requirePermissionForAirlines(userId, seatInstances, SeatPermissions.SEAT_READ);
+        return sumPremiums(seatInstances);
+    }
 
-        double total = 0.0;
-        for (SeatInstance si : seatInstances) {
-            double seatPremium = si.getPremiumSurcharge() != null ? si.getPremiumSurcharge() : 0.0;
-            total += seatPremium;
-        }
-        return total;
+    @Override
+    public List<SeatInstanceResponse> getAllByIdsInternal(List<Long> ids) {
+        return seatInstanceRepository.findAllById(ids).stream()
+                .map(SeatInstanceMapper::toResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal calculateSeatPriceInternal(List<Long> seatInstanceIds) {
+        return sumPremiums(seatInstanceRepository.findAllById(seatInstanceIds));
+    }
+
+    private BigDecimal sumPremiums(List<SeatInstance> seatInstances) {
+        return seatInstances.stream()
+                .map(SeatInstance::getPremiumSurcharge)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     @Override
@@ -134,17 +161,6 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
                 userId, si.getSeat().getSeatMap().getAirlineId(), SeatPermissions.SEAT_INSTANCE_STATUS_MANAGE);
 
         requireLegalForwardTransition(si, status);
-        si.setStatus(status);
-
-        SeatInstance saved = seatInstanceRepository.save(si);
-        return SeatInstanceMapper.toResponse(saved);
-    }
-
-    @Override
-    public SeatInstanceResponse updateSeatInstanceStatusInternal(Long id, SeatAvailabilityStatus status) {
-        SeatInstance si = seatInstanceRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_INSTANCE_NOT_FOUND_BY_ID, id)));
-
         si.setStatus(status);
 
         SeatInstance saved = seatInstanceRepository.save(si);
@@ -186,6 +202,89 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
                         .nonAvailableSeatCount(e.getValue())
                         .build())
                 .toList();
+    }
+
+    @Override
+    public SeatHoldResponse holdSeats(SeatHoldRequest request) {
+        List<Long> ids = request.getSeatInstanceIds().stream().distinct().sorted().toList();
+        List<SeatInstance> seats = seatInstanceRepository.findAllByIdForUpdate(ids);
+        Map<Long, SeatInstance> byId = seats.stream().collect(Collectors.toMap(SeatInstance::getId, s -> s));
+
+        List<String> failures = new ArrayList<>();
+        for (Long id : ids) {
+            SeatInstance si = byId.get(id);
+            boolean alreadyHeldByThisBooking = si != null && si.getStatus() == SeatAvailabilityStatus.HELD
+                    && Objects.equals(si.getHeldByBookingReference(), request.getBookingReference());
+            if (si == null) {
+                failures.add(String.format(ErrorMessageUtil.SEAT_INSTANCE_NOT_FOUND_BY_ID, id));
+            } else if (!Objects.equals(si.getFlightInstanceId(), request.getFlightInstanceId())) {
+                failures.add(String.format(ErrorMessageUtil.SEAT_INSTANCE_WRONG_FLIGHT_INSTANCE, id, request.getFlightInstanceId()));
+            } else if (si.getFlightInstanceCabin() == null
+                    || si.getFlightInstanceCabin().getCabinClass().getName() != request.getCabinClass()) {
+                failures.add(String.format(ErrorMessageUtil.SEAT_INSTANCE_WRONG_CABIN_CLASS, id, request.getCabinClass()));
+            } else if (si.getStatus() != SeatAvailabilityStatus.AVAILABLE && !alreadyHeldByThisBooking) {
+                // A retry of the same booking's hold call (e.g. after a Feign timeout) must not fail just
+                // because this seat is already HELD by that exact bookingReference — that's success, not a conflict.
+                failures.add(String.format(ErrorMessageUtil.SEAT_INSTANCE_NOT_AVAILABLE_FOR_HOLD, id));
+            }
+        }
+        if (!failures.isEmpty()) {
+            throw new ConflictException(String.join("; ", failures));
+        }
+
+        Instant holdExpiresAt = Instant.now().plus(Duration.ofMinutes(holdDurationMinutes));
+        BigDecimal totalPremium = BigDecimal.ZERO;
+        for (SeatInstance si : seats) {
+            si.setStatus(SeatAvailabilityStatus.HELD);
+            si.setHeldUntil(holdExpiresAt);
+            si.setHeldByBookingReference(request.getBookingReference());
+            totalPremium = totalPremium.add(si.getPremiumSurcharge() != null ? si.getPremiumSurcharge() : BigDecimal.ZERO);
+        }
+        seatInstanceRepository.saveAll(seats);
+
+        return SeatHoldResponse.builder().totalPremium(totalPremium).holdExpiresAt(holdExpiresAt).build();
+    }
+
+    @Override
+    public void markSeatsBookedBatch(String bookingReference, List<Long> seatInstanceIds) {
+        List<Long> ids = seatInstanceIds.stream().distinct().sorted().toList();
+        List<SeatInstance> seats = seatInstanceRepository.findAllByIdForUpdate(ids);
+        Map<Long, SeatInstance> byId = seats.stream().collect(Collectors.toMap(SeatInstance::getId, s -> s));
+
+        for (Long id : ids) {
+            SeatInstance si = byId.get(id);
+            if (si == null) {
+                log.error("Seat instance {} not found while confirming booking {}", id, bookingReference);
+                continue;
+            }
+            if (si.getStatus() == SeatAvailabilityStatus.HELD || si.getStatus() == SeatAvailabilityStatus.AVAILABLE) {
+                si.setStatus(SeatAvailabilityStatus.BOOKED);
+                si.setHeldUntil(null);
+                si.setHeldByBookingReference(null);
+            } else {
+                log.error("Seat instance {} is {} (expected HELD or AVAILABLE) while confirming booking {} — " +
+                                "the hold likely expired and the seat was taken by someone else",
+                        id, si.getStatus(), bookingReference);
+            }
+        }
+        seatInstanceRepository.saveAll(seats);
+    }
+
+    @Override
+    public void releaseSeatsBatch(List<Long> seatInstanceIds) {
+        if (seatInstanceIds == null || seatInstanceIds.isEmpty()) {
+            return;
+        }
+        List<Long> ids = seatInstanceIds.stream().distinct().sorted().toList();
+        List<SeatInstance> seats = seatInstanceRepository.findAllByIdForUpdate(ids);
+        for (SeatInstance si : seats) {
+            if (si.getStatus() == SeatAvailabilityStatus.HELD || si.getStatus() == SeatAvailabilityStatus.BOOKED) {
+                si.setStatus(SeatAvailabilityStatus.AVAILABLE);
+                si.setHeldUntil(null);
+                si.setHeldByBookingReference(null);
+            }
+        }
+        seatInstanceRepository.saveAll(seats);
     }
 
     private void requireLegalForwardTransition(SeatInstance si, SeatAvailabilityStatus target) {

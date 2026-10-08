@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -35,9 +36,10 @@ public class FlightMealController {
     }
 
     @PostMapping("/price/total")
-    public ResponseEntity<Double> calculateMealPrice(
+    public ResponseEntity<BigDecimal> calculateMealPrice(
+            @RequestParam Long flightId,
             @RequestBody List<Long> requests) {
-        double responses = flightMealService.calculateMealPrice(requests);
+        BigDecimal responses = flightMealService.calculateMealPrice(flightId, requests);
         return ResponseEntity.status(HttpStatus.OK).body(responses);
     }
 

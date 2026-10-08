@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
 import org.springframework.stereotype.Component;
@@ -23,7 +24,7 @@ public class PricingClientFallback implements PricingClient {
     }
 
     @Override
-    public FareQuoteResponse quoteFare(Long id, LocalDate departureDate) {
+    public FareQuoteResponse quoteFare(Long id, Long flightId, CabinClassType cabinClass, LocalDate departureDate) {
         return null;
     }
 }

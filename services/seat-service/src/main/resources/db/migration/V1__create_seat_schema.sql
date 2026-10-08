@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS seats (
     seat_row                    INT NOT NULL,
     column_letter               CHAR(1),
     seat_type                   VARCHAR(20) NOT NULL,
-    base_price                  DOUBLE,
-    premium_surcharge           DOUBLE,
+    base_price                  DECIMAL(12,2),
+    premium_surcharge           DECIMAL(12,2),
     is_available                BOOLEAN NOT NULL,
     is_blocked                  BOOLEAN NOT NULL,
     is_emergency_exit           BOOLEAN NOT NULL,
@@ -99,10 +99,12 @@ CREATE TABLE IF NOT EXISTS seat_instances (
     flight_instance_cabin_id    BIGINT,
     flight_instance_id          BIGINT,
     seat_id                     BIGINT NOT NULL,
-    status                      ENUM('AVAILABLE','BOOKED','OCCUPIED','BLOCKED') NOT NULL,
+    status                      ENUM('AVAILABLE','HELD','BOOKED','OCCUPIED','BLOCKED') NOT NULL,
     meal_preference              VARCHAR(255),
-    fare                         DOUBLE,
-    premium_surcharge            DOUBLE,
+    fare                         DECIMAL(12,2),
+    premium_surcharge            DECIMAL(12,2),
+    held_until                   DATETIME(6),
+    held_by_booking_reference    VARCHAR(255),
     version                      BIGINT,
     flight_schedule_id           BIGINT,
     created_at                   DATETIME(6),
@@ -116,3 +118,13 @@ CREATE INDEX idx_seat_instances_flight_id ON seat_instances (flight_id);
 CREATE INDEX idx_seat_instances_flight_instance_id ON seat_instances (flight_instance_id);
 CREATE INDEX idx_seat_instances_flight_instance_cabin_id ON seat_instances (flight_instance_cabin_id);
 CREATE INDEX idx_seat_instances_status ON seat_instances (status);
+
+-- Inbox-pattern dedup for the booking.confirmed/booking.cancelled consumers: a redelivered event
+-- can never double-apply its seat-status side effect, even if it races a concurrent delivery.
+CREATE TABLE IF NOT EXISTS processed_booking_events (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    booking_id      BIGINT NOT NULL,
+    event_type      VARCHAR(50) NOT NULL,
+    processed_at    DATETIME(6),
+    CONSTRAINT uq_processed_booking_events UNIQUE (booking_id, event_type)
+);

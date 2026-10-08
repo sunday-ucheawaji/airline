@@ -2,6 +2,7 @@ package com.sunday.common_lib.payload.response;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Data
@@ -19,7 +20,7 @@ public class MealResponse {
     private String allergens;
     private String nutritionalInfo;
     private String imageUrl;
-    private Double price;
+    private BigDecimal price;
     private String currency;
     private Boolean available;
     private Boolean requiresAdvanceBooking;

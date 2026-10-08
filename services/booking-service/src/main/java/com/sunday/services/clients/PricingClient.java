@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -25,5 +26,7 @@ public interface PricingClient {
 
     @GetMapping("/internal/fares/{id}/quote")
     FareQuoteResponse quoteFare(@PathVariable Long id,
+                                @RequestParam("flightId") Long flightId,
+                                @RequestParam("cabinClass") CabinClassType cabinClass,
                                 @RequestParam("departureDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate);
 }

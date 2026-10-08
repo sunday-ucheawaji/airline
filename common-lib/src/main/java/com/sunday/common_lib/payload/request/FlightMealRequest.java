@@ -1,7 +1,10 @@
 package com.sunday.common_lib.payload.request;
 
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -18,8 +21,8 @@ public class FlightMealRequest {
     @NotNull(message = "Availability status is required")
     private Boolean available;
 
-    @DecimalMin(value = "0.0", message = "Price cannot be negative")
-    private Double price;
+    @DecimalMin(value = "0.0", message = ErrorMessageUtil.FLIGHT_MEAL_PRICE_NEGATIVE)
+    private BigDecimal price;
 
     @Min(value = 0, message = "Display order cannot be negative")
     private Integer displayOrder;

@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS insurance_coverages (
                       ) NOT NULL,
     name              VARCHAR(200) NOT NULL,
     description       VARCHAR(1000),
-    coverage_amount   DOUBLE NOT NULL,
+    coverage_amount   DECIMAL(12,2) NOT NULL,
     currency          VARCHAR(3),
     is_flat           BIT(1) NOT NULL,
     claim_condition   VARCHAR(500),

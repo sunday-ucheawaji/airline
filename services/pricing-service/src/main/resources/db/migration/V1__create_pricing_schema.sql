@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS fares (
     CONSTRAINT chk_fares_sales_window CHECK (sales_from <= sales_to),
     CONSTRAINT chk_fares_travel_window CHECK (travel_from <= travel_to),
     CONSTRAINT chk_fares_advance_purchase CHECK (advance_purchase_days IS NULL OR advance_purchase_days >= 0)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+);
 
 CREATE TABLE IF NOT EXISTS fare_rules (
     id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS fare_rules (
     -- Cross-service ref: Airline is in airline-core-service, no FK. Copied from the fare.
     airline_id              BIGINT NOT NULL,
     is_refundable           BIT(1),
-    change_fee              DOUBLE,
-    cancellation_fee        DOUBLE,
+    change_fee              DECIMAL(12,2),
+    cancellation_fee        DECIMAL(12,2),
     refund_deadline_days    INT,
     change_deadline_hours   INT,
     is_changeable           BIT(1),
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS fare_rules (
     updated_at              DATETIME(6),
     INDEX idx_fare_rules_airline_id (airline_id),
     CONSTRAINT fk_fare_rules_fare FOREIGN KEY (fare_id) REFERENCES fares (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+);
 
 CREATE TABLE IF NOT EXISTS baggage_policies (
     id                                  BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -102,4 +102,4 @@ CREATE TABLE IF NOT EXISTS baggage_policies (
     updated_at                          DATETIME(6) NOT NULL,
     INDEX idx_baggage_policies_airline_id (airline_id),
     CONSTRAINT fk_baggage_policies_fare FOREIGN KEY (fare_id) REFERENCES fares (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+);

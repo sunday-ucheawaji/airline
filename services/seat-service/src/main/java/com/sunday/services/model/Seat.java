@@ -10,6 +10,7 @@ import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -42,10 +43,10 @@ public class Seat {
     private SeatType seatType;
 
     @Column(name = "base_price")
-    private Double basePrice;
+    private BigDecimal basePrice;
 
     @Column(name = "premium_surcharge")
-    private Double premiumSurcharge;
+    private BigDecimal premiumSurcharge;
 
     @Builder.Default
     @Column(name = "is_available", nullable = false)
@@ -127,10 +128,10 @@ public class Seat {
     @Column(name = "version")
     private Long version;
 
-    public Double getTotalPrice() {
-        Double total = basePrice != null ? basePrice : 0.0;
+    public BigDecimal getTotalPrice() {
+        BigDecimal total = basePrice != null ? basePrice : BigDecimal.ZERO;
         if (premiumSurcharge != null) {
-            total = total + premiumSurcharge;
+            total = total.add(premiumSurcharge);
         }
         return total;
     }

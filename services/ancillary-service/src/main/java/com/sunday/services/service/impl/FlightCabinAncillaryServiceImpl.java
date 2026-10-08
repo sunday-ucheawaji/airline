@@ -3,6 +3,7 @@ package com.sunday.services.service.impl;
 import com.sunday.common_lib.constants.AncillaryPermissions;
 import com.sunday.common_lib.enums.AncillaryType;
 import com.sunday.common_lib.exception.BadRequestException;
+import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightCabinAncillaryRequest;
 import com.sunday.common_lib.payload.response.FlightCabinAncillaryBulkCreateResponse;
@@ -22,6 +23,8 @@ import com.sunday.services.service.FlightCabinAncillaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -191,9 +194,9 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
 
     @Override
     @Transactional(readOnly = true)
-    public Double calculateAncillaryPrice(List<Long> ancillaryIds) {
+    public BigDecimal calculateAncillaryPrice(Long flightId, List<Long> ancillaryIds) {
         if (ancillaryIds == null || ancillaryIds.isEmpty()) {
-            return 0.0;
+            return BigDecimal.ZERO;
         }
 
         List<FlightCabinAncillary> ancillaries = repository.findAllById(ancillaryIds);
@@ -211,10 +214,18 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
                     String.format(ErrorMessageUtil.FLIGHT_CABIN_ANCILLARY_NOT_FOUND_FOR_IDS, missingIds));
         }
 
+        List<String> wrongFlight = ancillaries.stream()
+                .filter(item -> !item.getFlightId().equals(flightId))
+                .map(item -> String.format(ErrorMessageUtil.FLIGHT_CABIN_ANCILLARY_WRONG_FLIGHT, item.getId(), flightId))
+                .toList();
+        if (!wrongFlight.isEmpty()) {
+            throw new ConflictException(String.join("; ", wrongFlight));
+        }
+
         Map<Long, Long> quantities = ancillaryIds.stream()
                 .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
 
-        double totalPrice = 0;
+        BigDecimal totalPrice = BigDecimal.ZERO;
         for (FlightCabinAncillary item : ancillaries) {
             String label = item.getAncillary().getName() + " (id " + item.getId() + ")";
             long quantity = quantities.get(item.getId());
@@ -231,7 +242,7 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
             if (item.getPrice() == null) {
                 throw new BadRequestException(String.format(ErrorMessageUtil.ANCILLARY_PRICE_NOT_SET, label));
             }
-            totalPrice += item.getPrice() * quantity;
+            totalPrice = totalPrice.add(item.getPrice().multiply(BigDecimal.valueOf(quantity)));
         }
         return totalPrice;
     }

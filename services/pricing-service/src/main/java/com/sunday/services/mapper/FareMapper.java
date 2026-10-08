@@ -7,9 +7,6 @@ import com.sunday.common_lib.payload.request.FareRequest;
 import com.sunday.common_lib.payload.response.FareResponse;
 import com.sunday.services.model.Fare;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
 public class FareMapper {
 
     public static Fare toEntity(FareRequest request, Long airlineId, Long userId) {
@@ -61,9 +58,9 @@ public class FareMapper {
                 .updatedBy(userId)
 
                 .currency(request.getCurrency())
-                .baseFare(money(request.getBaseFare()))
-                .taxesAndFees(money(request.getTaxesAndFees()))
-                .airlineFees(money(request.getAirlineFees()))
+                .baseFare(request.getBaseFare())
+                .taxesAndFees(request.getTaxesAndFees())
+                .airlineFees(request.getAirlineFees())
                 .fareLabel(request.getFareLabel())
                 .salesFrom(request.getSalesFrom())
                 .salesTo(request.getSalesTo())
@@ -94,10 +91,10 @@ public class FareMapper {
                 .passengerType(fare.getPassengerType())
                 .fareBasisCode(fare.getFareBasisCode())
                 .currency(fare.getCurrency())
-                .baseFare(asDouble(fare.getBaseFare()))
-                .taxesAndFees(asDouble(fare.getTaxesAndFees()))
-                .airlineFees(asDouble(fare.getAirlineFees()))
-                .totalPrice(asDouble(fare.getTotalAmount()))
+                .baseFare(fare.getBaseFare())
+                .taxesAndFees(fare.getTaxesAndFees())
+                .airlineFees(fare.getAirlineFees())
+                .totalPrice(fare.getTotalAmount())
                 .fareLabel(fare.getFareLabel())
                 .salesFrom(fare.getSalesFrom())
                 .salesTo(fare.getSalesTo())
@@ -147,9 +144,9 @@ public class FareMapper {
         existing.setUpdatedBy(userId);
 
         existing.setCurrency(request.getCurrency());
-        existing.setBaseFare(money(request.getBaseFare()));
-        existing.setTaxesAndFees(money(request.getTaxesAndFees()));
-        existing.setAirlineFees(money(request.getAirlineFees()));
+        existing.setBaseFare(request.getBaseFare());
+        existing.setTaxesAndFees(request.getTaxesAndFees());
+        existing.setAirlineFees(request.getAirlineFees());
         existing.setFareLabel(request.getFareLabel());
         existing.setSalesFrom(request.getSalesFrom());
         existing.setSalesTo(request.getSalesTo());
@@ -189,14 +186,6 @@ public class FareMapper {
 
     public static PassengerType passengerTypeOf(FareRequest request) {
         return request.getPassengerType() != null ? request.getPassengerType() : PassengerType.ADT;
-    }
-
-    private static BigDecimal money(Double value) {
-        return value == null ? null : BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
-    }
-
-    private static Double asDouble(BigDecimal value) {
-        return value == null ? null : value.doubleValue();
     }
 
     private static boolean bool(Boolean value) {

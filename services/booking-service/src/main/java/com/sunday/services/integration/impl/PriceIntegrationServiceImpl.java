@@ -1,5 +1,6 @@
 package com.sunday.services.integration.impl;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
@@ -19,10 +20,10 @@ public class PriceIntegrationServiceImpl implements PricingIntegrationService {
     private final PricingClient pricingClient;
 
     @Override
-    public FareQuoteResponse quoteFare(Long fareId, LocalDate departureDate) {
+    public FareQuoteResponse quoteFare(Long fareId, Long flightId, CabinClassType cabinClass, LocalDate departureDate) {
         FareQuoteResponse quote;
         try {
-            quote = pricingClient.quoteFare(fareId, departureDate);
+            quote = pricingClient.quoteFare(fareId, flightId, cabinClass, departureDate);
         } catch (FeignException.Conflict e) {
             throw new ConflictException(ErrorMessageUtil.FARE_UNAVAILABLE_FOR_DEPARTURE);
         } catch (FeignException e) {

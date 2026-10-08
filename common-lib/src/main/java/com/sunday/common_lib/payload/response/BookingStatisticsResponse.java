@@ -2,6 +2,7 @@ package com.sunday.common_lib.payload.response;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -12,11 +13,11 @@ public class BookingStatisticsResponse {
 
     // Daily statistics
     private Long totalBookingsToday;
-    private Double revenueToday;
+    private BigDecimal revenueToday;
 
     // Monthly statistics
     private Long totalBookingsThisMonth;
-    private Double revenueThisMonth;
+    private BigDecimal revenueThisMonth;
 
     // Daily trend data (for the last 30 days)
     private List<DailyBookingData> dailyTrend;
@@ -31,7 +32,7 @@ public class BookingStatisticsResponse {
     public static class DailyBookingData {
         private String date; // Format: yyyy-MM-dd
         private Long bookingCount;
-        private Double revenue;
+        private BigDecimal revenue;
     }
 
     @Data
@@ -41,6 +42,6 @@ public class BookingStatisticsResponse {
     public static class MonthlyData {
         private String month; // Format: yyyy-MM
         private Long bookingCount;
-        private Double revenue;
+        private BigDecimal revenue;
     }
 }

@@ -10,6 +10,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -47,13 +48,13 @@ public class FareRequest {
 
     @NotNull(message = "Base fare is required")
     @Positive
-    private Double baseFare;
+    private BigDecimal baseFare;
 
     @PositiveOrZero
-    private Double taxesAndFees;
+    private BigDecimal taxesAndFees;
 
     @PositiveOrZero
-    private Double airlineFees;
+    private BigDecimal airlineFees;
 
     @Size(max = 100)
     private String fareLabel;

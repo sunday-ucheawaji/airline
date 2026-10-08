@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -31,7 +32,7 @@ public class AncillaryClientFallbackFactory implements FallbackFactory<Ancillary
         return new AncillaryClient() {
 
             @Override
-            public double calculateAncillariesPrice(List<Long> flightCabinAncillaryIds) {
+            public BigDecimal calculateAncillariesPrice(Long flightId, List<Long> flightCabinAncillaryIds) {
                 throw priceFailure("ancillaries", cause);
             }
 
@@ -46,7 +47,7 @@ public class AncillaryClientFallbackFactory implements FallbackFactory<Ancillary
             }
 
             @Override
-            public Double calculateMealPrice(List<Long> requests) {
+            public BigDecimal calculateMealPrice(Long flightId, List<Long> requests) {
                 throw priceFailure("meals", cause);
             }
         };

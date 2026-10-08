@@ -2,6 +2,7 @@ package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.constants.AncillaryPermissions;
 import com.sunday.common_lib.exception.BadRequestException;
+import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightMealRequest;
 import com.sunday.common_lib.payload.response.FlightMealBulkCreateResponse;
@@ -21,6 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -214,9 +216,9 @@ public class FlightMealServiceImpl implements FlightMealService {
 
     @Override
     @Transactional(readOnly = true)
-    public Double calculateMealPrice(List<Long> mealIds) {
+    public BigDecimal calculateMealPrice(Long flightId, List<Long> mealIds) {
         if (mealIds == null || mealIds.isEmpty()) {
-            return 0.0;
+            return BigDecimal.ZERO;
         }
 
         List<Long> duplicateIds = mealIds.stream()
@@ -242,7 +244,15 @@ public class FlightMealServiceImpl implements FlightMealService {
             throw new ResourceNotFoundException(String.format(ErrorMessageUtil.FLIGHT_MEAL_NOT_FOUND_FOR_IDS, missingIds));
         }
 
-        double total = 0.0;
+        List<String> wrongFlight = meals.stream()
+                .filter(meal -> !meal.getFlightId().equals(flightId))
+                .map(meal -> String.format(ErrorMessageUtil.FLIGHT_MEAL_WRONG_FLIGHT, meal.getId(), flightId))
+                .toList();
+        if (!wrongFlight.isEmpty()) {
+            throw new ConflictException(String.join("; ", wrongFlight));
+        }
+
+        BigDecimal total = BigDecimal.ZERO;
         for (FlightMeal flightMeal : meals) {
             String label = flightMeal.getMeal().getName() + " (id " + flightMeal.getId() + ")";
             if (!Boolean.TRUE.equals(flightMeal.getAvailable())
@@ -252,7 +262,7 @@ public class FlightMealServiceImpl implements FlightMealService {
             if (flightMeal.getPrice() == null) {
                 throw new BadRequestException(String.format(ErrorMessageUtil.MEAL_PRICE_NOT_SET, label));
             }
-            total += flightMeal.getPrice();
+            total = total.add(flightMeal.getPrice());
         }
         return total;
     }

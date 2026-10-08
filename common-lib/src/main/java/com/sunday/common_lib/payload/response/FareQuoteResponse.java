@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -17,10 +18,10 @@ public class FareQuoteResponse {
     private Long version;
     private LocalDate departureDate;
     private String currency;
-    private Double baseFare;
-    private Double taxesAndFees;
-    private Double airlineFees;
-    private Double totalPrice;
+    private BigDecimal baseFare;
+    private BigDecimal taxesAndFees;
+    private BigDecimal airlineFees;
+    private BigDecimal totalPrice;
     private Long fareRulesId;
     private Long baggagePolicyId;
 }

@@ -3,6 +3,7 @@ package com.sunday.common_lib.payload.response;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Data
@@ -20,7 +21,7 @@ public class SeatInstanceResponse {
 
     private SeatResponse seat;
 
-    private Double price;
+    private BigDecimal price;
 
     private SeatAvailabilityStatus status;
 
@@ -30,7 +31,7 @@ public class SeatInstanceResponse {
     private CabinClassType flightCabinClassType;
 
     private String mealPreference;
-    private Double fare;
+    private BigDecimal fare;
 
     private Long version;
     private Instant createdAt;

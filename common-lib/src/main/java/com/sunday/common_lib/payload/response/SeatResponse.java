@@ -2,6 +2,7 @@ package com.sunday.common_lib.payload.response;
 
 import com.sunday.common_lib.enums.SeatType;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -20,9 +21,9 @@ public class SeatResponse {
     private Boolean isEmergencyExit;
     private Boolean isActive;
 
-    private Double basePrice;
-    private Double premiumSurcharge;
-    private Double totalPrice;
+    private BigDecimal basePrice;
+    private BigDecimal premiumSurcharge;
+    private BigDecimal totalPrice;
 
     private Boolean hasExtraLegroom;
     private Boolean hasBassinet;

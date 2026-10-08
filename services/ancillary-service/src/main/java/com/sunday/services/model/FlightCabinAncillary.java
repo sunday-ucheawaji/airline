@@ -3,6 +3,8 @@ package com.sunday.services.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "flight_cabin_ancillaries")
 @Getter
@@ -35,7 +37,7 @@ public class FlightCabinAncillary {
 
     private Integer maxQuantity;
 
-    private Double price;
+    private BigDecimal price;
 
     private String currency;
 

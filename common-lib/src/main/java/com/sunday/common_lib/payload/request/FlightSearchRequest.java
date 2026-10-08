@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -34,8 +35,8 @@ public class FlightSearchRequest {
 
     // Filter Parameters
     private List<Long> airlines; // Filter by airline ids
-    private Double minPrice; // Minimum price filter
-    private Double maxPrice; // Maximum price filter
+    private BigDecimal minPrice; // Minimum price filter
+    private BigDecimal maxPrice; // Maximum price filter
     private String departureTimeRange; // "any", "morning", "afternoon", "evening", "night"
     private String arrivalTimeRange; // "any", "morning", "afternoon", "evening", "night"
     private Integer maxDuration; // Maximum duration in minutes

@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
@@ -25,9 +26,15 @@ public class FareQuoteServiceImpl implements FareQuoteService {
     private final Clock clock;
 
     @Override
-    public FareQuoteResponse quote(Long fareId, LocalDate departureDate) {
+    public FareQuoteResponse quote(Long fareId, Long flightId, CabinClassType cabinClass, LocalDate departureDate) {
         Fare fare = fareRepository.findById(fareId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FARE_NOT_FOUND_BY_ID, fareId)));
+        if (!fare.getFlightId().equals(flightId)) {
+            throw new ConflictException(String.format(ErrorMessageUtil.FARE_FLIGHT_MISMATCH, fareId, flightId));
+        }
+        if (fare.getCabinClass() != cabinClass) {
+            throw new ConflictException(String.format(ErrorMessageUtil.FARE_CABIN_CLASS_MISMATCH, fareId, cabinClass));
+        }
         Instant now = Instant.now(clock);
         FareValidityPolicy.violation(fare, departureDate, now).ifPresent(reason -> {
             throw new ConflictException(reason);
@@ -38,10 +45,10 @@ public class FareQuoteServiceImpl implements FareQuoteService {
                 .version(fare.getVersion())
                 .departureDate(departureDate)
                 .currency(fare.getCurrency())
-                .baseFare(fare.getBaseFare().doubleValue())
-                .taxesAndFees(fare.getTaxesAndFees() != null ? fare.getTaxesAndFees().doubleValue() : null)
-                .airlineFees(fare.getAirlineFees() != null ? fare.getAirlineFees().doubleValue() : null)
-                .totalPrice(fare.getTotalAmount().doubleValue())
+                .baseFare(fare.getBaseFare())
+                .taxesAndFees(fare.getTaxesAndFees())
+                .airlineFees(fare.getAirlineFees())
+                .totalPrice(fare.getTotalAmount())
                 .fareRulesId(fare.getFareRules() != null ? fare.getFareRules().getId() : null)
                 .baggagePolicyId(fare.getBaggagePolicy() != null ? fare.getBaggagePolicy().getId() : null)
                 .build();

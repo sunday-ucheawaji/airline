@@ -1,39 +1,47 @@
 package com.sunday.services.service.impl;
 
-import com.sunday.common_lib.payload.response.FareQuoteResponse;
-import java.time.LocalDate;
+import com.sunday.common_lib.constants.BookingPermissions;
 import com.sunday.common_lib.enums.BookingStatus;
 import com.sunday.common_lib.enums.PaymentGateway;
-import com.sunday.common_lib.exception.PaymentException;
+import com.sunday.common_lib.enums.TripType;
+import com.sunday.common_lib.exception.BadRequestException;
+import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
-import com.sunday.common_lib.payload.response.*;
-import com.sunday.services.clients.*;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 import com.sunday.common_lib.payload.request.BookingRequest;
 import com.sunday.common_lib.payload.request.PassengerRequest;
 import com.sunday.common_lib.payload.request.PaymentInitiateRequest;
+import com.sunday.common_lib.payload.request.SeatHoldRequest;
+import com.sunday.common_lib.payload.response.*;
+import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.clients.*;
+import com.sunday.services.event.publisher.BookingEventProducer;
 import com.sunday.services.integration.PricingIntegrationService;
 import com.sunday.services.mapper.BookingMapper;
+import com.sunday.services.mapper.PassengerMapper;
 import com.sunday.services.model.Booking;
+import com.sunday.services.model.BookingSaga;
 import com.sunday.services.model.Passenger;
+import com.sunday.services.model.SagaStatus;
 import com.sunday.services.repository.BookingRepository;
+import com.sunday.services.service.BookingAccessService;
+import com.sunday.services.service.BookingSagaService;
 import com.sunday.services.service.BookingService;
 import com.sunday.services.service.PassengerService;
-
-import com.sunday.services.service.TicketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
-import org.springframework.data.domain.Sort;
-
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -45,145 +53,190 @@ public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final PassengerService passengerService;
-    private final TicketService ticketService;
+    private final BookingSagaService bookingSagaService;
     private final PricingIntegrationService pricingIntegrationService;
     private final PricingClient pricingClient;
     private final AncillaryClient ancillaryClient;
     private final PaymentClient paymentClient;
     private final SeatClient seatClient;
     private final FlightClient flightClient;
-    private final AirlineClient airlineClient;
-
+    private final BookingAccessService bookingAccess;
+    private final BookingEventProducer bookingEventProducer;
 
     @Override
     @Transactional
-    public PaymentInitiateResponse createBooking(BookingRequest request, Long userId)
-            throws ResourceNotFoundException, PaymentException {
+    public PaymentInitiateResponse createBooking(BookingRequest request, Long userId, String idempotencyKey) {
         log.info("Creating booking for user: {}", userId);
 
-        // Generate unique booking reference
-        String bookingReference = generateBookingReference();
-
-        // Create passenger entities
-        Set<Passenger> passengers = new HashSet<>();
-        for (PassengerRequest passengerRequest : request.getPassengers()) {
-            Passenger passenger = passengerService
-                    .findOrCreatePassengerEntity(passengerRequest, userId);
-            passengers.add(passenger);
+        String key = idempotencyKey != null ? idempotencyKey : UUID.randomUUID().toString();
+        String requestHash = bookingSagaService.hashRequest(request, userId);
+        BookingSaga saga = bookingSagaService.tryStart(userId, key, requestHash);
+        if (!saga.getRequestHash().equals(requestHash)) {
+            throw new ConflictException(String.format(ErrorMessageUtil.IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_REQUEST, key));
+        }
+        if (saga.getStatus() == SagaStatus.COMPLETED) {
+            log.info("Idempotency-Key {} already completed, returning the original response", key);
+            return bookingSagaService.readResponse(saga);
+        }
+        if (saga.getStatus() != SagaStatus.STARTED) {
+            throw new ConflictException(String.format(ErrorMessageUtil.IDEMPOTENCY_REQUEST_IN_PROGRESS, key));
         }
 
-        // check flightExist
-        FlightResponse flightResponse = flightClient.getFlightById(request.getFlightId());
+        Booking booking = null;
+        try {
+            if (request.getTripType() != TripType.ONE_WAY) {
+                throw new BadRequestException(ErrorMessageUtil.ONLY_ONE_WAY_BOOKINGS_SUPPORTED);
+            }
 
-        // Create booking entity with cross-service IDs
-        Booking booking = BookingMapper.toEntity(
-                request, userId, passengers, bookingReference);
-        booking.setStatus(BookingStatus.PENDING);
-        booking.setAirlineId(flightResponse.getAirline().getId());
+            // The flight instance is the source of truth for which flight this is — a client-supplied flightId is
+            // only ever used to catch a mismatched request, never trusted on its own.
+            FlightInstanceResponse flightInstanceResponse = flightClient.getFlightInstanceResponse(request.getFlightInstanceId());
+            Long flightId = flightInstanceResponse.getFlightId();
+            if (request.getFlightId() != null && !request.getFlightId().equals(flightId)) {
+                throw new BadRequestException(String.format(
+                        ErrorMessageUtil.FLIGHT_ID_DOES_NOT_MATCH_INSTANCE, request.getFlightId(), request.getFlightInstanceId()));
+            }
+            LocalDate departureDate = flightInstanceResponse.getDepartureDateTime().toLocalDate();
+            FlightResponse flightResponse = flightClient.getFlightById(flightId);
 
-        // Set seat instance IDs from passenger requests
-        List<Long> seatInstanceIds = request.getPassengers().stream()
-                .map(PassengerRequest::getSeatInstanceId)
-                .collect(Collectors.toList());
-        booking.setSeatInstanceIds(seatInstanceIds);
+            FareQuoteResponse quote = pricingIntegrationService.quoteFare(
+                    request.getFareId(), flightId, request.getCabinClass(), departureDate);
 
-        // Save booking
-        booking = bookingRepository.save(booking);
+            // Skip the call when nothing was selected: an empty list sends no body the service can read.
+            List<Long> ancillaryIds = request.getAncillaryIds();
+            BigDecimal ancillaryPrice = ancillaryIds == null || ancillaryIds.isEmpty()
+                    ? BigDecimal.ZERO : ancillaryClient.calculateAncillariesPrice(flightId, ancillaryIds);
+            List<Long> mealIds = request.getMealIds();
+            BigDecimal mealPrice = mealIds == null || mealIds.isEmpty()
+                    ? BigDecimal.ZERO : ancillaryClient.calculateMealPrice(flightId, mealIds);
 
-        // Set booking reference on passengers
-        for (Passenger passenger : passengers) {
-            passenger.setBooking(booking);
+            String bookingReference = generateBookingReference();
+            List<Long> seatInstanceIds = request.getPassengers().stream()
+                    .map(PassengerRequest::getSeatInstanceId)
+                    .collect(Collectors.toList());
+            SeatHoldResponse hold = seatClient.holdSeats(SeatHoldRequest.builder()
+                    .flightInstanceId(request.getFlightInstanceId())
+                    .cabinClass(request.getCabinClass())
+                    .seatInstanceIds(seatInstanceIds)
+                    .bookingReference(bookingReference)
+                    .build());
+            bookingSagaService.recordSeatsHeld(saga.getId(), bookingReference, seatInstanceIds);
+
+            Set<Passenger> passengers = new HashSet<>();
+            for (PassengerRequest passengerRequest : request.getPassengers()) {
+                passengers.add(passengerService.createPassengerEntity(passengerRequest, userId));
+            }
+
+            booking = BookingMapper.toEntity(request, userId, passengers, bookingReference);
+            booking.setFlightId(flightId);
+            booking.setStatus(BookingStatus.PENDING);
+            booking.setAirlineId(flightResponse.getAirline().getId());
+            booking.setSeatInstanceIds(seatInstanceIds);
+            booking.setTicketTimeLimit(LocalDateTime.ofInstant(hold.getHoldExpiresAt(), ZoneId.systemDefault()));
+
+            booking.setFareVersion(quote.getVersion());
+            booking.setFareCurrency(quote.getCurrency());
+            booking.setFareBaseAmount(quote.getBaseFare());
+            booking.setFareTaxAmount(quote.getTaxesAndFees());
+            booking.setFareFeeAmount(quote.getAirlineFees());
+            booking.setFareRulesId(quote.getFareRulesId());
+            booking.setFareBaggagePolicyId(quote.getBaggagePolicyId());
+            booking.setFareTravelDate(departureDate);
+
+            BigDecimal fareTotal = quote.getTotalPrice().multiply(BigDecimal.valueOf(passengers.size()));
+            BigDecimal totalPrice = fareTotal.add(hold.getTotalPremium()).add(ancillaryPrice).add(mealPrice)
+                    .setScale(2, RoundingMode.HALF_EVEN);
+            // The stored total is what payment-service and PaymentEventListener check the payment against.
+            booking.setTotalAmount(totalPrice);
+
+            booking = bookingRepository.save(booking);
+            for (Passenger passenger : passengers) {
+                passenger.setBooking(booking);
+            }
+            bookingSagaService.recordBookingCreated(saga.getId(), booking.getId());
+            // Tickets are issued once the booking is CONFIRMED (payment success), not here — see
+            // PaymentEventListener.handlePaymentCompleted.
+
+            PaymentInitiateRequest paymentRequest = PaymentInitiateRequest.builder()
+                    .userId(userId)
+                    .bookingId(booking.getId())
+                    .amount(totalPrice)
+                    .gateway(PaymentGateway.RAZORPAY)
+                    .description("Booking: " + bookingReference)
+                    .idempotencyKey(bookingReference)
+                    .build();
+
+            log.info("Payment initiated for booking {} amount {}", bookingReference, totalPrice);
+
+            PaymentInitiateResponse paymentInit = paymentClient.initiatePayment(paymentRequest, userId);
+            if (paymentInit == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                        ErrorMessageUtil.PAYMENT_SERVICE_UNAVAILABLE);
+            }
+            bookingSagaService.recordPaymentInitiated(saga.getId(), paymentInit);
+            return paymentInit;
+        } catch (RuntimeException e) {
+            log.error("createBooking failed for Idempotency-Key {}, compensating", key, e);
+            if (booking != null) {
+                booking.setStatus(BookingStatus.CANCELLED);
+                bookingRepository.save(booking);
+                bookingEventProducer.sendBookingCancelled(booking);
+            }
+            bookingSagaService.fail(saga.getId(), e.getMessage());
+            throw e;
         }
-
-        // Generate tickets
-        ticketService.generateTicketsForBooking(booking);
-
-        // Calculate total amount
-
-        int passengerCount = booking.getPassengers().size();
-        LocalDate departureDate = flightClient.getFlightInstanceResponse(booking.getFlightInstanceId())
-                .getDepartureDateTime().toLocalDate();
-        FareQuoteResponse quote = pricingIntegrationService.quoteFare(booking.getFareId(), departureDate);
-        booking.setFareVersion(quote.getVersion());
-        booking.setFareCurrency(quote.getCurrency());
-        booking.setFareBaseAmount(quote.getBaseFare());
-        booking.setFareTaxAmount(quote.getTaxesAndFees());
-        booking.setFareFeeAmount(quote.getAirlineFees());
-        booking.setFareRulesId(quote.getFareRulesId());
-        booking.setFareBaggagePolicyId(quote.getBaggagePolicyId());
-        booking.setFareTravelDate(departureDate);
-        bookingRepository.save(booking);
-        Double fareTotal = quote.getTotalPrice() * passengerCount;
-        Double seatPrice= seatClient.calculateSeatPrice(booking.getSeatInstanceIds());
-        // Skip the call when nothing was selected: a missing list sends no request body, which
-        // ancillary-service rejects with a 4xx (no longer masked by a 0.0 fallback).
-        Double ancillaryPrice = booking.getAncillaryIds() == null || booking.getAncillaryIds().isEmpty()
-                ? 0.0 : ancillaryClient.calculateAncillariesPrice(booking.getAncillaryIds());
-        Double mealPrice = booking.getMealIds() == null || booking.getMealIds().isEmpty()
-                ? 0.0 : ancillaryClient.calculateMealPrice(booking.getMealIds());
-
-        Double totalPrice=fareTotal+seatPrice+ancillaryPrice+mealPrice;
-
-
-        // Initiate payment
-        PaymentInitiateRequest paymentRequest = PaymentInitiateRequest.builder()
-                .userId(userId)
-                .bookingId(booking.getId())
-                .amount(totalPrice)
-                .gateway(PaymentGateway.RAZORPAY)
-                .description("Booking: " + bookingReference)
-                .build();
-
-        System.out.println("Booking created successfully: {}   - "+paymentRequest);
-
-        PaymentInitiateResponse paymentInit = paymentClient.initiatePayment(paymentRequest, userId);
-        if (paymentInit == null) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "Payment service is temporarily unavailable. Please retry.");
-        }
-        return paymentInit;
     }
 
     @Override
     @Transactional
-    public BookingResponse updateBooking(Long id, BookingRequest request)
-            throws ResourceNotFoundException {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Booking not found with ID: " + id));
+    public BookingResponse updateBooking(Long id, BookingRequest request, Long userId) {
+        Booking booking = findBookingOrThrow(id);
+        bookingAccess.requireOwnerOrPermission(booking, userId, BookingPermissions.BOOKING_MANAGE);
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new ConflictException(String.format(
+                    ErrorMessageUtil.BOOKING_NOT_MODIFIABLE, booking.getBookingReference(), booking.getStatus()));
+        }
 
         Set<Passenger> passengers = new HashSet<>();
         for (PassengerRequest passengerRequest : request.getPassengers()) {
-            Passenger passenger = passengerService.findOrCreatePassengerEntity(
-                    passengerRequest, booking.getUserId());
-            passengers.add(passenger);
+            passengers.add(passengerService.createPassengerEntity(passengerRequest, booking.getUserId()));
         }
 
         BookingMapper.updateEntityFromRequest(request, booking, passengers);
         Booking updated = bookingRepository.save(booking);
-        return convertBookingResponse(updated);
+        return convertBookingResponse(updated, canSeePii(booking, userId));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public BookingResponse getBookingById(Long id) throws ResourceNotFoundException {
+    public BookingResponse getBookingById(Long id, Long userId) {
         Booking booking = bookingRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.BOOKING_NOT_FOUND_BY_ID, id)));
+        bookingAccess.requireOwnerOrPermission(booking, userId, BookingPermissions.BOOKING_READ);
+        return convertBookingResponse(booking, canSeePii(booking, userId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BookingResponse getBookingForSupport(String bookingReference) {
+        Booking booking = bookingRepository.findByBookingReference(bookingReference)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Booking not found with ID: " + id));
-        return convertBookingResponse(booking);
+                        String.format(ErrorMessageUtil.BOOKING_NOT_FOUND_BY_REFERENCE, bookingReference)));
+        return convertBookingResponse(booking, false);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByAirline(
             Long userId,
+            Long airlineId,
             String searchQuery,
             BookingStatus status,
             Long flightInstanceId,
             String sortDirection
     ) {
-        AirlineResponse airlineResponse = airlineClient.getAirlineByOwner(userId);
-        Long airlineId = airlineResponse.getId();
+        bookingAccess.requireAirlinePermission(airlineId, userId, BookingPermissions.BOOKING_READ);
+        boolean seePii = bookingAccess.hasAirlinePermission(airlineId, userId, BookingPermissions.PASSENGER_PII_READ);
 
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDirection)
                 ? Sort.Direction.ASC
@@ -193,38 +246,61 @@ public class BookingServiceImpl implements BookingService {
         List<Booking> bookings = bookingRepository.findByAirlineWithFilters(
                 airlineId, searchQuery, status, flightInstanceId, sort);
 
-        return enrichBatch(bookings);
+        List<BookingResponse> responses = enrichBatch(bookings);
+        if (!seePii) {
+            responses.forEach(this::maskPii);
+        }
+        return responses;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByUser(Long userId) {
         return bookingRepository.findByUserId(userId).stream()
-                .map(this::convertBookingResponse)
+                .map(booking -> convertBookingResponse(booking, true))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PassengerResponse> getPassengersByBooking(Long bookingId, Long userId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.BOOKING_NOT_FOUND_BY_ID, bookingId)));
+        bookingAccess.requireOwnerOrPermission(booking, userId, BookingPermissions.PASSENGER_READ);
+
+        boolean seePii = canSeePii(booking, userId);
+        return booking.getPassengers().stream()
+                .map(PassengerMapper::toResponse)
+                .peek(passenger -> {
+                    if (!seePii) {
+                        passenger.setPassportNumber(null);
+                        passenger.setDateOfBirth(null);
+                    }
+                })
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public BookingResponse cancelBooking(Long id) throws ResourceNotFoundException {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Booking not found with ID: " + id));
+    public BookingResponse cancelBooking(Long id, Long userId) {
+        Booking booking = findBookingOrThrow(id);
+        bookingAccess.requireOwnerOrPermission(booking, userId, BookingPermissions.BOOKING_MANAGE);
 
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setLastModified(LocalDateTime.now());
         Booking updated = bookingRepository.save(booking);
+        bookingEventProducer.sendBookingCancelled(updated);
 
         log.info("Booking cancelled: {}", booking.getBookingReference());
-        return convertBookingResponse(updated);
+        return convertBookingResponse(updated, canSeePii(booking, userId));
     }
 
     @Override
     @Transactional
-    public void deleteBooking(Long id) throws ResourceNotFoundException {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Booking not found with ID: " + id));
+    public void deleteBooking(Long id, Long userId) {
+        Booking booking = findBookingOrThrow(id);
+        bookingAccess.requireAirlinePermission(booking.getAirlineId(), userId, BookingPermissions.BOOKING_MANAGE);
+        bookingEventProducer.sendBookingCancelled(booking);
         bookingRepository.delete(booking);
         log.info("Booking deleted: {}", booking.getBookingReference());
     }
@@ -240,78 +316,76 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public long countByFlightId(Long flightId) {
-        return bookingRepository.countByFlightInstanceId(flightId);
+    @Transactional(readOnly = true)
+    public long countByFlightId(Long userId, Long airlineId, Long flightInstanceId) {
+        bookingAccess.requireAirlinePermission(airlineId, userId, BookingPermissions.BOOKING_READ);
+        return bookingRepository.countByFlightInstanceIdAndAirlineId(flightInstanceId, airlineId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public BookingStatisticsResponse getBookingStatisticsForAirline(Long airlineId) {
-        LocalDateTime now = LocalDateTime.now();
+    public BookingStatisticsResponse getBookingStatisticsForAirline(Long userId, Long airlineId) {
+        bookingAccess.requireAirlinePermission(airlineId, userId, BookingPermissions.BOOKING_READ);
 
-        // Today's statistics
-        LocalDateTime startOfDay = now.with(LocalTime.MIN);
-        LocalDateTime endOfDay = now.with(LocalTime.MAX);
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+        LocalDateTime startOfMonth = YearMonth.now().atDay(1).atStartOfDay();
+        LocalDateTime endOfMonth = YearMonth.now().atEndOfMonth().atTime(LocalTime.MAX);
 
-        // This month's statistics
-        YearMonth currentMonth = YearMonth.now();
-        LocalDateTime startOfMonth = currentMonth.atDay(1).atStartOfDay();
-        LocalDateTime endOfMonth = currentMonth.atEndOfMonth().atTime(LocalTime.MAX);
-
-        // Note: In the microservice, airlineId -> flightId mapping is needed via inter-service call
-        // For now, we provide basic statistics
-        Long todayBookings = bookingRepository.count(); // Simplified
-        Double todayRevenue = 0.0;
-        Long monthBookings = bookingRepository.count();
-        Double monthRevenue = 0.0;
-
-        // Build daily trend (last 30 days)
-        List<BookingStatisticsResponse.DailyBookingData> dailyTrend = new ArrayList<>();
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-        for (int i = 29; i >= 0; i--) {
-            LocalDate date = LocalDate.now().minusDays(i);
-            dailyTrend.add(BookingStatisticsResponse.DailyBookingData.builder()
-                    .date(date.format(dateFormatter))
-                    .bookingCount(0L)
-                    .revenue(0.0)
-                    .build());
-        }
-
-        // Build monthly data (last 12 months)
-        List<BookingStatisticsResponse.MonthlyData> monthlyData = new ArrayList<>();
-        DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("yyyy-MM");
-
-        for (int i = 11; i >= 0; i--) {
-            YearMonth month = YearMonth.now().minusMonths(i);
-            monthlyData.add(BookingStatisticsResponse.MonthlyData.builder()
-                    .month(month.format(monthFormatter))
-                    .bookingCount(0L)
-                    .revenue(0.0)
-                    .build());
-        }
-
+        // Trend series (daily and monthly) are not computed yet, so they are returned empty rather than zero-filled.
         return BookingStatisticsResponse.builder()
-                .totalBookingsToday(todayBookings)
-                .revenueToday(todayRevenue)
-                .totalBookingsThisMonth(monthBookings)
-                .revenueThisMonth(monthRevenue)
-                .dailyTrend(dailyTrend)
-                .monthlyData(monthlyData)
+                .totalBookingsToday(bookingRepository.countByAirlineIdAndBookingDateBetween(airlineId, startOfDay, endOfDay))
+                .revenueToday(bookingRepository.sumTotalAmountByAirlineIdAndBookingDateBetween(airlineId, startOfDay, endOfDay))
+                .totalBookingsThisMonth(bookingRepository.countByAirlineIdAndBookingDateBetween(airlineId, startOfMonth, endOfMonth))
+                .revenueThisMonth(bookingRepository.sumTotalAmountByAirlineIdAndBookingDateBetween(airlineId, startOfMonth, endOfMonth))
+                .dailyTrend(new ArrayList<>())
+                .monthlyData(new ArrayList<>())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PayableBookingResponse getPayableBooking(Long id) {
+        Booking booking = findBookingOrThrow(id);
+        return PayableBookingResponse.builder()
+                .bookingId(booking.getId())
+                .userId(booking.getUserId())
+                .airlineId(booking.getAirlineId())
+                .totalAmount(booking.getTotalAmount())
+                .status(booking.getStatus())
+                .build();
+    }
+
+    private Booking findBookingOrThrow(Long id) {
+        return bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.BOOKING_NOT_FOUND_BY_ID, id)));
+    }
+
+    /** The customer always sees their own passport and date of birth; anyone else needs PASSENGER_PII_READ on the airline. */
+    private boolean canSeePii(Booking booking, Long userId) {
+        return bookingAccess.isOwner(booking, userId)
+                || bookingAccess.hasAirlinePermission(booking.getAirlineId(), userId, BookingPermissions.PASSENGER_PII_READ);
+    }
+
+    private void maskPii(BookingResponse response) {
+        if (response.getPassengers() != null) {
+            response.getPassengers().forEach(passenger -> {
+                passenger.setPassportNumber(null);
+                passenger.setDateOfBirth(null);
+            });
+        }
     }
 
     private String generateBookingReference() {
         String reference;
         do {
-            reference = "BK" + UUID.randomUUID().toString()
-                    .substring(0, 8).toUpperCase();
+            reference = "BK" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         } while (bookingRepository.findByBookingReference(reference).isPresent());
         return reference;
     }
 
     private List<BookingResponse> enrichBatch(List<Booking> bookings) {
-        if (bookings.isEmpty()) return Collections.emptyList();
+        if (bookings.isEmpty()) return new ArrayList<>();
 
         List<Long> bookingIds = bookings.stream().map(Booking::getId).collect(Collectors.toList());
 
@@ -331,7 +405,6 @@ public class BookingServiceImpl implements BookingService {
                 .flatMap(b -> b.getMealIds() != null ? b.getMealIds().stream() : Stream.empty())
                 .distinct().collect(Collectors.toList());
 
-        // One call per service
         Map<Long, FareResponse> fareMap = pricingClient.getFaresByIds(fareIds);
         Map<Long, FlightResponse> flightMap = flightClient.getFlightsByIds(flightIds);
         Map<Long, FlightInstanceResponse> flightInstanceMap = flightClient.getFlightInstancesByIds(flightInstanceIds);
@@ -377,11 +450,12 @@ public class BookingServiceImpl implements BookingService {
         }).collect(Collectors.toList());
     }
 
-    private BookingResponse convertBookingResponse(Booking booking)  {
-        // getAllByIds/getMealsByIds return one response per *unique* id — re-map over the booking's
-        // raw (possibly repeated) id list so a quantity-2 item still renders as two entries.
+    private BookingResponse convertBookingResponse(Booking booking, boolean seePii) {
+        // Bulk lookups return one response per unique id, so re-map over the booking's own (possibly repeated)
+        // id list: a quantity-2 item still renders as two entries.
         List<Long> ancillaryIds = booking.getAncillaryIds() != null ? booking.getAncillaryIds() : List.of();
         List<Long> mealIds = booking.getMealIds() != null ? booking.getMealIds() : List.of();
+        List<Long> seatIds = booking.getSeatInstanceIds() != null ? booking.getSeatInstanceIds() : List.of();
 
         Map<Long, FlightCabinAncillaryResponse> ancillaryMap = ancillaryIds.isEmpty()
                 ? Collections.emptyMap()
@@ -391,29 +465,35 @@ public class BookingServiceImpl implements BookingService {
                 ? Collections.emptyMap()
                 : ancillaryClient.getMealsByIds(mealIds).stream()
                         .collect(Collectors.toMap(FlightMealResponse::getId, m -> m));
+        Map<Long, SeatInstanceResponse> seatMap = seatIds.isEmpty()
+                ? Collections.emptyMap()
+                : seatClient.getAllByIds(seatIds).stream()
+                        .collect(Collectors.toMap(SeatInstanceResponse::getId, s -> s));
 
         List<FlightCabinAncillaryResponse> ancillaryResponses = ancillaryIds.stream()
                 .map(ancillaryMap::get).filter(Objects::nonNull).collect(Collectors.toList());
         List<FlightMealResponse> mealResponses = mealIds.stream()
                 .map(mealMap::get).filter(Objects::nonNull).collect(Collectors.toList());
-        PaymentDTO paymentDTO=paymentClient.getPaymentByBookingId(booking.getId());
-        FareResponse fareResponse=pricingClient.getFareById(booking.getFareId());
-        FlightResponse flightResponse=flightClient.getFlightById(booking.getFlightId());
+        List<SeatInstanceResponse> seatResponses = seatIds.stream()
+                .map(seatMap::get).filter(Objects::nonNull).collect(Collectors.toList());
 
-        List<SeatInstanceResponse> seatInstanceResponses=seatClient.getAllByIds(booking.getSeatInstanceIds());
-        FlightInstanceResponse flightInstanceResponse=flightClient.getFlightInstanceResponse(booking.getFlightInstanceId());
+        PaymentDTO paymentDTO = paymentClient.getPaymentByBookingId(booking.getId());
+        FareResponse fareResponse = pricingClient.getFareById(booking.getFareId());
+        FlightResponse flightResponse = flightClient.getFlightById(booking.getFlightId());
+        FlightInstanceResponse flightInstanceResponse = flightClient.getFlightInstanceResponse(booking.getFlightInstanceId());
 
-
-        System.out.println("seat instances -------- "+seatInstanceResponses.size());
-
-        return BookingMapper.toResponse(booking,
+        BookingResponse response = BookingMapper.toResponse(booking,
                 paymentDTO,
                 fareResponse,
                 flightResponse,
                 flightInstanceResponse,
                 ancillaryResponses,
                 mealResponses,
-                seatInstanceResponses
+                seatResponses
         );
+        if (!seePii) {
+            maskPii(response);
+        }
+        return response;
     }
 }

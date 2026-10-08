@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -34,10 +35,10 @@ public class FareRules {
     private Boolean isRefundable;
 
     @Column(name = "change_fee")
-    private Double changeFee;
+    private BigDecimal changeFee;
 
     @Column(name = "cancellation_fee")
-    private Double cancellationFee;
+    private BigDecimal cancellationFee;
 
     @Column(name = "refund_deadline_days")
     private Integer refundDeadlineDays;

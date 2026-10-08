@@ -1,11 +1,15 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.constants.BookingPermissions;
 import com.sunday.common_lib.enums.TicketStatus;
+import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.model.Booking;
-import com.sunday.services.model.Passenger;
 import com.sunday.services.model.Ticket;
+import com.sunday.services.repository.BookingRepository;
 import com.sunday.services.repository.TicketRepository;
+import com.sunday.services.service.BookingAccessService;
 import com.sunday.services.service.TicketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,9 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,97 +27,92 @@ import java.util.UUID;
 public class TicketServiceImpl implements TicketService {
 
     private final TicketRepository ticketRepository;
+    private final BookingRepository bookingRepository;
+    private final BookingAccessService bookingAccess;
 
     @Override
     @Transactional
     public List<Ticket> generateTicketsForBooking(Booking booking) {
         log.info("Generating tickets for booking: {}", booking.getBookingReference());
 
-        List<Ticket> tickets = new ArrayList<>();
+        List<Ticket> tickets = booking.getPassengers().stream()
+                .map(passenger -> Ticket.builder()
+                        .ticketNumber(generateTicketNumber())
+                        .status(TicketStatus.BOOKED)
+                        .issuedAt(LocalDateTime.now())
+                        .booking(booking)
+                        .passenger(passenger)
+                        .build())
+                .collect(Collectors.toList());
 
-        for (Passenger passenger : booking.getPassengers()) {
-            String ticketNumber = generateUniqueTicketNumber();
+        tickets = ticketRepository.saveAll(tickets);
 
-            Ticket ticket = Ticket.builder()
-                    .ticketNumber(ticketNumber)
-                    .status(TicketStatus.BOOKED)
-                    .issuedAt(LocalDateTime.now())
-                    .booking(booking)
-                    .passenger(passenger)
-                    .build();
-
-            Ticket savedTicket = ticketRepository.save(ticket);
-            tickets.add(savedTicket);
-
-            log.info("Generated ticket {} for passenger {} {} on booking {}",
-                    ticketNumber,
-                    passenger.getFirstName(),
-                    passenger.getLastName(),
-                    booking.getBookingReference());
-        }
-
-        log.info("Successfully generated {} tickets for booking {}",
-                tickets.size(),
-                booking.getBookingReference());
-
+        log.info("Successfully generated {} tickets for booking {}", tickets.size(), booking.getBookingReference());
         return tickets;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Ticket getTicketByNumber(String ticketNumber) throws ResourceNotFoundException {
-        return ticketRepository.findByTicketNumber(ticketNumber)
+    public Ticket getTicketByNumber(String ticketNumber, Long userId) {
+        Ticket ticket = ticketRepository.findByTicketNumber(ticketNumber)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Ticket not found with number: " + ticketNumber));
+                        String.format(ErrorMessageUtil.TICKET_NOT_FOUND_BY_NUMBER, ticketNumber)));
+        bookingAccess.requireOwnerOrPermission(ticket.getBooking(), userId, BookingPermissions.TICKET_READ);
+        return ticket;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Ticket> getTicketsByBooking(Long bookingId) {
+    public List<Ticket> getTicketsByBooking(Long bookingId, Long userId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(ErrorMessageUtil.BOOKING_NOT_FOUND_BY_ID, bookingId)));
+        bookingAccess.requireOwnerOrPermission(booking, userId, BookingPermissions.TICKET_READ);
         return ticketRepository.findByBookingIdWithDetails(bookingId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Ticket> getTicketsByPassenger(Long passengerId) {
-        return ticketRepository.findByPassengerId(passengerId);
+    public List<Ticket> getTicketsByPassenger(Long passengerId, Long userId) {
+        List<Ticket> tickets = ticketRepository.findByPassengerId(passengerId);
+        for (Ticket ticket : tickets) {
+            bookingAccess.requireOwnerOrPermission(ticket.getBooking(), userId, BookingPermissions.TICKET_READ);
+        }
+        return tickets;
     }
 
     @Override
     @Transactional
-    public Ticket cancelTicket(Long ticketId) throws ResourceNotFoundException {
-        Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Ticket not found with id: " + ticketId));
+    public Ticket cancelTicket(Long ticketId, Long userId) {
+        Ticket ticket = findTicketOrThrow(ticketId);
+        bookingAccess.requireOwnerOrPermission(ticket.getBooking(), userId, BookingPermissions.TICKET_VOID);
 
         if (ticket.getStatus() == TicketStatus.USED) {
-            throw new IllegalStateException("Cannot cancel a ticket that has already been used");
+            throw new ConflictException(ErrorMessageUtil.TICKET_USED_CANNOT_CANCEL);
         }
-
         if (ticket.getStatus() == TicketStatus.REFUNDED) {
-            throw new IllegalStateException("Cannot cancel a ticket that has already been refunded");
+            throw new ConflictException(ErrorMessageUtil.TICKET_REFUNDED_CANNOT_CANCEL);
         }
 
         ticket.setStatus(TicketStatus.CANCELLED);
         Ticket updatedTicket = ticketRepository.save(ticket);
 
-        log.info("Ticket {} cancelled successfully", ticket.getTicketNumber());
+        log.info("Ticket {} cancelled", ticket.getTicketNumber());
         return updatedTicket;
     }
 
     @Override
     @Transactional
-    public Ticket markTicketAsUsed(Long ticketId) throws ResourceNotFoundException {
-        Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Ticket not found with id: " + ticketId));
+    public Ticket markTicketAsUsed(Long ticketId, Long userId) {
+        Ticket ticket = findTicketOrThrow(ticketId);
+        bookingAccess.requireAirlinePermission(
+                ticket.getBooking().getAirlineId(), userId, BookingPermissions.TICKET_ISSUE);
 
         if (ticket.getStatus() == TicketStatus.CANCELLED) {
-            throw new IllegalStateException("Cannot use a cancelled ticket");
+            throw new ConflictException(ErrorMessageUtil.TICKET_CANCELLED_CANNOT_USE);
         }
-
         if (ticket.getStatus() == TicketStatus.REFUNDED) {
-            throw new IllegalStateException("Cannot use a refunded ticket");
+            throw new ConflictException(ErrorMessageUtil.TICKET_REFUNDED_CANNOT_USE);
         }
 
         ticket.setStatus(TicketStatus.USED);
@@ -123,32 +122,35 @@ public class TicketServiceImpl implements TicketService {
         return updatedTicket;
     }
 
+    /** Refunds are an airline decision only: the customer never holds TICKET_REFUND_APPROVE and is not the owner check here. */
     @Override
     @Transactional
-    public Ticket refundTicket(Long ticketId) throws ResourceNotFoundException {
-        Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Ticket not found with id: " + ticketId));
+    public Ticket refundTicket(Long ticketId, Long userId) {
+        Ticket ticket = findTicketOrThrow(ticketId);
+        bookingAccess.requireAirlinePermission(
+                ticket.getBooking().getAirlineId(), userId, BookingPermissions.TICKET_REFUND_APPROVE);
 
         if (ticket.getStatus() == TicketStatus.USED) {
-            throw new IllegalStateException("Cannot refund a ticket that has already been used");
+            throw new ConflictException(ErrorMessageUtil.TICKET_USED_CANNOT_REFUND);
         }
 
         ticket.setStatus(TicketStatus.REFUNDED);
         Ticket updatedTicket = ticketRepository.save(ticket);
 
-        log.info("Ticket {} refunded successfully", ticket.getTicketNumber());
+        log.info("Ticket {} refunded", ticket.getTicketNumber());
         return updatedTicket;
     }
 
-    private String generateUniqueTicketNumber() {
-        String ticketNumber;
-        do {
-            String datePart = LocalDateTime.now().toString().substring(0, 10).replace("-", "");
-            String randomPart = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            ticketNumber = String.format("TKT-%s-%s", datePart, randomPart);
-        } while (ticketRepository.existsByTicketNumber(ticketNumber));
+    private Ticket findTicketOrThrow(Long ticketId) {
+        return ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(ErrorMessageUtil.TICKET_NOT_FOUND_BY_ID, ticketId)));
+    }
 
-        return ticketNumber;
+    /** Relies on the column's UNIQUE constraint, not a pre-check: a collision on an 8-hex-char random suffix is astronomically unlikely. */
+    private String generateTicketNumber() {
+        String datePart = LocalDateTime.now().toString().substring(0, 10).replace("-", "");
+        String randomPart = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return String.format("TKT-%s-%s", datePart, randomPart);
     }
 }

@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -49,14 +50,14 @@ public class BookingResponse {
 
     private Long fareId;
     private String fareName;
-    private Double fareBaseFare;
-    private Double fareTaxesAndFees;
-    private Double fareAirlineFees;
+    private BigDecimal fareBaseFare;
+    private BigDecimal fareTaxesAndFees;
+    private BigDecimal fareAirlineFees;
 
     private FareResponse fare;
 
     private Integer totalPassengers;
-    private Double totalAmount;
+    private BigDecimal totalAmount;
     private String currency;
 
     private String specialRequests;

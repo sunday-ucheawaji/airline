@@ -2,6 +2,7 @@ package com.sunday.services.event;
 
 import com.sunday.common_lib.event.PaymentCompletedEvent;
 import com.sunday.common_lib.event.PaymentFailedEvent;
+import com.sunday.common_lib.event.PaymentRefundedEvent;
 import com.sunday.services.model.Payment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,5 +48,20 @@ public class PaymentEventProducer {
         kafkaTemplate.send("payment.failed", event);
         log.warn("Published PaymentFailedEvent for payment ID: {} - Reason: {}",
                 payment.getId(), payment.getFailureReason());
+    }
+
+    public void sendPaymentRefunded(Payment payment) {
+        PaymentRefundedEvent event = PaymentRefundedEvent.builder()
+                .paymentId(payment.getId())
+                .bookingId(payment.getBookingId())
+                .userId(payment.getUserId())
+                .amount(payment.getAmount())
+                .providerRefundId(payment.getRefundId())
+                .refundedAt(LocalDateTime.now())
+                .build();
+
+        kafkaTemplate.send("payment.refunded", event);
+        log.info("Published PaymentRefundedEvent for payment ID: {}, booking ID: {}",
+                payment.getId(), payment.getBookingId());
     }
 }

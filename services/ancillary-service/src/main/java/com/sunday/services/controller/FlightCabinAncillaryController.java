@@ -87,7 +87,8 @@ public class FlightCabinAncillaryController {
 
     @PostMapping("/price/total")
     public ResponseEntity<?> calculateAncillariesPrice(
+            @RequestParam Long flightId,
             @RequestBody List<Long> flightCabinAncillaryIds) {
-        return ResponseEntity.ok(service.calculateAncillaryPrice(flightCabinAncillaryIds));
+        return ResponseEntity.ok(service.calculateAncillaryPrice(flightId, flightCabinAncillaryIds));
     }
 }

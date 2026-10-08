@@ -5,6 +5,7 @@ import com.sunday.common_lib.payload.request.FlightCabinAncillaryRequest;
 import com.sunday.common_lib.payload.response.FlightCabinAncillaryBulkCreateResponse;
 import com.sunday.common_lib.payload.response.FlightCabinAncillaryResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface FlightCabinAncillaryService {
@@ -30,5 +31,5 @@ public interface FlightCabinAncillaryService {
 
     void delete(Long userId, Long id);
 
-    Double calculateAncillaryPrice(List<Long> ancillaryIds);
+    BigDecimal calculateAncillaryPrice(Long flightId, List<Long> ancillaryIds);
 }

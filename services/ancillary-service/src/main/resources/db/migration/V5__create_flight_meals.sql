@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS flight_meals (
     flight_id     BIGINT NOT NULL,
     meal_id       BIGINT NOT NULL,
     available     BIT(1) NOT NULL,
-    price         DOUBLE,
+    price         DECIMAL(12,2),
     display_order INT,
     CONSTRAINT uk_flight_meal UNIQUE (flight_id, meal_id),
     CONSTRAINT fk_flight_meals_meal FOREIGN KEY (meal_id) REFERENCES meals (id),

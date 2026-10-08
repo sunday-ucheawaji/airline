@@ -1,8 +1,6 @@
 package com.sunday.services.controller;
 
 import com.sunday.common_lib.enums.BookingStatus;
-import com.sunday.common_lib.exception.PaymentException;
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.BookingRequest;
 import com.sunday.common_lib.payload.response.BookingResponse;
 import com.sunday.common_lib.payload.response.BookingStatisticsResponse;
@@ -26,9 +24,9 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<PaymentInitiateResponse> createBooking(
             @Valid @RequestBody BookingRequest request,
-            @RequestHeader("X-User-Id") Long userId)
-            throws ResourceNotFoundException, PaymentException {
-        PaymentInitiateResponse response = bookingService.createBooking(request, userId);
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        PaymentInitiateResponse response = bookingService.createBooking(request, userId, idempotencyKey);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -36,20 +34,28 @@ public class BookingController {
     public ResponseEntity<BookingResponse> updateBooking(
             @PathVariable Long id,
             @Valid @RequestBody BookingRequest request,
-            @RequestHeader("X-User-Id") Long userId) throws ResourceNotFoundException {
-        BookingResponse response = bookingService.updateBooking(id, request);
+            @RequestHeader("X-User-Id") Long userId) {
+        BookingResponse response = bookingService.updateBooking(id, request, userId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id:\\d+}")
     public ResponseEntity<BookingResponse> getBookingById(
-            @PathVariable Long id) throws ResourceNotFoundException {
-        BookingResponse response = bookingService.getBookingById(id);
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId) {
+        BookingResponse response = bookingService.getBookingById(id, userId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/support/{bookingReference}")
+    public ResponseEntity<BookingResponse> getBookingForSupport(
+            @PathVariable String bookingReference) {
+        return ResponseEntity.ok(bookingService.getBookingForSupport(bookingReference));
     }
 
     @GetMapping("/airline")
     public ResponseEntity<List<BookingResponse>> getBookingsByAirline(
+            @RequestParam Long airlineId,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) BookingStatus status,
             @RequestParam(required = false) Long flightInstanceId,
@@ -58,6 +64,7 @@ public class BookingController {
     ) {
         List<BookingResponse> responses = bookingService.getBookingsByAirline(
                 userId,
+                airlineId,
                 search,
                 status,
                 flightInstanceId,
@@ -76,29 +83,32 @@ public class BookingController {
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<BookingResponse> cancelBooking(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) throws ResourceNotFoundException {
-        BookingResponse response = bookingService.cancelBooking(id);
+            @RequestHeader("X-User-Id") Long userId) {
+        BookingResponse response = bookingService.cancelBooking(id, userId);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id:\\d+}")
     public ResponseEntity<Void> deleteBooking(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) throws ResourceNotFoundException {
-        bookingService.deleteBooking(id);
+            @RequestHeader("X-User-Id") Long userId) {
+        bookingService.deleteBooking(id, userId);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/count/flight/{flightId}")
-    public ResponseEntity<Long> getBookingCountByFlight(@PathVariable Long flightId) {
-        long count = bookingService.countByFlightId(flightId);
+    @GetMapping("/count/flight/{flightInstanceId}")
+    public ResponseEntity<Long> getBookingCountByFlight(
+            @PathVariable Long flightInstanceId,
+            @RequestParam Long airlineId,
+            @RequestHeader("X-User-Id") Long userId) {
+        long count = bookingService.countByFlightId(userId, airlineId, flightInstanceId);
         return ResponseEntity.ok(count);
     }
 
     @GetMapping("/statistics/airline")
     public ResponseEntity<BookingStatisticsResponse> getBookingStatisticsForAirline(
-            @RequestParam Long airlineId) {
-        BookingStatisticsResponse statistics = bookingService.getBookingStatisticsForAirline(airlineId);
-        return ResponseEntity.ok(statistics);
+            @RequestParam Long airlineId,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(bookingService.getBookingStatisticsForAirline(userId, airlineId));
     }
 }

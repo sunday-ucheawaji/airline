@@ -1,7 +1,8 @@
 package com.sunday.services.controller;
 
-import com.sunday.common_lib.exception.PaymentException;
+import com.sunday.common_lib.enums.PaymentGateway;
 import com.sunday.common_lib.payload.request.PaymentInitiateRequest;
+import com.sunday.common_lib.payload.request.PaymentRefundRequest;
 import com.sunday.common_lib.payload.response.PaymentDTO;
 import com.sunday.common_lib.payload.response.PaymentInitiateResponse;
 import com.sunday.services.service.PaymentService;
@@ -15,8 +16,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -26,71 +26,62 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    /** The payer is the authenticated caller (X-User-Id), never the body. The service checks they own the booking. */
     @PostMapping("/initiate")
-    public ResponseEntity<?> initiatePayment(
+    public ResponseEntity<PaymentInitiateResponse> initiatePayment(
             @Valid @RequestBody PaymentInitiateRequest request,
-            @RequestHeader("X-User-Id") Long userId) throws PaymentException {
-
-
-            PaymentInitiateResponse response = paymentService
-                    .initiatePayment(request);
-            return ResponseEntity.ok(response);
-
-
+            @RequestHeader("X-User-Id") Long userId) {
+        request.setUserId(userId);
+        return ResponseEntity.ok(paymentService.initiatePayment(request));
     }
 
+    /** Deprecated alias for an existing Razorpay dashboard webhook URL — point new configs at
+     *  POST /api/payments/webhooks/razorpay instead. Removed after one release. */
+    @Deprecated
     @PostMapping("/verify")
-    public ResponseEntity<?> verifyPayment(
-            @RequestBody String payload,
-            @RequestHeader(value = "X-Razorpay-Signature", required = false)
-            String signature)
-            throws PaymentException {
-
-            log.info("Received RazorPay payment verification request");
-            PaymentDTO payment = paymentService.verifyPayment(payload, signature);
-            return ResponseEntity.ok(payment);
-
+    public ResponseEntity<PaymentDTO> verifyLegacy(
+            @RequestBody byte[] rawBody,
+            @RequestHeader(value = "X-Razorpay-Signature", required = false) String signature) {
+        log.warn("Deprecated /api/payments/verify called — point the Razorpay dashboard webhook at /api/payments/webhooks/razorpay");
+        return ResponseEntity.ok(paymentService.handleWebhook(PaymentGateway.RAZORPAY, rawBody, signature));
     }
 
-//    @PostMapping("/webhook/razorpay")
-//    public ResponseEntity<Void> handleRazorpayWebhook(
-//            @RequestBody String payload,
-//            @RequestHeader(value = "X-Razorpay-Signature", required = false)
-//            String signature) throws PaymentException {
-//
-//        log.info("========== RAZORPAY WEBHOOK ==========");
-//        log.info("Signature: {}", signature);
-//        log.info("Payload: {}", payload);
-//        log.info("======================================");
-//
-//        paymentService.handleRazorpayWebhook(payload, signature);
-//
-//        return ResponseEntity.ok().build();
-//    }
-
-    @PostMapping("/batch/bookings")
-    public ResponseEntity<Map<Long, PaymentDTO>> getPaymentsByBookingIds(@RequestBody List<Long> bookingIds) {
-        return ResponseEntity.ok(paymentService
-                .getPaymentsByBookingIds(bookingIds));
+    /** Owner of the payment (customer receipt lookup), or PAYMENT_READ on its airline. */
+    @GetMapping("/booking/{bookingId}")
+    public ResponseEntity<PaymentDTO> getPaymentForBooking(
+            @PathVariable Long bookingId,
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(paymentService.getPaymentForBooking(bookingId, userId));
     }
 
-    @GetMapping
-    public ResponseEntity<Page<PaymentDTO>> getAllPayments(
+    /** Airline-scoped list, gated on PAYMENT_READ for that airline. Replaces the old unscoped GET /. */
+    @GetMapping("/airline/{airlineId}")
+    public ResponseEntity<Page<PaymentDTO>> getPaymentsForAirline(
+            @PathVariable Long airlineId,
+            @RequestHeader("X-User-Id") Long userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "DESC") String sortDirection,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
         Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ?
                 Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-        Page<PaymentDTO> payments = paymentService.getAllPayments(pageable);
-        return ResponseEntity.ok(payments);
+        return ResponseEntity.ok(paymentService.getPaymentsForAirline(airlineId, userId, pageable));
     }
 
+    /** Platform support read across airlines — PAYMENT_SUPPORT_READ is enforced at the gateway. */
+    @GetMapping("/support/booking/{bookingId}")
+    public ResponseEntity<PaymentDTO> getPaymentForSupport(@PathVariable Long bookingId) {
+        return ResponseEntity.ok(paymentService.getPaymentForSupport(bookingId));
+    }
 
-
-
-
-    private record ErrorResponse(String message) {}
+    /** Never owner-eligible: a customer must never execute their own refund. */
+    @PostMapping("/{paymentId}/refund")
+    public ResponseEntity<PaymentDTO> refundPayment(
+            @PathVariable Long paymentId,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody(required = false) PaymentRefundRequest request) {
+        BigDecimal amount = request != null ? request.getAmount() : null;
+        return ResponseEntity.ok(paymentService.refundPayment(paymentId, userId, amount));
+    }
 }

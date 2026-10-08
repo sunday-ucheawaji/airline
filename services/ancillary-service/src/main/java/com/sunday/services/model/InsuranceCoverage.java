@@ -4,6 +4,8 @@ import com.sunday.common_lib.enums.CoverageType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "insurance_coverages")
 @Getter
@@ -33,7 +35,7 @@ public class InsuranceCoverage {
     private String description;
 
     @Column(nullable = false)
-    private Double coverageAmount;
+    private BigDecimal coverageAmount;
 
     @Column(length = 3)
     @Builder.Default

@@ -4,6 +4,7 @@ import com.sunday.common_lib.payload.request.FlightMealRequest;
 import com.sunday.common_lib.payload.response.FlightMealBulkCreateResponse;
 import com.sunday.common_lib.payload.response.FlightMealResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface FlightMealService {
@@ -24,5 +25,5 @@ public interface FlightMealService {
 
     FlightMealResponse updateAvailability(Long userId, Long id, Boolean available);
 
-    Double calculateMealPrice(List<Long> mealIds);
+    BigDecimal calculateMealPrice(Long flightId, List<Long> mealIds);
 }

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -20,10 +22,10 @@ public class FareRulesRequest {
     private Boolean isRefundable;
 
     @PositiveOrZero(message = "Change fee must be positive or zero")
-    private Double changeFee;
+    private BigDecimal changeFee;
 
     @PositiveOrZero(message = "Cancellation fee must be positive or zero")
-    private Double cancellationFee;
+    private BigDecimal cancellationFee;
 
     @PositiveOrZero(message = "Refund deadline days must be positive or zero")
     private Integer refundDeadlineDays;

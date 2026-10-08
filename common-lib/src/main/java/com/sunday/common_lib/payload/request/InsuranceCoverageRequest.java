@@ -1,8 +1,11 @@
 package com.sunday.common_lib.payload.request;
 
 import com.sunday.common_lib.enums.CoverageType;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -23,9 +26,9 @@ public class InsuranceCoverageRequest {
     @Size(max = 1000, message = "Description cannot be longer than 1000 characters")
     private String description;
 
-    @NotNull(message = "Coverage amount is required")
-    @PositiveOrZero(message = "Coverage amount must be zero or positive")
-    private Double coverageAmount;
+    @NotNull(message = ErrorMessageUtil.COVERAGE_AMOUNT_MANDATORY)
+    @PositiveOrZero(message = ErrorMessageUtil.COVERAGE_AMOUNT_MUST_BE_ZERO_OR_POSITIVE)
+    private BigDecimal coverageAmount;
 
     private String currency;
 

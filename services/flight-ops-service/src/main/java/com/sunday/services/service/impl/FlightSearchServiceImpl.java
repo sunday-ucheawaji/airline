@@ -21,6 +21,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -94,10 +95,10 @@ public class FlightSearchServiceImpl implements FlightSearchService {
     private boolean passesFareAndPriceFilter(FareResponse fare, FlightSearchRequest request, boolean hasPriceFilter) {
         if (fare == null) return false;
         if (!hasPriceFilter) return true;
-        Double price = fare.getTotalPrice();
+        BigDecimal price = fare.getTotalPrice();
         if (price == null) return false;
-        if (request.getMinPrice() != null && price < request.getMinPrice()) return false;
-        return request.getMaxPrice() == null || price <= request.getMaxPrice();
+        if (request.getMinPrice() != null && price.compareTo(request.getMinPrice()) < 0) return false;
+        return request.getMaxPrice() == null || price.compareTo(request.getMaxPrice()) <= 0;
     }
 
     private List<FlightInstanceResponse> enrichWithExternalData(

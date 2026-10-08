@@ -140,7 +140,7 @@ spring:
             - id: booking-service-routes
               uri: lb://booking-service
               predicates:
-                - Path=/api/bookings/**
+                - Path=/api/bookings/**,/api/tickets/**,/api/passengers/**
               filters:
                 - name: RequestRateLimiter
                   args:

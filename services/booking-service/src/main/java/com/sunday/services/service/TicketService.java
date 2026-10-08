@@ -1,6 +1,5 @@
 package com.sunday.services.service;
 
-import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.services.model.Booking;
 import com.sunday.services.model.Ticket;
 
@@ -10,15 +9,15 @@ public interface TicketService {
 
     List<Ticket> generateTicketsForBooking(Booking booking);
 
-    Ticket getTicketByNumber(String ticketNumber) throws ResourceNotFoundException;
+    Ticket getTicketByNumber(String ticketNumber, Long userId);
 
-    List<Ticket> getTicketsByBooking(Long bookingId);
+    List<Ticket> getTicketsByBooking(Long bookingId, Long userId);
 
-    List<Ticket> getTicketsByPassenger(Long passengerId);
+    List<Ticket> getTicketsByPassenger(Long passengerId, Long userId);
 
-    Ticket cancelTicket(Long ticketId) throws ResourceNotFoundException;
+    Ticket cancelTicket(Long ticketId, Long userId);
 
-    Ticket markTicketAsUsed(Long ticketId) throws ResourceNotFoundException;
+    Ticket markTicketAsUsed(Long ticketId, Long userId);
 
-    Ticket refundTicket(Long ticketId) throws ResourceNotFoundException;
+    Ticket refundTicket(Long ticketId, Long userId);
 }

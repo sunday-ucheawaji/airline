@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -64,7 +65,8 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
 
         List<SeatInstance> seatInstances = seatMap.getSeats().stream()
                 .map(seat -> {
-                    Double premiumSurcharge = getPremiumSurcharge(seat.getSeatType(), 1000.0, 500.0);
+                    BigDecimal premiumSurcharge = getPremiumSurcharge(
+                            seat.getSeatType(), BigDecimal.valueOf(1000), BigDecimal.valueOf(500));
                     return SeatInstance.builder()
                             .flightId(request.getFlightId())
                             .status(SeatAvailabilityStatus.AVAILABLE)
@@ -154,12 +156,12 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
         flightInstanceCabinRepository.delete(fic);
     }
 
-    private Double getPremiumSurcharge(SeatType seatType, Double windowSurcharge, Double aisleSurcharge) {
-        if (seatType == null) return 0.0;
+    private BigDecimal getPremiumSurcharge(SeatType seatType, BigDecimal windowSurcharge, BigDecimal aisleSurcharge) {
+        if (seatType == null) return BigDecimal.ZERO;
         return switch (seatType) {
-            case WINDOW -> windowSurcharge != null ? windowSurcharge : 0.0;
-            case AISLE -> aisleSurcharge != null ? aisleSurcharge : 0.0;
-            default -> 0.0;
+            case WINDOW -> windowSurcharge != null ? windowSurcharge : BigDecimal.ZERO;
+            case AISLE -> aisleSurcharge != null ? aisleSurcharge : BigDecimal.ZERO;
+            default -> BigDecimal.ZERO;
         };
     }
 }

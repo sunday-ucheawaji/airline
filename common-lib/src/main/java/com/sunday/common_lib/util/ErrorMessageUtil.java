@@ -121,6 +121,8 @@ public class ErrorMessageUtil {
     public static final String FARE_OUTSIDE_TRAVEL_WINDOW = "Fare does not apply to this departure date";
     public static final String FARE_ADVANCE_PURCHASE_NOT_MET = "Fare must be bought at least %s days before departure";
     public static final String FARE_INVALID_STATUS_TRANSITION = "Fare cannot move from %s to %s";
+    public static final String FARE_FLIGHT_MISMATCH = "Fare %s does not belong to flight %s";
+    public static final String FARE_CABIN_CLASS_MISMATCH = "Fare %s is not for cabin class %s";
     public static final String FARE_SALES_WINDOW_ENDED = "Fare sales window has already ended";
     public static final String FARE_TRAVEL_WINDOW_ENDED = "Fare travel window has already ended";
     public static final String FARE_TERMS_MISSING = "Fare needs both fare rules and a baggage policy before it can be published";
@@ -163,6 +165,8 @@ public class ErrorMessageUtil {
     public static final String FLIGHT_CABIN_ANCILLARY_NOT_FOUND_FOR_IDS = "FlightCabinAncillary not found for id(s): %s";
     public static final String FLIGHT_MEAL_NOT_FOUND_BY_ID = "FlightMeal not found with id: %s";
     public static final String FLIGHT_MEAL_NOT_FOUND_FOR_IDS = "FlightMeal not found for id(s): %s";
+    public static final String FLIGHT_CABIN_ANCILLARY_WRONG_FLIGHT = "FlightCabinAncillary %s does not belong to flight %s";
+    public static final String FLIGHT_MEAL_WRONG_FLIGHT = "FlightMeal %s does not belong to flight %s";
     public static final String FLIGHT_MEAL_ALREADY_ASSIGNED_TO_FLIGHT = "Meal %s is already assigned to flight %s";
     public static final String FLIGHT_MEAL_DUPLICATE_IN_REQUEST = "Each meal can only be selected once per booking; duplicate meal id(s): %s";
     public static final String INSURANCE_COVERAGE_NOT_FOUND_BY_ID = "Insurance coverage not found with id: %s";
@@ -257,6 +261,9 @@ public class ErrorMessageUtil {
     public static final String SEAT_MAP_CABIN_CLASS_DUPLICATE_IN_REQUEST = "Cabin class %s appears more than once in this request; only one seat map is allowed per cabin class";
     public static final String SEAT_INSTANCE_ILLEGAL_STATUS_TRANSITION = "Cannot transition seat instance %s from %s to %s";
     public static final String SEAT_INSTANCE_DUPLICATE_FOR_SEAT = "A seat instance already exists for seat %s on this flight instance";
+    public static final String SEAT_INSTANCE_WRONG_FLIGHT_INSTANCE = "Seat instance %s does not belong to flight instance %s";
+    public static final String SEAT_INSTANCE_WRONG_CABIN_CLASS = "Seat instance %s is not in cabin class %s";
+    public static final String SEAT_INSTANCE_NOT_AVAILABLE_FOR_HOLD = "Seat instance %s is not available";
     public static final String NO_SEATS_IN_SEAT_MAP = "No seats found in the seat map for cabin class id %s";
     public static final String FLIGHT_INSTANCE_CABIN_NOT_FOUND_FOR_FLIGHT_AND_CABIN_CLASS =
             "Flight instance cabin not found for flight instance id %s and cabin class id %s";
@@ -299,4 +306,86 @@ public class ErrorMessageUtil {
     public static final String TOKEN_HASH_MANDATORY = "tokenHash is mandatory";
     public static final String EXPIRES_AT_MANDATORY = "expiresAt is mandatory";
     public static final String PASSWORD_MIN_LENGTH = "Password must be at least 8 characters";
+
+    // ---------- Booking ----------
+    public static final String FARE_ID_MANDATORY = "Fare ID is required";
+    public static final String AT_LEAST_ONE_PASSENGER_REQUIRED = "At least one passenger is required";
+    public static final String TRIP_TYPE_MANDATORY = "Trip type is required";
+    public static final String ONLY_ONE_WAY_BOOKINGS_SUPPORTED = "Only one-way bookings are supported at this time";
+    public static final String FLIGHT_ID_DOES_NOT_MATCH_INSTANCE = "Flight %s does not match flight instance %s";
+    public static final String BOOKING_NOT_FOUND_BY_ID = "Booking not found with ID: %s";
+    public static final String BOOKING_NOT_FOUND_BY_REFERENCE = "Booking not found with reference: %s";
+    public static final String BOOKING_NOT_MODIFIABLE = "Booking %s can no longer be changed (status %s)";
+    public static final String BOOKING_NOT_PAYABLE = "Booking %s is not awaiting payment (status %s)";
+    public static final String BOOKING_AMOUNT_MISMATCH = "Payment amount %s does not match booking total %s";
+    public static final String BOOKING_SERVICE_UNAVAILABLE = "Booking service unavailable";
+    public static final String BOOKING_SERVICE_ERROR = "Booking service error: %s";
+    public static final String BOOKING_PAYMENT_NOT_OWNED = "You can only pay for your own bookings";
+    public static final String IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_REQUEST =
+            "Idempotency-Key %s was already used with a different request body";
+    public static final String IDEMPOTENCY_REQUEST_IN_PROGRESS =
+            "A request with Idempotency-Key %s is already in progress";
+
+    // ---------- Passenger ----------
+    public static final String PASSENGER_FIRST_NAME_MANDATORY = "First name is required";
+    public static final String PASSENGER_FIRST_NAME_SIZE = "First name must be between 2 and 50 characters";
+    public static final String PASSENGER_LAST_NAME_MANDATORY = "Last name is required";
+    public static final String PASSENGER_LAST_NAME_SIZE = "Last name must be between 2 and 50 characters";
+    public static final String PASSENGER_EMAIL_MANDATORY = "Email is required";
+    public static final String PASSENGER_PHONE_MANDATORY = "Phone number is required";
+    public static final String PASSENGER_PHONE_FORMAT_INVALID = "Phone number should be in international format";
+    public static final String PASSENGER_DOB_MANDATORY = "Date of birth is required";
+    public static final String PASSENGER_DOB_PAST = "Date of birth must be in the past";
+    public static final String PASSENGER_GENDER_MANDATORY = "Gender is required";
+    public static final String PASSENGER_SEAT_INSTANCE_ID_MANDATORY = "Seat instance ID is required";
+    public static final String PASSENGER_NOT_FOUND_BY_ID = "Passenger not found with id: %s";
+
+    // ---------- Ticket ----------
+    public static final String TICKET_NOT_FOUND_BY_NUMBER = "Ticket not found with number: %s";
+    public static final String TICKET_NOT_FOUND_BY_ID = "Ticket not found with id: %s";
+    public static final String TICKET_USED_CANNOT_CANCEL = "Cannot cancel a ticket that has already been used";
+    public static final String TICKET_REFUNDED_CANNOT_CANCEL = "Cannot cancel a ticket that has already been refunded";
+    public static final String TICKET_CANCELLED_CANNOT_USE = "Cannot use a cancelled ticket";
+    public static final String TICKET_REFUNDED_CANNOT_USE = "Cannot use a refunded ticket";
+    public static final String TICKET_USED_CANNOT_REFUND = "Cannot refund a ticket that has already been used";
+
+    // ---------- Payment ----------
+    public static final String PAYMENT_USER_ID_MANDATORY = "User ID is mandatory";
+    public static final String PAYMENT_BOOKING_ID_MANDATORY = "bookingId is required";
+    public static final String PAYMENT_GATEWAY_MANDATORY = "Payment gateway is mandatory";
+    public static final String PAYMENT_AMOUNT_MANDATORY = "Amount is mandatory";
+    public static final String PAYMENT_AMOUNT_POSITIVE = "Amount must be positive";
+    public static final String PAYMENT_ALREADY_COMPLETED = "Payment already completed for this booking";
+    public static final String PAYMENT_NOT_FOUND_BY_ID = "Payment not found with ID: %s";
+    public static final String PAYMENT_NOT_FOUND_FOR_BOOKING = "No payment found for booking: %s";
+    public static final String PAYMENT_INITIATION_FAILED = "Failed to initiate payment: %s";
+    public static final String PAYMENT_VERIFICATION_FAILED = "Payment verification failed";
+    public static final String PAYMENT_CAPTURED_AMOUNT_MISMATCH = "Captured amount does not match the payment amount";
+    public static final String PAYMENT_SERVICE_UNAVAILABLE = "Payment service is temporarily unavailable. Please retry.";
+    public static final String RAZORPAY_WEBHOOK_PROCESSING_FAILED = "Failed to process Razorpay webhook: %s";
+    public static final String RAZORPAY_NOT_CONFIGURED = "Razorpay is not configured; set its API key and secret";
+    public static final String RAZORPAY_PAYMENT_LINK_FAILED = "Failed to create payment link: %s";
+    public static final String RAZORPAY_FETCH_PAYMENT_FAILED = "Failed to fetch payment details: %s";
+    public static final String RAZORPAY_REFUND_FAILED = "Failed to refund Razorpay payment: %s";
+    public static final String STRIPE_NOT_CONFIGURED = "Stripe is not configured; set its API key";
+    public static final String STRIPE_CHECKOUT_FAILED = "Failed to create Stripe checkout session: %s";
+    public static final String STRIPE_FETCH_PAYMENT_FAILED = "Failed to fetch Stripe payment intent: %s";
+    public static final String STRIPE_REFUND_FAILED = "Failed to refund Stripe payment: %s";
+    public static final String STRIPE_WEBHOOK_PROCESSING_FAILED = "Failed to process Stripe webhook: %s";
+    public static final String PAYSTACK_NOT_CONFIGURED = "Paystack is not configured; set its secret key";
+    public static final String PAYSTACK_CHECKOUT_FAILED = "Failed to initialize Paystack transaction: %s";
+    public static final String PAYSTACK_FETCH_PAYMENT_FAILED = "Failed to verify Paystack transaction: %s";
+    public static final String PAYSTACK_REFUND_FAILED = "Failed to refund Paystack transaction: %s";
+    public static final String PAYSTACK_WEBHOOK_PROCESSING_FAILED = "Failed to process Paystack webhook: %s";
+    public static final String WEBHOOK_SIGNATURE_INVALID = "Webhook signature verification failed";
+    public static final String PAYMENT_GATEWAY_NOT_SUPPORTED = "No payment provider is configured for gateway %s";
+    public static final String PAYMENT_NOT_REFUNDABLE = "Payment %s is not refundable (status %s)";
+    public static final String PAYMENT_REFUND_FAILED = "Failed to refund payment %s: %s";
+
+    // ---------- Ancillary: request validation (Bean Validation message attributes) ----------
+    public static final String PRICE_MANDATORY = "Price is required";
+    public static final String PRICE_MUST_BE_ZERO_OR_POSITIVE = "Price must be zero or positive";
+    public static final String FLIGHT_MEAL_PRICE_NEGATIVE = "Price cannot be negative";
+    public static final String COVERAGE_AMOUNT_MANDATORY = "Coverage amount is required";
+    public static final String COVERAGE_AMOUNT_MUST_BE_ZERO_OR_POSITIVE = "Coverage amount must be zero or positive";
 }

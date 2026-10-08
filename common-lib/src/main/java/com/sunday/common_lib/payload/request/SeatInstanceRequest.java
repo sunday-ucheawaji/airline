@@ -5,6 +5,8 @@ import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -25,6 +27,6 @@ public class SeatInstanceRequest {
 
     private SeatAvailabilityStatus status;
     private String mealPreference;
-    private Double fare;
+    private BigDecimal fare;
     private Long flightScheduleId;
 }

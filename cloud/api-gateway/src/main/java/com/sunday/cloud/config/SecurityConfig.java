@@ -78,6 +78,13 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.OPTIONS).permitAll()
                         .pathMatchers("/auth/**", "/fallback").permitAll()
 
+                        // Payment provider webhooks: Razorpay/Stripe/Paystack carry no platform JWT, so these must
+                        // be reachable without one. Signature verification inside payment-service IS the
+                        // authentication boundary for these three routes — that's the correct design for webhooks.
+                        // /api/payments/verify is the deprecated Razorpay-only alias, kept public for one release
+                        // for whatever dashboard webhook URL is still configured against it.
+                        .pathMatchers(HttpMethod.POST, "/api/payments/webhooks/**", "/api/payments/verify").permitAll()
+
                         // --- applicant: own onboarding application ---
                         .pathMatchers(HttpMethod.POST, "/api/onboarding/applications")
                                 .hasAuthority(ONBOARDING_APPLICATION_CREATE)
@@ -200,9 +207,19 @@ public class SecurityConfig {
                         // INSTANCE_* permissions are checked inside flight-ops-service, same layering as /api/aircrafts/**.
                         .pathMatchers("/api/flights/**", "/api/flight-instances/**", "/api/flight-schedules/**").authenticated()
 
+                        // Bookings, tickets, passengers: owner and airline checks happen inside booking-service. Customer care
+                        // reads a booking through the platform-only support path, with passenger data masked.
+                        .pathMatchers(HttpMethod.GET, "/api/bookings/support/**").hasAuthority(BOOKING_SUPPORT_READ)
+                        .pathMatchers("/api/bookings/**", "/api/tickets/**", "/api/passengers/**").authenticated()
+
                         // Fares/rules/baggage: gateway only checks authentication — FARE_* permissions are checked
                         // inside pricing-service against the fare's own airline. /internal/fares/** is never routed.
                         .pathMatchers("/api/fares/**", "/api/fare-rules/**", "/api/baggage-policies/**").authenticated()
+
+                        // Payments: owner and airline checks happen inside payment-service, same layering as
+                        // bookings. Customer care/finance reads a payment through the platform-only support path.
+                        .pathMatchers(HttpMethod.GET, "/api/payments/support/**").hasAuthority(PAYMENT_SUPPORT_READ)
+                        .pathMatchers("/api/payments/**").authenticated()
 
                         // --- any signed-in user (per-airline checks happen inside the services) ---
                         .pathMatchers("/api/**").authenticated()

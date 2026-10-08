@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -32,8 +33,8 @@ public class FlightSearchController {
             @RequestParam Integer passengers,
             @RequestParam CabinClassType cabinClass,
             @RequestParam(required = false) List<Long> airlines,
-            @RequestParam(required = false) Double minPrice,
-            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) String departureTimeRange,
             @RequestParam(required = false) String arrivalTimeRange,
             @RequestParam(required = false) Integer maxDuration,

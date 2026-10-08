@@ -4,6 +4,8 @@ import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -21,22 +23,22 @@ public class FlightInstanceCabinRequest {
 
     @NotNull
     @Positive
-    private Double baseFare;
+    private BigDecimal baseFare;
 
     @NotNull
-    private Double windowSurcharge;
+    private BigDecimal windowSurcharge;
 
     @NotNull
-    private Double aisleSurcharge;
-
-    @NotNull
-    @PositiveOrZero
-    private Double taxesAndFees;
+    private BigDecimal aisleSurcharge;
 
     @NotNull
     @PositiveOrZero
-    private Double airlineFees;
+    private BigDecimal taxesAndFees;
 
-    private Double currentPrice;
+    @NotNull
+    @PositiveOrZero
+    private BigDecimal airlineFees;
+
+    private BigDecimal currentPrice;
     private Boolean isActive;
 }
