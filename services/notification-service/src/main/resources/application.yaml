@@ -8,18 +8,26 @@ spring:
   config:
     import: optional:configserver:${CONFIG_SERVER_URL}
 
-  # ── Kafka Consumer ──────────────────────────────────────────────────────────
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+
+  # ── Kafka ────────────────────────────────────────────────────────────────────
+  # Consumer factory is built programmatically in KafkaConsumerConfig (generic Object type, trusted
+  # packages set there) so one factory serves every event type this service consumes; these properties
+  # are kept only for the group-id default and bootstrap-servers lookup.
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_URL}
     consumer:
       group-id: notification-service-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
-      properties:
-        spring.json.trusted.packages: "com.sunday.common_lib.event"
-        spring.json.use.type.headers: false
-        spring.json.value.default.type: com.sunday.common_lib.event.BookingConfirmedEvent
 
   # ── Email (Gmail SMTP) ──────────────────────────────────────────────────────
   mail:
@@ -59,4 +67,31 @@ notification:
   support-phone: ${SUPPORT_PHONE}
   checkin-url: ${CHECKIN_URL}
   manage-booking-url: ${MANAGE_BOOKING_URL}
+
+# ── Resilience: each channel provider call is circuit-broken and rate-limited so a down/slow
+# provider (SMTP outage, Twilio throttling) degrades to fast failures instead of hanging the
+# consumer thread or hammering the vendor into a 429 storm.
+resilience4j:
+  circuitbreaker:
+    instances:
+      email:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+      sms:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+  ratelimiter:
+    instances:
+      email:
+        limit-for-period: 20
+        limit-refresh-period: 1s
+        timeout-duration: 2s
+      sms:
+        limit-for-period: 5
+        limit-refresh-period: 1s
+        timeout-duration: 2s
 

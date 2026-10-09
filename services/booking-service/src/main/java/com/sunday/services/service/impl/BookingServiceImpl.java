@@ -289,7 +289,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setLastModified(LocalDateTime.now());
         Booking updated = bookingRepository.save(booking);
-        bookingEventProducer.sendBookingCancelled(updated);
+        bookingEventProducer.sendBookingCancelled(updated, "Cancelled by request");
 
         log.info("Booking cancelled: {}", booking.getBookingReference());
         return convertBookingResponse(updated, canSeePii(booking, userId));

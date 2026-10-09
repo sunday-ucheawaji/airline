@@ -165,6 +165,20 @@ spring:
                     name: payment-service-cb
                     fallbackUri: forward:/fallback
 
+            - id: notification-service-routes
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/notifications/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@defaultRateLimiter}"
+                    key-resolver: "#{@userKeyResolver}"
+                - name: CircuitBreaker
+                  args:
+                    name: notification-service-cb
+                    fallbackUri: forward:/fallback
+
 # Must be the same value user-service signs with (HS256, at least 32 bytes) and the same issuer.
 jwt:
   secret: ${JWT_SECRET_KEY}

@@ -358,6 +358,11 @@ public class ErrorMessageUtil {
     public static final String PAYMENT_ALREADY_COMPLETED = "Payment already completed for this booking";
     public static final String PAYMENT_NOT_FOUND_BY_ID = "Payment not found with ID: %s";
     public static final String PAYMENT_NOT_FOUND_FOR_BOOKING = "No payment found for booking: %s";
+
+    // ---------- Notification ----------
+    public static final String NOTIFICATION_NOT_FOUND_BY_ID = "Notification not found with ID: %s";
+    public static final String NOTIFICATION_CHANNEL_NOT_SUPPORTED = "No provider configured for notification channel %s";
+    public static final String NOTIFICATION_DELIVERY_FAILED = "Failed to deliver %s notification: %s";
     public static final String PAYMENT_INITIATION_FAILED = "Failed to initiate payment: %s";
     public static final String PAYMENT_VERIFICATION_FAILED = "Payment verification failed";
     public static final String PAYMENT_CAPTURED_AMOUNT_MISMATCH = "Captured amount does not match the payment amount";

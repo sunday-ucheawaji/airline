@@ -63,24 +63,8 @@ public class BookingEventProducer {
                 .collect(Collectors.toList());
 
         // ── Contact Info ──────────────────────────────────────────────────────
-        // Prefer booking.contactInfo; fall back to first passenger
-        String contactEmail = booking.getContactInfo() != null
-                ? booking.getContactInfo().getEmail() : null;
-        String contactPhone = booking.getContactInfo() != null
-                ? booking.getContactInfo().getPhone() : null;
-
-        if (contactEmail == null || contactEmail.isBlank()) {
-            contactEmail = booking.getPassengers().stream()
-                    .map(Passenger::getEmail)
-                    .filter(e -> e != null && !e.isBlank())
-                    .findFirst().orElse(null);
-        }
-        if (contactPhone == null || contactPhone.isBlank()) {
-            contactPhone = booking.getPassengers().stream()
-                    .map(Passenger::getPhone)
-                    .filter(p -> p != null && !p.isBlank())
-                    .findFirst().orElse(null);
-        }
+        String contactEmail = resolveContactEmail(booking);
+        String contactPhone = resolveContactPhone(booking);
 
         // ── Flight Details ─────────────────────────────────────────────────────
         String flightNumber   = flight != null ? flight.getFlightNumber()  : "N/A";
@@ -187,12 +171,24 @@ public class BookingEventProducer {
 
     /** A prompt-release optimization on top of seat-service's hold-expiry sweeper, not a substitute for it. */
     public void sendBookingCancelled(Booking booking) {
-        sendBookingCancelled(booking.getId(), booking.getBookingReference(), booking.getSeatInstanceIds());
+        sendBookingCancelled(booking.getId(), booking.getBookingReference(), booking.getSeatInstanceIds(),
+                resolveContactEmail(booking), resolveContactPhone(booking), null);
+    }
+
+    public void sendBookingCancelled(Booking booking, String reason) {
+        sendBookingCancelled(booking.getId(), booking.getBookingReference(), booking.getSeatInstanceIds(),
+                resolveContactEmail(booking), resolveContactPhone(booking), reason);
     }
 
     /** Overload for compensation paths (e.g. BookingSagaRecoverySweeper) that only have the saga's own
-     *  record of what was held, not a persisted Booking row. */
+     *  record of what was held, not a persisted Booking row — so no contact info is available either;
+     *  notification-service treats a blank contact as "nothing to notify", not an error. */
     public void sendBookingCancelled(Long bookingId, String bookingReference, List<Long> seatInstanceIds) {
+        sendBookingCancelled(bookingId, bookingReference, seatInstanceIds, null, null, null);
+    }
+
+    private void sendBookingCancelled(Long bookingId, String bookingReference, List<Long> seatInstanceIds,
+                                       String contactEmail, String contactPhone, String reason) {
         if (seatInstanceIds == null || seatInstanceIds.isEmpty()) {
             return;
         }
@@ -200,8 +196,34 @@ public class BookingEventProducer {
                 .bookingId(bookingId)
                 .bookingReference(bookingReference)
                 .seatInstanceIds(seatInstanceIds)
+                .contactEmail(contactEmail)
+                .contactPhone(contactPhone)
+                .reason(reason)
                 .build();
         kafkaTemplate.send("booking.cancelled", event);
         log.info("Published BookingCancelledEvent for booking={}", bookingReference);
+    }
+
+    /** Prefer booking.contactInfo; fall back to first passenger. Shared by sendBookingConfirmed/sendBookingCancelled. */
+    private String resolveContactEmail(Booking booking) {
+        String contactEmail = booking.getContactInfo() != null ? booking.getContactInfo().getEmail() : null;
+        if (contactEmail == null || contactEmail.isBlank()) {
+            contactEmail = booking.getPassengers().stream()
+                    .map(Passenger::getEmail)
+                    .filter(e -> e != null && !e.isBlank())
+                    .findFirst().orElse(null);
+        }
+        return contactEmail;
+    }
+
+    private String resolveContactPhone(Booking booking) {
+        String contactPhone = booking.getContactInfo() != null ? booking.getContactInfo().getPhone() : null;
+        if (contactPhone == null || contactPhone.isBlank()) {
+            contactPhone = booking.getPassengers().stream()
+                    .map(Passenger::getPhone)
+                    .filter(p -> p != null && !p.isBlank())
+                    .findFirst().orElse(null);
+        }
+        return contactPhone;
     }
 }

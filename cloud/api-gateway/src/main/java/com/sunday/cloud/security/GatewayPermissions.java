@@ -60,4 +60,6 @@ public final class GatewayPermissions {
     public static final String LOCATION_MANAGE = "LOCATION_MANAGE";
     public static final String BOOKING_SUPPORT_READ = "BOOKING_SUPPORT_READ";
     public static final String PAYMENT_SUPPORT_READ = "PAYMENT_SUPPORT_READ";
+    public static final String NOTIFICATION_SUPPORT_READ = "NOTIFICATION_SUPPORT_READ";
+    public static final String NOTIFICATION_RESEND = "NOTIFICATION_RESEND";
 }

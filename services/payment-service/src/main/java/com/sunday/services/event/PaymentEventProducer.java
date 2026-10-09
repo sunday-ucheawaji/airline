@@ -1,5 +1,6 @@
 package com.sunday.services.event;
 
+import com.sunday.common_lib.dto.UserDTO;
 import com.sunday.common_lib.event.PaymentCompletedEvent;
 import com.sunday.common_lib.event.PaymentFailedEvent;
 import com.sunday.common_lib.event.PaymentRefundedEvent;
@@ -34,7 +35,9 @@ public class PaymentEventProducer {
                 payment.getId(), payment.getBookingId());
     }
 
-    public void sendPaymentFailed(Payment payment) {
+    /** user is best-effort (payment-service's UserClient fails closed to null, not an exception) —
+     *  a null contact just means notification-service has nothing to notify, not an error here. */
+    public void sendPaymentFailed(Payment payment, UserDTO user) {
         PaymentFailedEvent event = PaymentFailedEvent.builder()
                 .paymentId(payment.getId())
                 .bookingId(payment.getBookingId())
@@ -43,6 +46,8 @@ public class PaymentEventProducer {
                 .transactionId(payment.getTransactionId())
                 .failureReason(payment.getFailureReason())
                 .failedAt(LocalDateTime.now())
+                .contactEmail(user != null ? user.getEmail() : null)
+                .contactPhone(user != null ? user.getPhoneNumber() : null)
                 .build();
 
         kafkaTemplate.send("payment.failed", event);
@@ -50,7 +55,7 @@ public class PaymentEventProducer {
                 payment.getId(), payment.getFailureReason());
     }
 
-    public void sendPaymentRefunded(Payment payment) {
+    public void sendPaymentRefunded(Payment payment, UserDTO user) {
         PaymentRefundedEvent event = PaymentRefundedEvent.builder()
                 .paymentId(payment.getId())
                 .bookingId(payment.getBookingId())
@@ -58,6 +63,8 @@ public class PaymentEventProducer {
                 .amount(payment.getAmount())
                 .providerRefundId(payment.getRefundId())
                 .refundedAt(LocalDateTime.now())
+                .contactEmail(user != null ? user.getEmail() : null)
+                .contactPhone(user != null ? user.getPhoneNumber() : null)
                 .build();
 
         kafkaTemplate.send("payment.refunded", event);

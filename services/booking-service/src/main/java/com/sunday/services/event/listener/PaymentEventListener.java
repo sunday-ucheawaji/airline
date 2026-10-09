@@ -100,7 +100,7 @@ public class PaymentEventListener {
 
         booking.setStatus(BookingStatus.CANCELLED);
         booking = bookingRepository.save(booking);
-        bookingEventProducer.sendBookingCancelled(booking);
+        bookingEventProducer.sendBookingCancelled(booking, "Payment failed: " + event.getFailureReason());
         bookingSagaService.cancel(booking.getId());
         log.warn("Booking {} cancelled due to payment failure: {}",
                 booking.getBookingReference(), event.getFailureReason());

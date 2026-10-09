@@ -264,29 +264,29 @@
             <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
               <tr>
                 <td width="50%" style="padding:4px 0;">
-                  <p th:if="${event.priorityBoarding}"
+                  <p th:if="${priorityBoarding}"
                      style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Priority Boarding</p>
-                  <p th:unless="${event.priorityBoarding}"
+                  <p th:unless="${priorityBoarding}"
                      style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Priority Boarding</p>
-                  <p th:if="${event.loungeAccess}"
+                  <p th:if="${loungeAccess}"
                      style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Lounge Access</p>
-                  <p th:unless="${event.loungeAccess}"
+                  <p th:unless="${loungeAccess}"
                      style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Lounge Access</p>
-                  <p th:if="${event.complimentaryMeals}"
+                  <p th:if="${complimentaryMeals}"
                      style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Complimentary Meals</p>
-                  <p th:unless="${event.complimentaryMeals}"
+                  <p th:unless="${complimentaryMeals}"
                      style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Complimentary Meals</p>
                 </td>
                 <td width="50%" style="padding:4px 0;">
-                  <p th:if="${event.freeDateChange}"
+                  <p th:if="${freeDateChange}"
                      style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Free Date Change</p>
-                  <p th:unless="${event.freeDateChange}"
+                  <p th:unless="${freeDateChange}"
                      style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Free Date Change</p>
-                  <p th:if="${event.fullRefund}"
+                  <p th:if="${fullRefund}"
                      style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Full Refund</p>
-                  <p th:if="${!event.fullRefund and event.partialRefund}"
+                  <p th:if="${!fullRefund and partialRefund}"
                      style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Partial Refund</p>
-                  <p th:if="${!event.fullRefund and !event.partialRefund}"
+                  <p th:if="${!fullRefund and !partialRefund}"
                      style="margin:0 0 6px;font-size:13px;color:#94a3b8;">&#215; Non-Refundable</p>
                   <p th:if="${event.flexibleTicket}"
                      style="margin:0 0 6px;font-size:13px;color:#166534;">&#10003; Flexible Ticket</p>
@@ -413,11 +413,11 @@
               <li>Arrive at the airport at least <strong>2 hours</strong> before departure (3 hours for international)</li>
               <li>Carry a valid government-issued photo ID / passport at all times</li>
               <li>Ensure your name on this booking matches your ID / passport exactly</li>
-              <li th:if="${event.freeDateChange}">&#10003; You can change your travel date free of charge</li>
-              <li th:if="${event.fullRefund or event.partialRefund}">
+              <li th:if="${freeDateChange}">&#10003; You can change your travel date free of charge</li>
+              <li th:if="${fullRefund or partialRefund}">
                 Refund applicable — visit Manage Booking on our website
               </li>
-              <li th:unless="${event.fullRefund or event.partialRefund}">
+              <li th:unless="${fullRefund or partialRefund}">
                 This ticket is <strong>non-refundable</strong>; cancellation fees may apply
               </li>
             </ul>

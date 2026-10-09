@@ -221,6 +221,11 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, "/api/payments/support/**").hasAuthority(PAYMENT_SUPPORT_READ)
                         .pathMatchers("/api/payments/**").authenticated()
 
+                        // Notifications: a notification has no airline owner of its own (it's a side effect of a
+                        // booking/payment event addressed to the customer) — both checks are platform-only.
+                        .pathMatchers(HttpMethod.GET, "/api/notifications/support/**").hasAuthority(NOTIFICATION_SUPPORT_READ)
+                        .pathMatchers(HttpMethod.POST, "/api/notifications/*/resend").hasAuthority(NOTIFICATION_RESEND)
+
                         // --- any signed-in user (per-airline checks happen inside the services) ---
                         .pathMatchers("/api/**").authenticated()
 

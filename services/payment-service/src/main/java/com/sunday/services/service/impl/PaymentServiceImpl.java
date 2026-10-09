@@ -203,7 +203,7 @@ public class PaymentServiceImpl implements PaymentService {
             payment.setFailureReason(failureReason);
             log.error("Payment verification failed for payment {}: {}", payment.getId(), failureReason);
             payment = paymentRepository.save(payment);
-            paymentEventProducer.sendPaymentFailed(payment);
+            paymentEventProducer.sendPaymentFailed(payment, userClient.getUserById(payment.getUserId()));
         }
 
         return PaymentMapper.toDTO(payment);
@@ -255,7 +255,7 @@ public class PaymentServiceImpl implements PaymentService {
             payment.setStatus(PaymentStatus.REFUNDED);
             payment.setRefundId(result.providerRefundId());
             payment = paymentRepository.save(payment);
-            paymentEventProducer.sendPaymentRefunded(payment);
+            paymentEventProducer.sendPaymentRefunded(payment, userClient.getUserById(payment.getUserId()));
             log.info("Payment {} refunded via {} (provider refund id {})", paymentId, payment.getProvider(), result.providerRefundId());
             return PaymentMapper.toDTO(payment);
         } catch (PaymentException e) {
