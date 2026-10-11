@@ -8,6 +8,7 @@ import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AirlineRequest;
 import com.sunday.common_lib.payload.response.AirlineDropdownItem;
 import com.sunday.common_lib.payload.response.AirlineResponse;
+import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.enums.MembershipStatus;
 import com.sunday.services.mapper.AirlineMapper;
@@ -42,7 +43,7 @@ public class AirlineServiceImpl implements AirlineService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "airlinesByUser", key = "#userId")
+    @Cacheable(cacheNames = CacheUtil.AIRLINES_BY_USER, key = "#userId")
     public List<AirlineResponse> getMyAirlines(UUID userId) {
         return airlineMembershipRepository.findByUserIdAndStatus(userId, MembershipStatus.ACTIVE).stream()
                 .map(membership -> AirlineMapper.toResponse(membership.getAirline()))
@@ -112,9 +113,9 @@ public class AirlineServiceImpl implements AirlineService {
 
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = "airlines", key = "#airlineId"),
-            @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
-            @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES, key = "#airlineId"),
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true),
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES_DROPDOWN, allEntries = true)
     })
     public AirlineResponse updateAirline(UUID airlineId, AirlineRequest request, UUID userId) {
         Airline airline = getAirlineOrThrow(airlineId);
@@ -132,9 +133,9 @@ public class AirlineServiceImpl implements AirlineService {
      */
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = "airlines", key = "#id"),
-            @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
-            @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES, key = "#id"),
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true),
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES_DROPDOWN, allEntries = true)
     })
     public void deleteAirline(UUID id, UUID userId) {
         Airline airline = getAirlineOrThrow(id);
@@ -148,9 +149,9 @@ public class AirlineServiceImpl implements AirlineService {
 
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = "airlines", key = "#airlineId"),
-            @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
-            @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES, key = "#airlineId"),
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true),
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES_DROPDOWN, allEntries = true)
     })
     public AirlineResponse changeStatusByAdmin(UUID airlineId, AirlineStatus status) {
         Airline airline = getAirlineOrThrow(airlineId);
@@ -168,7 +169,7 @@ public class AirlineServiceImpl implements AirlineService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "airlinesDropdown")
+    @Cacheable(cacheNames = CacheUtil.AIRLINES_DROPDOWN)
     public List<AirlineDropdownItem> getAirlinesForDropdown() {
         return airlineRepository.findByStatus(AirlineStatus.ACTIVE).stream()
                 .map(a -> AirlineDropdownItem.builder()

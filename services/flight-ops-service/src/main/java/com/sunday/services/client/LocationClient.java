@@ -14,10 +14,10 @@ import java.util.Map;
 @FeignClient(name = "location-service", fallback = LocationClientFallback.class)
 public interface LocationClient {
 
-    @GetMapping("/api/airports/{id}")
+    @GetMapping("/internal/airports/{id}")
     AirportResponse getAirportById(@PathVariable UUID id);
 
     /** Batch variant of {@link #getAirportById}: one round trip instead of one per airport. */
-    @PostMapping("/api/airports/batch")
+    @PostMapping("/internal/airports/batch")
     Map<UUID, AirportResponse> getAirportsByIds(@RequestBody List<UUID> ids);
 }

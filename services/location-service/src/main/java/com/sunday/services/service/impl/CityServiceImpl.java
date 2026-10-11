@@ -2,16 +2,16 @@ package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
-import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.CityRequest;
 import com.sunday.common_lib.payload.response.CityResponse;
+import com.sunday.common_lib.util.CacheUtil;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.mapper.CityMapper;
 import com.sunday.services.model.City;
 import com.sunday.services.repository.AirportRepository;
 import com.sunday.services.repository.CityRepository;
 import com.sunday.services.service.CityService;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -20,6 +20,7 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 import java.time.DateTimeException;
@@ -43,7 +44,7 @@ public class CityServiceImpl implements CityService {
         validateCityRequest(request);
 
         if (cityRepository.existsByCityCode(request.getCityCode())) {
-            throw new OperationNotPermittedException("City with code " + request.getCityCode() + " already exists");
+            throw new ConflictException(String.format(ErrorMessageUtil.CITY_CODE_ALREADY_EXISTS, request.getCityCode()));
         }
 
         City city = CityMapper.toEntity(request);
@@ -85,32 +86,29 @@ public class CityServiceImpl implements CityService {
     }
 
     @Override
-    @Cacheable(cacheNames = "cities", key = "#id")
+    @Cacheable(cacheNames = CacheUtil.CITIES, key = "#id")
     public CityResponse getCityById(UUID id) {
         City city = cityRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.CITY_NOT_FOUND_BY_ID, id)));
         return CityMapper.toResponse(city);
     }
 
 
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = "cities", key = "#id"),
-            @CacheEvict(cacheNames = "citiesByCode", allEntries = true),
+            @CacheEvict(cacheNames = CacheUtil.CITIES, key = "#id"),
             // AirportResponse embeds CityResponse, so cached airports would otherwise show stale city data
-            @CacheEvict(cacheNames = "airports", allEntries = true),
-            @CacheEvict(cacheNames = "allAirports", allEntries = true),
-            @CacheEvict(cacheNames = "airportsByIata", allEntries = true),
-            @CacheEvict(cacheNames = "airportsByCity", allEntries = true)
+            @CacheEvict(cacheNames = CacheUtil.AIRPORTS, allEntries = true),
+            @CacheEvict(cacheNames = CacheUtil.AIRPORTS_BY_CITY, allEntries = true)
     })
     public CityResponse updateCity(UUID id, CityRequest request) {
         City city = cityRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.CITY_NOT_FOUND_BY_ID, id)));
 
         validateCityRequest(request);
 
         if (cityRepository.existsByCityCodeAndIdNot(request.getCityCode(), id)) {
-            throw new OperationNotPermittedException("City with code " + request.getCityCode() + " already exists");
+            throw new ConflictException(String.format(ErrorMessageUtil.CITY_CODE_ALREADY_EXISTS, request.getCityCode()));
         }
 
         City updatedCity = cityRepository.save(CityMapper.updateEntity(city, request));
@@ -120,16 +118,13 @@ public class CityServiceImpl implements CityService {
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "cities", key = "#id"),
-            @CacheEvict(cacheNames = "citiesByCode", allEntries = true)
-    })
+    @CacheEvict(cacheNames = CacheUtil.CITIES, key = "#id")
     public void deleteCity(UUID id) {
         City city = cityRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.CITY_NOT_FOUND_BY_ID, id)));
 
         if (airportRepository.existsByCityId(id)) {
-            throw new ConflictException("City " + city.getCityCode() + " still has airports; remove or reassign them first");
+            throw new ConflictException(String.format(ErrorMessageUtil.CITY_STILL_HAS_AIRPORTS, city.getCityCode()));
         }
 
         cityRepository.delete(city);
@@ -172,26 +167,21 @@ public class CityServiceImpl implements CityService {
 
     private void validateCityRequest(CityRequest request) {
         if (!validateCityCode(request.getCityCode())) {
-            throw new BadRequestException("Invalid city code format. Must be 2-10 alphanumeric characters.");
+            throw new BadRequestException(ErrorMessageUtil.CITY_CODE_FORMAT_INVALID);
         }
 
         if (request.getCountryCode() == null || !request.getCountryCode().matches("[A-Z]{2,5}")) {
-            throw new BadRequestException("Country code must be 2-5 uppercase letters");
+            throw new BadRequestException(ErrorMessageUtil.CITY_COUNTRY_CODE_FORMAT_INVALID);
         }
 
         if (request.getTimeZoneId() == null) {
-            throw new BadRequestException("Time zone is required");
+            throw new BadRequestException(ErrorMessageUtil.TIMEZONE_MANDATORY);
         }
 
         try {
             ZoneId.of(request.getTimeZoneId());
         } catch (DateTimeException ex) {
-            throw new BadRequestException("Invalid timezone: " + request.getTimeZoneId());
+            throw new BadRequestException(String.format(ErrorMessageUtil.TIMEZONE_INVALID, request.getTimeZoneId()));
         }
-
-
-//        if (request.getTimeZoneOffset() != null && !request.getTimeZoneOffset().matches("[+-]\\d{2}:\\d{2}")) {
-//            throw new IllegalArgumentException("Time zone offset must be in format ±HH:MM");
-//        }
     }
 }

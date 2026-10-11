@@ -19,8 +19,8 @@ import com.sunday.services.repository.FareRepository;
 import com.sunday.services.service.BaggagePolicyService;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.services.config.FareCacheEvictor;
-import com.sunday.services.config.RedisConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -52,7 +52,7 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
     private final Validator validator;
 
     @Override
-    @CacheEvict(cacheNames = RedisConfig.FARES, key = "#request.fareId")
+    @CacheEvict(cacheNames = CacheUtil.FARES, key = "#request.fareId")
     public BaggagePolicyResponse createBaggagePolicy(UUID userId, BaggagePolicyRequest request) {
         Fare fare = fareRepository.findById(request.getFareId())
                 .orElseThrow(() -> new ResourceNotFoundException(

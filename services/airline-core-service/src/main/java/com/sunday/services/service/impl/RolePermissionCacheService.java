@@ -2,6 +2,7 @@ package com.sunday.services.service.impl;
 
 import java.util.UUID;
 import com.sunday.common_lib.dto.PermissionDTO;
+import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.services.client.RoleClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,7 +23,7 @@ public class RolePermissionCacheService {
 
     private final RoleClient roleClient;
 
-    @Cacheable(cacheNames = "rolePermissions", key = "#roleId")
+    @Cacheable(cacheNames = CacheUtil.ROLE_PERMISSIONS, key = "#roleId")
     public List<String> getPermissionNamesForRole(UUID roleId) {
         List<PermissionDTO> permissions = roleClient.getPermissionsForRole(roleId);
         if (permissions == null) {

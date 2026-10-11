@@ -14,8 +14,8 @@ import com.sunday.services.model.FareRules;
 import com.sunday.services.repository.FareRepository;
 import com.sunday.services.repository.FareRulesRepository;
 import com.sunday.services.service.FareRulesService;
+import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.services.config.FareCacheEvictor;
-import com.sunday.services.config.RedisConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -36,7 +36,7 @@ public class FareRulesServiceImpl implements FareRulesService {
     private final FareCacheEvictor fareCacheEvictor;
 
     @Override
-    @CacheEvict(cacheNames = RedisConfig.FARES, key = "#request.fareId")
+    @CacheEvict(cacheNames = CacheUtil.FARES, key = "#request.fareId")
     public FareRulesResponse createFareRules(UUID userId, FareRulesRequest request) {
         Fare fare = fareRepository.findById(request.getFareId())
                 .orElseThrow(() -> new ResourceNotFoundException(

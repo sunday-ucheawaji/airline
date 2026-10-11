@@ -13,6 +13,7 @@ import com.sunday.common_lib.payload.request.MemberRoleUpdateRequest;
 import com.sunday.common_lib.payload.request.MemberStatusUpdateRequest;
 import com.sunday.common_lib.payload.response.AirlineMembershipResponse;
 import com.sunday.common_lib.payload.response.ReviewerResponse;
+import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.client.RoleClient;
 import com.sunday.services.client.UserClient;
@@ -94,7 +95,7 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "airlinesByUser", allEntries = true)
+    @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true)
     public AirlineMembershipResponse accept(UUID airlineId, UUID membershipId, UUID actorUserId) {
         AirlineMembership membership = getMembershipOrThrow(airlineId, membershipId);
         if (!membership.getUserId().equals(actorUserId)) {
@@ -132,7 +133,7 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "airlinesByUser", allEntries = true)
+    @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true)
     public AirlineMembershipResponse updateStatus(UUID airlineId, UUID membershipId, MemberStatusUpdateRequest request, UUID actorUserId) {
         airlineService.requirePermission(actorUserId, List.of(airlineId), AirlineMembershipPermissions.UPDATE_STATUS);
         MembershipStatus target = parseActivatableStatus(request.getStatus());
@@ -149,7 +150,7 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "airlinesByUser", allEntries = true)
+    @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true)
     public void removeOrRevoke(UUID airlineId, UUID membershipId, UUID actorUserId) {
         AirlineMembership membership = getMembershipOrThrow(airlineId, membershipId);
         if (membership.getStatus() == MembershipStatus.INVITED) {

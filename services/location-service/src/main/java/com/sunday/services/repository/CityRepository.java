@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.UUID;
-import java.util.List;
 import java.util.Optional;
 
 public interface CityRepository extends JpaRepository<City, UUID> {
@@ -21,12 +20,6 @@ public interface CityRepository extends JpaRepository<City, UUID> {
     boolean existsByCityCodeAndIdNot(String cityCode, UUID id);
 
     Page<City> findByCountryCodeIgnoreCase(String countryCode, Pageable pageable);
-
-    Page<City> findByCountryNameContainingIgnoreCase(String countryName, Pageable pageable);
-
-    Page<City> findByRegionCodeIgnoreCase(String regionCode, Pageable pageable);
-
-    List<City> findByCountryCodeIgnoreCaseOrderByNameAsc(String countryCode);
 
     @Query("""
            SELECT c FROM City c

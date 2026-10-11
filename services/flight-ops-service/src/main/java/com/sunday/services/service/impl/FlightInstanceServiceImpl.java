@@ -16,6 +16,7 @@ import com.sunday.common_lib.payload.response.AirportResponse;
 import com.sunday.common_lib.payload.response.CabinClassResponse;
 import com.sunday.common_lib.payload.response.CabinSeatStatusResponse;
 import com.sunday.common_lib.payload.response.FlightInstanceResponse;
+import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.Integration.AirlineIntegrationService;
 import com.sunday.services.client.AirlineClient;
@@ -60,7 +61,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     @Override
     @Transactional
-    @CacheEvict(cacheNames = "flightInstances", allEntries = true)
+    @CacheEvict(cacheNames = CacheUtil.FLIGHT_INSTANCES, allEntries = true)
     public FlightInstanceResponse createFlightInstanceWithCabins(
             UUID userId, FlightInstanceRequest request) {
 
@@ -79,7 +80,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     @Override
     @Transactional
-    @CacheEvict(cacheNames = "flightInstances", allEntries = true)
+    @CacheEvict(cacheNames = CacheUtil.FLIGHT_INSTANCES, allEntries = true)
     public List<FlightInstance> createFlightInstancesInBulk(Flight flight, AircraftResponse aircraft, List<FlightInstanceRequest> requests) {
         if (requests.isEmpty()) return List.of();
 
@@ -101,7 +102,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "flightInstances", key = "#id")
+    @Cacheable(cacheNames = CacheUtil.FLIGHT_INSTANCES, key = "#id")
     public FlightInstanceResponse getFlightInstanceById(UUID id) {
         FlightInstance fi = flightInstanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -130,7 +131,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "flightInstances", key = "#id")
+    @CacheEvict(cacheNames = CacheUtil.FLIGHT_INSTANCES, key = "#id")
     public FlightInstanceResponse updateFlightInstance(UUID id, FlightInstanceRequest request, UUID userId) {
         FlightInstance existing = flightInstanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -141,7 +142,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "flightInstances", key = "#id")
+    @CacheEvict(cacheNames = CacheUtil.FLIGHT_INSTANCES, key = "#id")
     public void deleteFlightInstance(UUID id, UUID userId) {
         FlightInstance fi = flightInstanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -179,7 +180,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "flightInstances", key = "#id")
+    @CacheEvict(cacheNames = CacheUtil.FLIGHT_INSTANCES, key = "#id")
     public FlightInstanceResponse reassignAircraft(UUID id, UUID newAircraftId, UUID userId) {
         FlightInstance instance = flightInstanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(

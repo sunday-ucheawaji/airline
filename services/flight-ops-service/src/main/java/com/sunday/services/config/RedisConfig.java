@@ -1,5 +1,6 @@
 package com.sunday.services.config;
 
+import com.sunday.common_lib.util.CacheUtil;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
@@ -46,7 +47,7 @@ public class RedisConfig implements CachingConfigurer {
 
         Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
                 // Individual flight instance lookups — 3 min (admin updates are infrequent)
-                "flightInstances", defaults.entryTtl(Duration.ofMinutes(3))
+                CacheUtil.FLIGHT_INSTANCES, defaults.entryTtl(Duration.ofMinutes(3))
         );
 
         return RedisCacheManager.builder(factory)

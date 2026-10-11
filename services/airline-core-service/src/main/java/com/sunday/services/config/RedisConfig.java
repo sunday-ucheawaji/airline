@@ -1,5 +1,6 @@
 package com.sunday.services.config;
 
+import com.sunday.common_lib.util.CacheUtil;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
@@ -53,15 +54,15 @@ public class RedisConfig implements CachingConfigurer {
 
         Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
                 // Airline data — 2 h (status changes occasionally)
-                "airlines", defaults.entryTtl(Duration.ofHours(2)),
-                "airlinesByUser", defaults.entryTtl(Duration.ofHours(2)),
-                "airlinesDropdown", defaults.entryTtl(Duration.ofHours(2)),
+                CacheUtil.AIRLINES, defaults.entryTtl(Duration.ofHours(2)),
+                CacheUtil.AIRLINES_BY_USER, defaults.entryTtl(Duration.ofHours(2)),
+                CacheUtil.AIRLINES_DROPDOWN, defaults.entryTtl(Duration.ofHours(2)),
                 // Aircraft models — 6 h (very stable)
-                "aircrafts", defaults.entryTtl(Duration.ofHours(6)),
+                CacheUtil.AIRCRAFTS, defaults.entryTtl(Duration.ofHours(6)),
                 // roleId -> permission names — ~4 roles system-wide, near-universal hit rate.
                 // No cross-service eviction trigger exists (a permission change happens in
                 // user-service), so staleness is TTL-bounded only, same trade-off as the airline caches.
-                "rolePermissions", defaults.entryTtl(Duration.ofHours(6))
+                CacheUtil.ROLE_PERMISSIONS, defaults.entryTtl(Duration.ofHours(6))
         );
 
         return RedisCacheManager.builder(factory)

@@ -4,6 +4,7 @@ import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.payload.request.CityRequest;
 import com.sunday.common_lib.payload.response.ApiResponse;
 import com.sunday.common_lib.payload.response.CityResponse;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.service.CityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ import java.util.Set;
 @RequestMapping("/api/cities")
 @RequiredArgsConstructor
 @Slf4j
-public class    CityController {
+public class CityController {
 
     private final CityService cityService;
 
@@ -32,8 +33,6 @@ public class    CityController {
     // PropertyReferenceException surfacing as a raw 500.
     private static final Set<String> SORTABLE_FIELDS = Set.of(
             "name", "cityCode", "countryCode", "countryName", "regionCode", "timeZoneId");
-
-    // ---------- CREATE ----------
 
     @PostMapping
     public ResponseEntity<CityResponse> createCity(
@@ -49,8 +48,6 @@ public class    CityController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responses);
     }
 
-    // ---------- READ ----------
-
     @GetMapping("/{id}")
     public ResponseEntity<CityResponse> getCityById(@PathVariable UUID id) {
         return ResponseEntity.ok(cityService.getCityById(id));
@@ -64,20 +61,18 @@ public class    CityController {
             @RequestParam(defaultValue = "asc") String sortDirection) {
 
         if (!SORTABLE_FIELDS.contains(sortBy)) {
-            throw new BadRequestException("sortBy must be one of " + SORTABLE_FIELDS);
+            throw new BadRequestException(String.format(ErrorMessageUtil.SORT_BY_FIELD_INVALID, SORTABLE_FIELDS));
         }
         Sort.Direction direction;
         try {
             direction = Sort.Direction.fromString(sortDirection);
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("sortDirection must be 'asc' or 'desc'");
+            throw new BadRequestException(ErrorMessageUtil.SORT_DIRECTION_INVALID);
         }
         Sort sort = Sort.by(direction, sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
         return ResponseEntity.ok(cityService.getAllCities(pageable));
     }
-
-    // ---------- UPDATE ----------
 
     @PutMapping("/{id}")
     public ResponseEntity<CityResponse> updateCity(
@@ -86,15 +81,11 @@ public class    CityController {
         return ResponseEntity.ok(cityService.updateCity(id, request));
     }
 
-    // ---------- DELETE ----------
-
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse> deleteCity(@PathVariable UUID id) {
         cityService.deleteCity(id);
-        return ResponseEntity.ok(new ApiResponse("City deleted successfully"));
+        return ResponseEntity.ok(new ApiResponse(ErrorMessageUtil.CITY_DELETED_SUCCESSFULLY));
     }
-
-    // ---------- SEARCH & QUERY ----------
 
     @GetMapping("/search")
     public ResponseEntity<Page<CityResponse>> searchCities(
@@ -115,8 +106,6 @@ public class    CityController {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(cityService.getCitiesByCountryCode(countryCode.toUpperCase(), pageable));
     }
-
-    // ---------- VALIDATION ----------
 
     @GetMapping("/exists/{cityCode}")
     public ResponseEntity<Boolean> checkCityExists(@PathVariable String cityCode) {

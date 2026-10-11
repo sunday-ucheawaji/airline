@@ -9,6 +9,7 @@ import com.sunday.common_lib.payload.request.OnboardingApplicationRequest;
 import com.sunday.common_lib.payload.request.OwnerAssignmentRequest;
 import com.sunday.common_lib.payload.response.OnboardingApplicationResponse;
 import com.sunday.common_lib.payload.response.OnboardingReviewResponse;
+import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.common_lib.enums.ReviewDecision;
 import com.sunday.services.client.RoleClient;
@@ -222,8 +223,8 @@ public class OnboardingServiceImpl implements OnboardingService {
     @Override
     @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
-            @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true),
+            @CacheEvict(cacheNames = CacheUtil.AIRLINES_DROPDOWN, allEntries = true)
     })
     public OnboardingApplicationResponse provisionApplication(UUID applicationId, String comments, UUID actorUserId) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);

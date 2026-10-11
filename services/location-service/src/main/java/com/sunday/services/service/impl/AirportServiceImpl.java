@@ -1,9 +1,11 @@
 package com.sunday.services.service.impl;
 
-import com.sunday.common_lib.exception.AirportException;
+import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AirportRequest;
 import com.sunday.common_lib.payload.response.AirportResponse;
+import com.sunday.common_lib.util.CacheUtil;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.mapper.AirportMapper;
 import com.sunday.services.model.Airport;
 import com.sunday.services.model.City;
@@ -15,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,11 +41,11 @@ public class AirportServiceImpl implements AirportService {
     @Transactional
     public AirportResponse createAirport(AirportRequest request){
         if (airportRepository.findByIataCode(request.getIataCode()).isPresent()) {
-            throw new AirportException("Airport with IATA code " + request.getIataCode() + " already exists.");
+            throw new ConflictException(String.format(ErrorMessageUtil.AIRPORT_IATA_CODE_ALREADY_EXISTS, request.getIataCode()));
         }
 
         City city = cityRepository.findById(request.getCityId())
-                .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + request.getCityId()));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.CITY_NOT_FOUND_BY_ID, request.getCityId())));
 
         Airport airport = AirportMapper.toEntity(request);
         airport.setCity(city);
@@ -85,10 +89,10 @@ public class AirportServiceImpl implements AirportService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "airports", key = "#id")
+    @Cacheable(cacheNames = CacheUtil.AIRPORTS, key = "#id")
     public AirportResponse getAirportById(UUID id) {
         Airport airport = airportRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Airport not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRPORT_NOT_FOUND_BY_ID, id)));
         return AirportMapper.toResponse(airport);
     }
 
@@ -96,41 +100,35 @@ public class AirportServiceImpl implements AirportService {
     @Transactional(readOnly = true)
     public Map<UUID, AirportResponse> getAirportsByIds(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) return Map.of();
-        return airportRepository.findAllById(ids).stream()
+        return airportRepository.findAllWithCityByIdIn(ids).stream()
                 .collect(Collectors.toMap(Airport::getId, AirportMapper::toResponse));
     }
 
-
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "allAirports")
-    public List<AirportResponse> getAllAirports() {
-        return airportRepository.findAll().stream()
-                .map(AirportMapper::toResponse)
-                .collect(Collectors.toList());
+    public Page<AirportResponse> getAllAirports(Pageable pageable) {
+        return airportRepository.findAllWithCity(pageable).map(AirportMapper::toResponse);
     }
 
     @Override
     @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = "airports", key = "#id"),
-            @CacheEvict(cacheNames = "allAirports", allEntries = true),
-            @CacheEvict(cacheNames = "airportsByIata", allEntries = true),
-            @CacheEvict(cacheNames = "airportsByCity", allEntries = true)
+            @CacheEvict(cacheNames = CacheUtil.AIRPORTS, key = "#id"),
+            @CacheEvict(cacheNames = CacheUtil.AIRPORTS_BY_CITY, allEntries = true)
     })
     public AirportResponse updateAirport(UUID id, AirportRequest request) {
         Airport existingAirport = airportRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Airport not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRPORT_NOT_FOUND_BY_ID, id)));
 
         if (request.getIataCode() != null
                 && !existingAirport.getIataCode().equals(request.getIataCode())
                 && airportRepository.findByIataCode(request.getIataCode()).isPresent()) {
-            throw new AirportException("IATA code " + request.getIataCode() + " is already taken.");
+            throw new ConflictException(String.format(ErrorMessageUtil.AIRPORT_IATA_CODE_TAKEN, request.getIataCode()));
         }
 
         if (request.getCityId() != null) {
             City newCity = cityRepository.findById(request.getCityId())
-                    .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + request.getCityId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.CITY_NOT_FOUND_BY_ID, request.getCityId())));
             existingAirport.setCity(newCity);
         }
 
@@ -143,20 +141,18 @@ public class AirportServiceImpl implements AirportService {
     @Override
     @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = "airports", key = "#id"),
-            @CacheEvict(cacheNames = "allAirports", allEntries = true),
-            @CacheEvict(cacheNames = "airportsByIata", allEntries = true),
-            @CacheEvict(cacheNames = "airportsByCity", allEntries = true)
+            @CacheEvict(cacheNames = CacheUtil.AIRPORTS, key = "#id"),
+            @CacheEvict(cacheNames = CacheUtil.AIRPORTS_BY_CITY, allEntries = true)
     })
     public void deleteAirport(UUID id) {
         Airport airport = airportRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Airport not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRPORT_NOT_FOUND_BY_ID, id)));
         airportRepository.delete(airport);
     }
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "airportsByCity", key = "#cityId")
+    @Cacheable(cacheNames = CacheUtil.AIRPORTS_BY_CITY, key = "#cityId")
     public List<AirportResponse> getAirportsByCityId(UUID cityId) {
         return airportRepository.findByCityId(cityId).stream()
                 .map(AirportMapper::toResponse)

@@ -390,6 +390,34 @@ public class ErrorMessageUtil {
     public static final String PAYMENT_NOT_REFUNDABLE = "Payment %s is not refundable (status %s)";
     public static final String PAYMENT_REFUND_FAILED = "Failed to refund payment %s: %s";
 
+    // ---------- Location: City ----------
+    public static final String CITY_NAME_MANDATORY = "City name is required";
+    public static final String CITY_CODE_MANDATORY = "City code is required";
+    public static final String COUNTRY_CODE_MANDATORY = "Country code is required";
+    public static final String COUNTRY_NAME_MANDATORY = "Country name is required";
+    public static final String CITY_CODE_ALREADY_EXISTS = "City with code %s already exists";
+    public static final String CITY_NOT_FOUND_BY_ID = "City not found with id: %s";
+    public static final String CITY_STILL_HAS_AIRPORTS = "City %s still has airports; remove or reassign them first";
+    public static final String CITY_CODE_FORMAT_INVALID = "Invalid city code format. Must be 2-10 alphanumeric characters.";
+    public static final String CITY_COUNTRY_CODE_FORMAT_INVALID = "Country code must be 2-5 uppercase letters";
+    public static final String TIMEZONE_MANDATORY = "Time zone is required";
+    public static final String TIMEZONE_INVALID = "Invalid timezone: %s";
+    public static final String CITY_DELETED_SUCCESSFULLY = "City deleted successfully";
+
+    // ---------- Location: Airport ----------
+    public static final String AIRPORT_IATA_CODE_MANDATORY = "IATA code is mandatory";
+    public static final String AIRPORT_IATA_CODE_LENGTH = "IATA code must be exactly 3 characters";
+    public static final String AIRPORT_NAME_MANDATORY = "Airport name is mandatory";
+    public static final String AIRPORT_CITY_ID_MANDATORY = "City ID is mandatory";
+    public static final String AIRPORT_IATA_CODE_ALREADY_EXISTS = "Airport with IATA code %s already exists";
+    public static final String AIRPORT_IATA_CODE_TAKEN = "IATA code %s is already taken";
+    public static final String AIRPORT_NOT_FOUND_BY_ID = "Airport not found with id: %s";
+    public static final String AIRPORT_DELETED_SUCCESSFULLY = "Airport deleted successfully";
+
+    // ---------- Location: request validation (Bean Validation message attributes) ----------
+    public static final String SORT_BY_FIELD_INVALID = "sortBy must be one of %s";
+    public static final String SORT_DIRECTION_INVALID = "sortDirection must be 'asc' or 'desc'";
+
     // ---------- Ancillary: request validation (Bean Validation message attributes) ----------
     public static final String PRICE_MANDATORY = "Price is required";
     public static final String PRICE_MUST_BE_ZERO_OR_POSITIVE = "Price must be zero or positive";

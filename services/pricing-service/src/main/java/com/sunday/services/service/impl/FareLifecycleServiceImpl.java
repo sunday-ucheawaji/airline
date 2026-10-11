@@ -14,8 +14,8 @@ import com.sunday.services.repository.BaggagePolicyRepository;
 import com.sunday.services.repository.FareRepository;
 import com.sunday.services.repository.FareRulesRepository;
 import com.sunday.services.service.FareLifecycleService;
+import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.services.config.FareCacheEvictor;
-import com.sunday.services.config.RedisConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -39,7 +39,7 @@ public class FareLifecycleServiceImpl implements FareLifecycleService {
     private final Clock clock;
 
     @Override
-    @CacheEvict(cacheNames = RedisConfig.FARES, key = "#id")
+    @CacheEvict(cacheNames = CacheUtil.FARES, key = "#id")
     public FareResponse publishFare(UUID userId, UUID id) {
         Fare fare = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fare.getAirlineId(), PricingPermissions.FARE_MANAGE);
@@ -66,7 +66,7 @@ public class FareLifecycleServiceImpl implements FareLifecycleService {
     }
 
     @Override
-    @CacheEvict(cacheNames = RedisConfig.FARES, key = "#id")
+    @CacheEvict(cacheNames = CacheUtil.FARES, key = "#id")
     public FareResponse withdrawFare(UUID userId, UUID id) {
         Fare fare = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fare.getAirlineId(), PricingPermissions.FARE_MANAGE);

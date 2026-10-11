@@ -1,8 +1,6 @@
 package com.sunday.services.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.Instant;
@@ -30,27 +28,18 @@ public class City {
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID id;
 
-    @NotBlank(message = "City name is required")
-    @Size(max = 100)
     @Column(nullable = false)
     private String name;
 
-    @NotBlank(message = "City code is required")
-    @Size(max = 10)
     @Column(nullable = false, unique = true)
     private String cityCode;
 
-    @NotBlank(message = "Country code is required")
-    @Size(max = 5)
     @Column(nullable = false)
     private String countryCode;
 
-    @NotBlank(message = "Country name is required")
-    @Size(max = 100)
     @Column(nullable = false)
     private String countryName;
 
-    @Size(max = 10)
     private String regionCode;
 
     @Column(name = "time_zone_id", length = 50)

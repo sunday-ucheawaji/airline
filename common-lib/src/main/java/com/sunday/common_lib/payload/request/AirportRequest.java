@@ -3,6 +3,7 @@ package com.sunday.common_lib.payload.request;
 
 import com.sunday.common_lib.embeddable.Address;
 import com.sunday.common_lib.embeddable.GeoCode;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -21,11 +22,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AirportRequest {
 
-    @NotBlank(message = "IATA code is mandatory")
-    @Size(min = 3, max = 3, message = "IATA code must be exactly 3 characters")
+    @NotBlank(message = ErrorMessageUtil.AIRPORT_IATA_CODE_MANDATORY)
+    @Size(min = 3, max = 3, message = ErrorMessageUtil.AIRPORT_IATA_CODE_LENGTH)
     private String iataCode;
 
-    @NotBlank(message = "Airport name is mandatory")
+    @NotBlank(message = ErrorMessageUtil.AIRPORT_NAME_MANDATORY)
     private String name;
 
     private ZoneId timeZone;
@@ -33,7 +34,7 @@ public class AirportRequest {
     @Valid
     private Address address;
 
-    @NotNull(message = "City ID is mandatory")
+    @NotNull(message = ErrorMessageUtil.AIRPORT_CITY_ID_MANDATORY)
     private UUID cityId;
 
     @Valid

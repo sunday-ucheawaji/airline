@@ -1,5 +1,6 @@
 package com.sunday.common_lib.payload.request;
 
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -11,19 +12,19 @@ import lombok.*;
 @Builder
 public class CityRequest {
 
-    @NotBlank(message = "City name is required")
+    @NotBlank(message = ErrorMessageUtil.CITY_NAME_MANDATORY)
     @Size(max = 100)
     private String name;
 
-    @NotBlank(message = "City code is required")
+    @NotBlank(message = ErrorMessageUtil.CITY_CODE_MANDATORY)
     @Size(max = 10)
     private String cityCode;
 
-    @NotBlank(message = "Country code is required")
+    @NotBlank(message = ErrorMessageUtil.COUNTRY_CODE_MANDATORY)
     @Size(max = 5)
     private String countryCode;
 
-    @NotBlank(message = "Country name is required")
+    @NotBlank(message = ErrorMessageUtil.COUNTRY_NAME_MANDATORY)
     @Size(max = 100)
     private String countryName;
 

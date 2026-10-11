@@ -2,6 +2,8 @@ package com.sunday.services.service;
 
 import com.sunday.common_lib.payload.request.AirportRequest;
 import com.sunday.common_lib.payload.response.AirportResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;
 import java.util.List;
@@ -16,7 +18,7 @@ public interface AirportService {
     /** Batch variant: one round trip instead of one per airport. */
     Map<UUID, AirportResponse> getAirportsByIds(List<UUID> ids);
 
-    List<AirportResponse> getAllAirports();
+    Page<AirportResponse> getAllAirports(Pageable pageable);
     AirportResponse updateAirport(UUID id, AirportRequest request);
     void deleteAirport(UUID id);
     List<AirportResponse> getAirportsByCityId(UUID cityId);

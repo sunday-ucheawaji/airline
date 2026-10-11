@@ -52,13 +52,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
-    /** Airport conflicts (duplicate IATA code) and lookups. */
-    @ExceptionHandler(AirportException.class)
-    public ResponseEntity<ErrorResponse> handleAirport(
-            AirportException ex, HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
-    }
-
     /** Action the caller is not allowed to perform / duplicate resource. */
     @ExceptionHandler(OperationNotPermittedException.class)
     public ResponseEntity<ErrorResponse> handleOperationNotPermitted(

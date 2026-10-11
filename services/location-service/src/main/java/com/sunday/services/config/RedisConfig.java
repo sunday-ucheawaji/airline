@@ -1,5 +1,6 @@
 package com.sunday.services.config;
 
+import com.sunday.common_lib.util.CacheUtil;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
@@ -46,13 +47,10 @@ public class RedisConfig implements CachingConfigurer {
 
         Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
                 // Airports change extremely rarely — long TTL
-                "airports", defaults.entryTtl(Duration.ofHours(6)),
-                "airportsByIata", defaults.entryTtl(Duration.ofHours(6)),
-                "airportsByCity", defaults.entryTtl(Duration.ofHours(6)),
-                "allAirports", defaults.entryTtl(Duration.ofHours(2)),
+                CacheUtil.AIRPORTS, defaults.entryTtl(Duration.ofHours(6)),
+                CacheUtil.AIRPORTS_BY_CITY, defaults.entryTtl(Duration.ofHours(6)),
                 // Cities also static reference data
-                "cities", defaults.entryTtl(Duration.ofHours(6)),
-                "citiesByCode", defaults.entryTtl(Duration.ofHours(6))
+                CacheUtil.CITIES, defaults.entryTtl(Duration.ofHours(6))
         );
 
         return RedisCacheManager.builder(factory)

@@ -7,6 +7,7 @@ import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AircraftRequest;
 import com.sunday.common_lib.payload.response.AircraftResponse;
+import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.mapper.AircraftMapper;
 import com.sunday.services.model.Aircraft;
@@ -55,7 +56,7 @@ public class AircraftServiceImpl implements AircraftService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "aircrafts", key = "#id")
+    @Cacheable(cacheNames = CacheUtil.AIRCRAFTS, key = "#id")
     public AircraftResponse getAircraftById(UUID id, UUID userId) {
         Aircraft aircraft = getAircraftOrThrow(id);
         airlineService.requirePermission(userId, List.of(aircraft.getAirline().getId()), AircraftPermissions.READ);
@@ -88,7 +89,7 @@ public class AircraftServiceImpl implements AircraftService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "aircrafts", key = "#id")
+    @CacheEvict(cacheNames = CacheUtil.AIRCRAFTS, key = "#id")
     public AircraftResponse updateAircraft(UUID id, AircraftRequest request, UUID userId) {
         Aircraft aircraft = getAircraftOrThrow(id);
         airlineService.requirePermission(userId, List.of(aircraft.getAirline().getId()), AircraftPermissions.MANAGE);
@@ -104,7 +105,7 @@ public class AircraftServiceImpl implements AircraftService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "aircrafts", key = "#id")
+    @CacheEvict(cacheNames = CacheUtil.AIRCRAFTS, key = "#id")
     public void deleteAircraft(UUID id, UUID userId) {
         Aircraft aircraft = getAircraftOrThrow(id);
         airlineService.requirePermission(userId, List.of(aircraft.getAirline().getId()), AircraftPermissions.MANAGE);

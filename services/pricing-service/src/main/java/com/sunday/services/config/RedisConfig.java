@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sunday.common_lib.payload.response.FareResponse;
+import com.sunday.common_lib.util.CacheUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.CachingConfigurer;
@@ -24,8 +25,6 @@ import java.util.Map;
 @Configuration
 public class RedisConfig implements CachingConfigurer {
 
-    public static final String FARES = "fares";
-
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory factory) {
         ObjectMapper mapper = new ObjectMapper()
@@ -44,7 +43,7 @@ public class RedisConfig implements CachingConfigurer {
 
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(defaults)
-                .withInitialCacheConfigurations(Map.of(FARES, fares))
+                .withInitialCacheConfigurations(Map.of(CacheUtil.FARES, fares))
                 .build();
     }
 

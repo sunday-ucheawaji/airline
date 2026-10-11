@@ -19,8 +19,8 @@ import com.sunday.services.service.FareService;
 import com.sunday.services.validation.FareRequestValidator;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.services.config.FareCacheEvictor;
-import com.sunday.services.config.RedisConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -186,7 +186,7 @@ public class FareServiceImpl implements FareService {
     }
 
     @Override
-    @CacheEvict(cacheNames = RedisConfig.FARES, key = "#id")
+    @CacheEvict(cacheNames = CacheUtil.FARES, key = "#id")
     public FareResponse updateFare(UUID userId, UUID id, FareRequest request) {
         Fare existing = findFareOrThrow(id);
         pricingIntegrationService.requirePermission(userId, existing.getAirlineId(), PricingPermissions.FARE_MANAGE);
@@ -203,7 +203,7 @@ public class FareServiceImpl implements FareService {
     }
 
     @Override
-    @CacheEvict(cacheNames = RedisConfig.FARES, key = "#id")
+    @CacheEvict(cacheNames = CacheUtil.FARES, key = "#id")
     public void deleteFare(UUID userId, UUID id) {
         Fare fare = findFareOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fare.getAirlineId(), PricingPermissions.FARE_MANAGE);
@@ -212,7 +212,7 @@ public class FareServiceImpl implements FareService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = RedisConfig.FARES, key = "#id")
+    @Cacheable(cacheNames = CacheUtil.FARES, key = "#id")
     public FareResponse getFareByIdInternal(UUID id) {
         return FareMapper.toResponse(findFareOrThrow(id));
     }
