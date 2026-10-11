@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.AirlineStatus;
 import com.sunday.services.model.Airline;
 import org.springframework.data.domain.Page;
@@ -11,7 +12,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface AirlineRepository extends JpaRepository<Airline, Long> {
+public interface AirlineRepository extends JpaRepository<Airline, UUID> {
 
     Optional<Airline> findByIataCode(String code);
 

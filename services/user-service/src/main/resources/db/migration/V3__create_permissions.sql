@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS permissions (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id          CHAR(36) PRIMARY KEY,
     name        VARCHAR(150)  NOT NULL,
     description VARCHAR(500),
     created_at  DATETIME      NOT NULL,

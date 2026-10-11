@@ -6,6 +6,10 @@ import lombok.*;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "flight_instances",
@@ -20,12 +24,14 @@ import java.time.LocalDateTime;
 public class FlightInstance {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     // Cross-service ref: Airline is in airline-core-service
     @Column(name = "airline_id")
-    private Long airlineId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID airlineId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "flight_id", nullable = false)
@@ -35,18 +41,22 @@ public class FlightInstance {
     // independently reassignable afterward (aircraft swaps, maintenance substitutions) —
     // this is deliberately on the instance, not the Flight route/template.
     @Column(name = "aircraft_id")
-    private Long aircraftId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID aircraftId;
 
     // Cross-service ref: Airport is in location-service
     @Column(name = "departure_airport_id", nullable = false)
-    private Long departureAirportId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID departureAirportId;
 
     // Cross-service ref: Airport is in location-service
     @Column(name = "arrival_airport_id", nullable = false)
-    private Long arrivalAirportId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID arrivalAirportId;
 
     @Column(nullable = false)
-    private Long scheduleId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID scheduleId;
 
     @Column(nullable = false)
     private LocalDateTime departureDateTime;

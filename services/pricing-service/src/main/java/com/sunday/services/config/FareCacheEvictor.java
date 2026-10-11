@@ -1,5 +1,6 @@
 package com.sunday.services.config;
 
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -12,7 +13,7 @@ public class FareCacheEvictor {
 
     private final CacheManager cacheManager;
 
-    public void evict(Long fareId) {
+    public void evict(UUID fareId) {
         Cache cache = cacheManager.getCache(RedisConfig.FARES);
         if (cache != null) {
             cache.evictIfPresent(fareId);

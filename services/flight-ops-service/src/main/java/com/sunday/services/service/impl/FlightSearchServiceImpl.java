@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.FareSearchRequest;
 import com.sunday.common_lib.payload.request.FareSearchRequest.FlightDeparture;
 import com.sunday.common_lib.payload.request.FlightSearchRequest;
@@ -105,14 +106,14 @@ public class FlightSearchServiceImpl implements FlightSearchService {
             List<FlightInstance> instances,
             Map<FlightDeparture, FareResponse> fareMap) {
 
-        List<Long> distinctAirlineIds = instances.stream().map(FlightInstance::getAirlineId).distinct().toList();
-        List<Long> distinctAircraftIds = instances.stream().map(FlightInstance::getAircraftId).distinct().toList();
-        List<Long> distinctAirportIds = instances.stream()
+        List<UUID> distinctAirlineIds = instances.stream().map(FlightInstance::getAirlineId).distinct().toList();
+        List<UUID> distinctAircraftIds = instances.stream().map(FlightInstance::getAircraftId).distinct().toList();
+        List<UUID> distinctAirportIds = instances.stream()
                 .flatMap(fi -> Stream.of(fi.getDepartureAirportId(), fi.getArrivalAirportId()))
                 .distinct().toList();
-        Map<Long, AirlineResponse> airlines = airlineClient.getAirlinesByIdsInternal(distinctAirlineIds);
-        Map<Long, AircraftResponse> aircrafts = airlineIntegrationService.getAircraftsByIdsInternal(distinctAircraftIds);
-        Map<Long, AirportResponse> airports = locationClient.getAirportsByIds(distinctAirportIds);
+        Map<UUID, AirlineResponse> airlines = airlineClient.getAirlinesByIdsInternal(distinctAirlineIds);
+        Map<UUID, AircraftResponse> aircrafts = airlineIntegrationService.getAircraftsByIdsInternal(distinctAircraftIds);
+        Map<UUID, AirportResponse> airports = locationClient.getAirportsByIds(distinctAirportIds);
 
         List<FlightInstanceResponse> results = new ArrayList<>(instances.size());
         for (FlightInstance fi : instances) {

@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.PaymentStatus;
 import com.sunday.services.model.Payment;
 import org.springframework.data.domain.Page;
@@ -12,20 +13,20 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface PaymentRepository extends JpaRepository<Payment, Long> {
+public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
-    Optional<Payment> findByBookingId(Long bookingId);
+    Optional<Payment> findByBookingId(UUID bookingId);
 
     /** A booking can have several attempts (failed, then retried), so the lookup is for the latest one. */
-    Optional<Payment> findFirstByBookingIdOrderByIdDesc(Long bookingId);
+    Optional<Payment> findFirstByBookingIdOrderByIdDesc(UUID bookingId);
 
     Optional<Payment> findByTransactionId(String transactionId);
 
     List<Payment> findByStatus(PaymentStatus status);
 
-    List<Payment> findByBookingIdIn(Collection<Long> bookingIds);
+    List<Payment> findByBookingIdIn(Collection<UUID> bookingIds);
 
     Optional<Payment> findByIdempotencyKey(String idempotencyKey);
 
-    Page<Payment> findByAirlineId(Long airlineId, Pageable pageable);
+    Page<Payment> findByAirlineId(UUID airlineId, Pageable pageable);
 }

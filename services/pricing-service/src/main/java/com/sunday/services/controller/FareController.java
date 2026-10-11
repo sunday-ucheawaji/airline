@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.FareRequest;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.response.FareBulkCreateResponse;
@@ -31,7 +32,7 @@ public class FareController {
 
     @PostMapping
     public ResponseEntity<FareResponse> createFare(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody FareRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(fareService.createFare(userId, request));
@@ -39,7 +40,7 @@ public class FareController {
 
     @PostMapping("/bulk")
     public ResponseEntity<FareBulkCreateResponse> createFares(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody List<FareRequest> requests) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(fareService.createFares(userId, requests));
@@ -47,8 +48,8 @@ public class FareController {
 
     @GetMapping
     public ResponseEntity<Page<FareResponse>> getFaresByAirline(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestParam Long airlineId,
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestParam UUID airlineId,
             Pageable pageable) {
         return ResponseEntity.ok(fareService.getFaresByAirline(userId, airlineId, pageable));
     }
@@ -56,7 +57,7 @@ public class FareController {
     // Public customer read: published, in-window fares on one flight and cabin. No airline permission is needed.
     @GetMapping("/offers")
     public ResponseEntity<List<FareOfferResponse>> offers(
-            @RequestParam Long flightId,
+            @RequestParam UUID flightId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate,
             @RequestParam CabinClassType cabinClass) {
         return ResponseEntity.ok(fareOfferService.offers(flightId, departureDate, cabinClass));
@@ -64,46 +65,46 @@ public class FareController {
 
     @GetMapping("/{id}")
     public ResponseEntity<FareResponse> getFareById(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         return ResponseEntity.ok(fareService.getFareById(userId, id));
     }
 
     @GetMapping("/flight/{flightId}/cabin-class/{cabinClassId}")
     public ResponseEntity<List<FareResponse>> getFaresByFlightAndCabinClass(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long flightId,
-            @PathVariable Long cabinClassId) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID flightId,
+            @PathVariable UUID cabinClassId) {
         return ResponseEntity.ok(fareService.getFaresByFlightIdAndCabinClassId(userId, flightId, cabinClassId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<FareResponse> updateFare(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id,
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id,
             @Valid @RequestBody FareRequest request) {
         return ResponseEntity.ok(fareService.updateFare(userId, id, request));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFare(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         fareService.deleteFare(userId, id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/publish")
     public ResponseEntity<FareResponse> publishFare(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         return ResponseEntity.ok(fareLifecycleService.publishFare(userId, id));
     }
 
     @PostMapping("/{id}/withdraw")
     public ResponseEntity<FareResponse> withdrawFare(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         return ResponseEntity.ok(fareLifecycleService.withdrawFare(userId, id));
     }
 }

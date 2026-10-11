@@ -7,6 +7,10 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 /**
  * A question staff put to the applicant while the application stays in review. {@code stage} is the review stage
@@ -22,8 +26,9 @@ import java.time.Instant;
 public class OnboardingInformationRequest {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "application_id", nullable = false)
@@ -34,7 +39,8 @@ public class OnboardingInformationRequest {
     private OnboardingStage stage;
 
     @Column(name = "requested_by_user_id", nullable = false)
-    private Long requestedByUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID requestedByUserId;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String message;

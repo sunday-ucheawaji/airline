@@ -5,16 +5,17 @@ import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class SeatInstanceResponse {
-    private Long id;
+    private UUID id;
 
-    private Long flightId;
-    private Long seatId;
+    private UUID flightId;
+    private UUID seatId;
     private String seatNumber;
     private String seatType;
     private String seatPosition;
@@ -25,9 +26,9 @@ public class SeatInstanceResponse {
 
     private SeatAvailabilityStatus status;
 
-    private Long flightInstanceId;
+    private UUID flightInstanceId;
 
-    private Long flightCabinId;
+    private UUID flightCabinId;
     private CabinClassType flightCabinClassType;
 
     private String mealPreference;

@@ -3,6 +3,7 @@ package com.sunday.common_lib.payload.response;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -11,12 +12,12 @@ import java.time.Instant;
 @Builder
 public class OnboardingStageResponse {
 
-    private Long applicationId;
+    private UUID applicationId;
     /** COMPLIANCE, COMMERCIAL or TECHNICAL. */
     private String stage;
     /** PENDING, APPROVED or REJECTED. */
     private String status;
-    private Long assigneeUserId;
+    private UUID assigneeUserId;
     private String comments;
     private Instant decidedAt;
 }

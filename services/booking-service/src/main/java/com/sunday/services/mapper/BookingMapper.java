@@ -1,5 +1,6 @@
 package com.sunday.services.mapper;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.BookingRequest;
 import com.sunday.common_lib.payload.response.*;
 import com.sunday.services.model.Booking;
@@ -14,7 +15,7 @@ public class BookingMapper {
 
     public static Booking toEntity(
             BookingRequest request,
-            Long userId,
+            UUID userId,
             Set<Passenger> passengers,
             String bookingReference
     ) {

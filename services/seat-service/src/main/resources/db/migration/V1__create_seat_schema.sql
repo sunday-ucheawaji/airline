@@ -9,12 +9,12 @@
 -- OCCUPIED/BLOCKED transitions).
 
 CREATE TABLE IF NOT EXISTS cabin_classes (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                  CHAR(36) PRIMARY KEY,
     name                ENUM('ECONOMY','PREMIUM_ECONOMY','BUSINESS','FIRST') NOT NULL,
     code                VARCHAR(5) NOT NULL,
     description         VARCHAR(255),
     -- Cross-service ref: Aircraft is in airline-core-service, no FK.
-    aircraft_id         BIGINT,
+    aircraft_id         CHAR(36),
     display_order       INT NOT NULL,
     is_active           BOOLEAN NOT NULL,
     is_bookable         BOOLEAN NOT NULL,
@@ -29,14 +29,14 @@ CREATE INDEX idx_cabin_classes_aircraft_id ON cabin_classes (aircraft_id);
 CREATE UNIQUE INDEX uk_cabin_classes_code_aircraft ON cabin_classes (code, aircraft_id);
 
 CREATE TABLE IF NOT EXISTS seat_maps (
-    id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                      CHAR(36) PRIMARY KEY,
     name                    VARCHAR(255) NOT NULL,
     total_rows              INT NOT NULL,
     right_seats_per_row     INT NOT NULL,
     left_seats_per_row      INT NOT NULL,
     -- Cross-service ref: Airline is in airline-core-service, no FK.
-    airline_id              BIGINT NOT NULL,
-    cabin_class_id          BIGINT,
+    airline_id              CHAR(36) NOT NULL,
+    cabin_class_id          CHAR(36),
     CONSTRAINT uk_seat_maps_cabin_class UNIQUE (cabin_class_id),
     CONSTRAINT fk_seat_maps_cabin_class FOREIGN KEY (cabin_class_id) REFERENCES cabin_classes (id)
 );
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS seat_maps (
 CREATE INDEX idx_seat_maps_airline_id ON seat_maps (airline_id);
 
 CREATE TABLE IF NOT EXISTS seats (
-    id                          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                          CHAR(36) PRIMARY KEY,
     seat_number                 VARCHAR(10) NOT NULL,
     seat_row                    INT NOT NULL,
     column_letter               CHAR(1),
@@ -66,8 +66,8 @@ CREATE TABLE IF NOT EXISTS seats (
     seat_pitch                  INT,
     seat_width                  INT,
     recline_angle               INT,
-    seat_map_id                 BIGINT NOT NULL,
-    cabin_class_id              BIGINT,
+    seat_map_id                 CHAR(36) NOT NULL,
+    cabin_class_id              CHAR(36),
     created_at                  DATETIME(6) NOT NULL,
     updated_at                  DATETIME(6) NOT NULL,
     created_by                  VARCHAR(255),
@@ -81,10 +81,10 @@ CREATE INDEX idx_seats_seat_map_id ON seats (seat_map_id);
 CREATE INDEX idx_seats_cabin_class_id ON seats (cabin_class_id);
 
 CREATE TABLE IF NOT EXISTS flight_instance_cabins (
-    id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                   CHAR(36) PRIMARY KEY,
     -- Cross-service ref: FlightInstance is in flight-ops-service, no FK.
-    flight_instance_id   BIGINT NOT NULL,
-    cabin_class_id       BIGINT NOT NULL,
+    flight_instance_id   CHAR(36) NOT NULL,
+    cabin_class_id       CHAR(36) NOT NULL,
     total_seats          INT NOT NULL,
     CONSTRAINT fk_flight_instance_cabins_cabin_class FOREIGN KEY (cabin_class_id) REFERENCES cabin_classes (id)
 );
@@ -93,12 +93,12 @@ CREATE INDEX idx_flight_instance_cabins_flight_instance_id ON flight_instance_ca
 CREATE INDEX idx_flight_instance_cabins_cabin_class_id ON flight_instance_cabins (cabin_class_id);
 
 CREATE TABLE IF NOT EXISTS seat_instances (
-    id                          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                          CHAR(36) PRIMARY KEY,
     -- Cross-service refs: Flight/FlightInstance/FlightSchedule are in flight-ops-service, no FK.
-    flight_id                   BIGINT NOT NULL,
-    flight_instance_cabin_id    BIGINT,
-    flight_instance_id          BIGINT,
-    seat_id                     BIGINT NOT NULL,
+    flight_id                   CHAR(36) NOT NULL,
+    flight_instance_cabin_id    CHAR(36),
+    flight_instance_id          CHAR(36),
+    seat_id                     CHAR(36) NOT NULL,
     status                      ENUM('AVAILABLE','HELD','BOOKED','OCCUPIED','BLOCKED') NOT NULL,
     meal_preference              VARCHAR(255),
     fare                         DECIMAL(12,2),
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS seat_instances (
     held_until                   DATETIME(6),
     held_by_booking_reference    VARCHAR(255),
     version                      BIGINT,
-    flight_schedule_id           BIGINT,
+    flight_schedule_id           CHAR(36),
     created_at                   DATETIME(6),
     updated_at                   DATETIME(6),
     CONSTRAINT fk_seat_instances_flight_instance_cabin FOREIGN KEY (flight_instance_cabin_id) REFERENCES flight_instance_cabins (id),
@@ -122,8 +122,8 @@ CREATE INDEX idx_seat_instances_status ON seat_instances (status);
 -- Inbox-pattern dedup for the booking.confirmed/booking.cancelled consumers: a redelivered event
 -- can never double-apply its seat-status side effect, even if it races a concurrent delivery.
 CREATE TABLE IF NOT EXISTS processed_booking_events (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    booking_id      BIGINT NOT NULL,
+    id              CHAR(36) PRIMARY KEY,
+    booking_id      CHAR(36) NOT NULL,
     event_type      VARCHAR(50) NOT NULL,
     processed_at    DATETIME(6),
     CONSTRAINT uq_processed_booking_events UNIQUE (booking_id, event_type)

@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
@@ -19,14 +20,14 @@ import java.util.Map;
 public interface PricingClient {
 
     @GetMapping("/internal/fares/{id}")
-    FareResponse getFareById(@PathVariable Long id);
+    FareResponse getFareById(@PathVariable UUID id);
 
     @PostMapping("/internal/fares/batch")
-    Map<Long, FareResponse> getFaresByIds(@RequestBody List<Long> ids);
+    Map<UUID, FareResponse> getFaresByIds(@RequestBody List<UUID> ids);
 
     @GetMapping("/internal/fares/{id}/quote")
-    FareQuoteResponse quoteFare(@PathVariable Long id,
-                                @RequestParam("flightId") Long flightId,
+    FareQuoteResponse quoteFare(@PathVariable UUID id,
+                                @RequestParam("flightId") UUID flightId,
                                 @RequestParam("cabinClass") CabinClassType cabinClass,
                                 @RequestParam("departureDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate);
 }

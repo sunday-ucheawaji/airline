@@ -1,13 +1,12 @@
--- IDs are explicit on purpose: flight-ops-service and airline-core-service store these IDs
--- as logical references, so the rows must keep the IDs they had before Flyway was introduced.
+-- city_code is the stable key other seed rows (V4) join on; the id itself is now a generated UUID,
+-- not a cross-service-referenced literal (no source-controlled data hardcodes these ids anymore).
 INSERT INTO cities (id, city_code, country_code, country_name, name, region_code, time_zone_id) VALUES
-    (5,  'LOS', 'NG', 'Nigeria',              'Lagos',     'LA',  'Africa/Lagos'),
-    (6,  'ABV', 'NG', 'Nigeria',              'Abuja',     'FC',  'Africa/Lagos'),
-    (7,  'LON', 'GB', 'United Kingdom',       'London',    'ENG', 'Europe/London'),
-    (8,  'NYC', 'US', 'United States',        'New York',  'NY',  'America/New_York'),
-    (9,  'DXB', 'AE', 'United Arab Emirates', 'Dubai',     'DU',  'Asia/Dubai'),
-    (10, 'PAR', 'FR', 'France',               'Paris',     'IDF', 'Europe/Paris'),
-    (11, 'SIN', 'SG', 'Singapore',            'Singapore', 'SG',  'Asia/Singapore'),
-    -- Delhi and Mumbai did not exist as cities before: their airports (DEL, BOM) were wrongly attached to Dubai.
-    (12, 'DEL', 'IN', 'India',                'Delhi',     'DL',  'Asia/Kolkata'),
-    (13, 'BOM', 'IN', 'India',                'Mumbai',    'MH',  'Asia/Kolkata');
+    (UUID(), 'LOS', 'NG', 'Nigeria',              'Lagos',     'LA',  'Africa/Lagos'),
+    (UUID(), 'ABV', 'NG', 'Nigeria',              'Abuja',     'FC',  'Africa/Lagos'),
+    (UUID(), 'LON', 'GB', 'United Kingdom',       'London',    'ENG', 'Europe/London'),
+    (UUID(), 'NYC', 'US', 'United States',        'New York',  'NY',  'America/New_York'),
+    (UUID(), 'DXB', 'AE', 'United Arab Emirates', 'Dubai',     'DU',  'Asia/Dubai'),
+    (UUID(), 'PAR', 'FR', 'France',               'Paris',     'IDF', 'Europe/Paris'),
+    (UUID(), 'SIN', 'SG', 'Singapore',            'Singapore', 'SG',  'Asia/Singapore'),
+    (UUID(), 'DEL', 'IN', 'India',                'Delhi',     'DL',  'Asia/Kolkata'),
+    (UUID(), 'BOM', 'IN', 'India',                'Mumbai',    'MH',  'Asia/Kolkata');

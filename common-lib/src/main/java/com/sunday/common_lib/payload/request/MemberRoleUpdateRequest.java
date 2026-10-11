@@ -3,6 +3,7 @@ package com.sunday.common_lib.payload.request;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import java.util.UUID;
 
 /** Changes an existing (ACTIVE) member's role between ADMIN and VIEWER — never OWNER, a separate concern. */
 @Getter
@@ -13,5 +14,5 @@ import lombok.*;
 public class MemberRoleUpdateRequest {
 
     @NotNull(message = ErrorMessageUtil.MEMBER_INVITE_ROLE_MANDATORY)
-    private Long roleId;
+    private UUID roleId;
 }

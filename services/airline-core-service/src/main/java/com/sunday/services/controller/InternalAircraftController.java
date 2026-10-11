@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.services.service.AircraftService;
 import lombok.RequiredArgsConstructor;
@@ -23,12 +24,12 @@ public class InternalAircraftController {
 
     /** No permission check — for display-enrichment callers (e.g. public flight search) with no real caller identity to forward. */
     @GetMapping("/{id}")
-    public AircraftResponse getAircraftById(@PathVariable Long id) {
+    public AircraftResponse getAircraftById(@PathVariable UUID id) {
         return aircraftService.getAircraftByIdInternal(id);
     }
 
     @PostMapping("/batch")
-    public Map<Long, AircraftResponse> getAircraftsByIds(@RequestBody List<Long> ids) {
+    public Map<UUID, AircraftResponse> getAircraftsByIds(@RequestBody List<UUID> ids) {
         return aircraftService.getAircraftsByIdsInternal(ids);
     }
 }

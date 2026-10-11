@@ -5,6 +5,7 @@ import com.sunday.common_lib.validation.OnCreate;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import java.util.UUID;
 
 /**
  * Used both to create a draft and to update one (PATCH). Fields stay optional
@@ -20,7 +21,7 @@ import lombok.*;
 @Builder
 public class OnboardingApplicationRequest {
 
-    private Long initialAdminUserId;
+    private UUID initialAdminUserId;
 
     @NotBlank(message = ErrorMessageUtil.ONBOARDING_LEGAL_NAME_MANDATORY, groups = OnCreate.class)
     private String legalName;
@@ -45,5 +46,5 @@ public class OnboardingApplicationRequest {
     private String supportPhone;
     private String supportHours;
 
-    private Long headquartersCityId;
+    private UUID headquartersCityId;
 }

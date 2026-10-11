@@ -8,6 +8,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.ZoneId;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "airports", indexes = {
@@ -24,10 +28,11 @@ import java.time.ZoneId;
 public class Airport {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
     @EqualsAndHashCode.Include
     @ToString.Include
-    private Long id;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Column(nullable = false, length = 3, unique = true)
     @EqualsAndHashCode.Include

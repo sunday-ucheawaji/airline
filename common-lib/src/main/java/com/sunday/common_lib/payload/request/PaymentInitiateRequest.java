@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -18,10 +19,10 @@ import java.math.BigDecimal;
 public class PaymentInitiateRequest {
 
     @NotNull(message = ErrorMessageUtil.PAYMENT_USER_ID_MANDATORY)
-    private Long userId;
+    private UUID userId;
 
     @NotNull(message = ErrorMessageUtil.PAYMENT_BOOKING_ID_MANDATORY)
-    private Long bookingId;
+    private UUID bookingId;
 
     @NotNull(message = ErrorMessageUtil.PAYMENT_GATEWAY_MANDATORY)
     private PaymentGateway gateway;

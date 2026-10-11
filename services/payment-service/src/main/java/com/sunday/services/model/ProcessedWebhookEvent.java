@@ -5,6 +5,10 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 /**
  * Inbox-pattern dedup row for the Razorpay webhook (/api/payments/verify): a unique
@@ -21,8 +25,9 @@ import java.time.LocalDateTime;
 public class ProcessedWebhookEvent {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Column(nullable = false, length = 50)
     private String provider;

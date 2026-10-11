@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS insurance_coverages (
-    id                BIGINT AUTO_INCREMENT PRIMARY KEY,
-    ancillary_id      BIGINT NOT NULL,
+    id                CHAR(36) PRIMARY KEY,
+    ancillary_id      CHAR(36) NOT NULL,
     coverage_type     ENUM(
                           'BAGGAGE_LOSS', 'BAGGAGE_DELAY', 'BAGGAGE_ASSISTANCE',
                           'PERSONAL_ACCIDENT',

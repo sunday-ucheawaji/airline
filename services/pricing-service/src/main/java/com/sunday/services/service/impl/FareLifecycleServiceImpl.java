@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.PricingPermissions;
 import com.sunday.common_lib.enums.FareStatus;
 import com.sunday.common_lib.exception.ConflictException;
@@ -39,7 +40,7 @@ public class FareLifecycleServiceImpl implements FareLifecycleService {
 
     @Override
     @CacheEvict(cacheNames = RedisConfig.FARES, key = "#id")
-    public FareResponse publishFare(Long userId, Long id) {
+    public FareResponse publishFare(UUID userId, UUID id) {
         Fare fare = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fare.getAirlineId(), PricingPermissions.FARE_MANAGE);
 
@@ -66,7 +67,7 @@ public class FareLifecycleServiceImpl implements FareLifecycleService {
 
     @Override
     @CacheEvict(cacheNames = RedisConfig.FARES, key = "#id")
-    public FareResponse withdrawFare(Long userId, Long id) {
+    public FareResponse withdrawFare(UUID userId, UUID id) {
         Fare fare = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fare.getAirlineId(), PricingPermissions.FARE_MANAGE);
 
@@ -79,7 +80,7 @@ public class FareLifecycleServiceImpl implements FareLifecycleService {
         return FareMapper.toResponse(fareRepository.save(fare));
     }
 
-    private Fare findOrThrow(Long id) {
+    private Fare findOrThrow(UUID id) {
         return fareRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FARE_NOT_FOUND_BY_ID, id)));
     }

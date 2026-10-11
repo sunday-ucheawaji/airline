@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -11,10 +12,10 @@ import java.time.Instant;
 @AllArgsConstructor
 public class FareRulesResponse {
 
-    private Long id;
+    private UUID id;
     private String ruleName;
-    private Long fareId;
-    private Long airlineId;
+    private UUID fareId;
+    private UUID airlineId;
     private Boolean isRefundable;
     private BigDecimal changeFee;
     private BigDecimal cancellationFee;

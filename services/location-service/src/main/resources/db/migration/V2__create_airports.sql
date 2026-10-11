@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS airports (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                  CHAR(36)   PRIMARY KEY,
     iata_code           VARCHAR(3)   NOT NULL,
     name                VARCHAR(255) NOT NULL,
     time_zone_id        VARCHAR(50),
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS airports (
     on_time_performance DOUBLE,
     size_category       VARCHAR(20),
     traveler_score      INT,
-    city_id             BIGINT       NOT NULL,
+    city_id             CHAR(36)   NOT NULL,
     CONSTRAINT uk_airports_iata_code UNIQUE (iata_code),
     CONSTRAINT fk_airports_city FOREIGN KEY (city_id) REFERENCES cities (id),
     INDEX idx_airport_city_id (city_id)

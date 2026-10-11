@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.enums.DocumentStatus;
@@ -32,7 +33,7 @@ public class OnboardingDocumentGate {
     private final OnboardingDocumentRepository documentRepository;
 
     /** To submit, every required type needs a newest upload that has passed the automatic checks. */
-    public void requireReadyForSubmission(Long applicationId) {
+    public void requireReadyForSubmission(UUID applicationId) {
         List<DocumentType> unsatisfied = unsatisfied(applicationId, READY);
         if (!unsatisfied.isEmpty()) {
             throw new ConflictException(String.format(ErrorMessageUtil.DOCUMENT_REQUIRED_MISSING, names(unsatisfied)));
@@ -40,14 +41,14 @@ public class OnboardingDocumentGate {
     }
 
     /** The compliance stage can only be approved once every required document has been verified by a reviewer. */
-    public void requireVerifiedForCompliance(Long applicationId) {
+    public void requireVerifiedForCompliance(UUID applicationId) {
         List<DocumentType> unsatisfied = unsatisfied(applicationId, VERIFIED);
         if (!unsatisfied.isEmpty()) {
             throw new ConflictException(String.format(ErrorMessageUtil.DOCUMENT_REQUIRED_NOT_VERIFIED, names(unsatisfied)));
         }
     }
 
-    private List<DocumentType> unsatisfied(Long applicationId, Set<DocumentStatus> acceptable) {
+    private List<DocumentType> unsatisfied(UUID applicationId, Set<DocumentStatus> acceptable) {
         Map<DocumentType, OnboardingDocument> newest = new HashMap<>();
         documentRepository.findByApplicationIdOrderByCreatedAtAsc(applicationId).stream()
                 .sorted(Comparator.comparing(OnboardingDocument::getCreatedAt, Comparator.nullsFirst(Comparator.naturalOrder()))

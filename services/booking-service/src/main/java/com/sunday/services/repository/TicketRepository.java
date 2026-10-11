@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.TicketStatus;
 import com.sunday.services.model.Ticket;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,13 +12,13 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface TicketRepository extends JpaRepository<Ticket, Long> {
+public interface TicketRepository extends JpaRepository<Ticket, UUID> {
 
     Optional<Ticket> findByTicketNumber(String ticketNumber);
 
-    List<Ticket> findByBookingId(Long bookingId);
+    List<Ticket> findByBookingId(UUID bookingId);
 
-    List<Ticket> findByPassengerId(Long passengerId);
+    List<Ticket> findByPassengerId(UUID passengerId);
 
     List<Ticket> findByStatus(TicketStatus status);
 
@@ -27,5 +28,5 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
             "LEFT JOIN FETCH t.booking " +
             "LEFT JOIN FETCH t.passenger " +
             "WHERE t.booking.id = :bookingId")
-    List<Ticket> findByBookingIdWithDetails(@Param("bookingId") Long bookingId);
+    List<Ticket> findByBookingIdWithDetails(@Param("bookingId") UUID bookingId);
 }

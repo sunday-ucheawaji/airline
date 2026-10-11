@@ -8,6 +8,10 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "flights")
@@ -22,23 +26,27 @@ import java.time.Instant;
 public class Flight {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Column(nullable = false, length = 10)
     private String flightNumber;
 
     // Cross-service ref: Airline is in airline-core-service
     @Column(name = "airline_id", nullable = false)
-    private Long airlineId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID airlineId;
 
     // Cross-service ref: Airport is in location-service
     @Column(name = "departure_airport_id", nullable = false)
-    private Long departureAirportId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID departureAirportId;
 
     // Cross-service ref: Airport is in location-service
     @Column(name = "arrival_airport_id", nullable = false)
-    private Long arrivalAirportId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID arrivalAirportId;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)

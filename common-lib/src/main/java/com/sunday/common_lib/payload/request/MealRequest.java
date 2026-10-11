@@ -2,6 +2,7 @@ package com.sunday.common_lib.payload.request;
 
 import jakarta.validation.constraints.*;
 import lombok.*;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -11,7 +12,7 @@ public class MealRequest {
 
     // Required on create (the airline the caller is acting for); ignored on update,
     // since a meal can't be moved between airlines.
-    private Long airlineId;
+    private UUID airlineId;
 
     @NotBlank(message = "Meal code is required")
     @Size(max = 10, message = "Meal code must not exceed 10 characters")

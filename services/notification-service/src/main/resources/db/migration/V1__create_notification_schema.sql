@@ -3,7 +3,7 @@
 -- migrated, same convention as every other service's V1 baseline in this repo.
 
 CREATE TABLE IF NOT EXISTS notifications (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                  CHAR(36) PRIMARY KEY,
     event_type          ENUM('BOOKING_CONFIRMED','BOOKING_CANCELLED','PAYMENT_FAILED','PAYMENT_REFUNDED') NOT NULL,
     reference           VARCHAR(100) NOT NULL,
     channel             ENUM('EMAIL','SMS') NOT NULL,

@@ -4,14 +4,15 @@ import com.sunday.common_lib.enums.CabinClassType;
 import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class FlightInstanceCabinResponse {
-    private Long id;
-    private Long flightInstanceId;
+    private UUID id;
+    private UUID flightInstanceId;
     private CabinClassType cabinClassType;
     private CabinClassResponse cabinClass;
     @Builder.Default

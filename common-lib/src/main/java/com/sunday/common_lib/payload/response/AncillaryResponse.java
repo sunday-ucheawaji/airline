@@ -5,13 +5,14 @@ import com.sunday.common_lib.enums.AncillaryType;
 import lombok.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class AncillaryResponse {
-    private Long id;
+    private UUID id;
     private AncillaryType type;
     private String subType;
     private String rfisc;
@@ -23,5 +24,5 @@ public class AncillaryResponse {
     private AncillaryMetadata metadata;
     private List<InsuranceCoverageResponse> coverages;
     private Integer displayOrder;
-    private Long airlineId;
+    private UUID airlineId;
 }

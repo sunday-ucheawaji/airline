@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -18,14 +19,14 @@ import java.util.List;
 @AllArgsConstructor
 public class BookingResponse {
 
-    private Long id;
+    private UUID id;
     private String bookingReference;
 
-    private Long userId;
+    private UUID userId;
     private String userName;
     private String userEmail;
 
-    private Long flightId;
+    private UUID flightId;
     private String flightNumber;
     private String flightName;
     private String departureAirport;
@@ -48,7 +49,7 @@ public class BookingResponse {
     private PaymentStatus paymentStatus;
     private String paymentLink;
 
-    private Long fareId;
+    private UUID fareId;
     private String fareName;
     private BigDecimal fareBaseFare;
     private BigDecimal fareTaxesAndFees;

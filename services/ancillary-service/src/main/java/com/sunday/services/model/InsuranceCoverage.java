@@ -5,6 +5,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "insurance_coverages")
@@ -16,8 +20,9 @@ import java.math.BigDecimal;
 public class InsuranceCoverage {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     // Same bounded context: Ancillary lives in this service
     @ManyToOne(fetch = FetchType.LAZY)

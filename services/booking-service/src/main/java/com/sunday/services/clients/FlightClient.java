@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.FlightInstanceResponse;
 import com.sunday.common_lib.payload.response.FlightResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -15,14 +16,14 @@ import java.util.Map;
 public interface FlightClient
 {
     @GetMapping("/api/flights/{id}")
-    FlightResponse getFlightById(@PathVariable Long id);
+    FlightResponse getFlightById(@PathVariable UUID id);
 
     @GetMapping("/api/flight-instances/{id}")
-    FlightInstanceResponse getFlightInstanceResponse(@PathVariable Long id);
+    FlightInstanceResponse getFlightInstanceResponse(@PathVariable UUID id);
 
     @PostMapping("/api/flights/batch")
-    Map<Long, FlightResponse> getFlightsByIds(@RequestBody List<Long> ids);
+    Map<UUID, FlightResponse> getFlightsByIds(@RequestBody List<UUID> ids);
 
     @PostMapping("/api/flight-instances/batch")
-    Map<Long, FlightInstanceResponse> getFlightInstancesByIds(@RequestBody List<Long> ids);
+    Map<UUID, FlightInstanceResponse> getFlightInstancesByIds(@RequestBody List<UUID> ids);
 }

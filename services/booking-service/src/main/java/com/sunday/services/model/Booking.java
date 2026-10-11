@@ -15,6 +15,10 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -26,26 +30,31 @@ import java.util.Set;
 public class Booking {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Column(unique = true, nullable = false)
     private String bookingReference;
 
     // Cross-service ref: User (user-service)
     @Column(name = "user_id")
-    private Long userId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID userId;
 
     // Cross-service ref: Flight (flight-ops-service)
     @Column(name = "flight_id")
-    private Long flightId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID flightId;
 
     // Cross-service ref: FlightInstance (flight-ops-service)
     @Column(name = "flight_instance_id")
-    private Long flightInstanceId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID flightInstanceId;
 
     @Column(nullable = false)
-    private Long airlineId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID airlineId;
 
     private TripType tripType = TripType.ONE_WAY;
 
@@ -54,7 +63,8 @@ public class Booking {
 
     // Cross-service ref: Fare (pricing-service)
     @Column(name = "fare_id")
-    private Long fareId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID fareId;
 
     // Fare as priced at purchase time, so a later repricing or rule edit does not change this booking.
     private Long fareVersion;
@@ -62,8 +72,10 @@ public class Booking {
     private BigDecimal fareBaseAmount;
     private BigDecimal fareTaxAmount;
     private BigDecimal fareFeeAmount;
-    private Long fareRulesId;
-    private Long fareBaggagePolicyId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID fareRulesId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID fareBaggagePolicyId;
     private LocalDate fareTravelDate;
 
     // What the customer owes for this booking, fixed at creation. Payment must match it.
@@ -79,25 +91,29 @@ public class Booking {
     @ElementCollection
     @CollectionTable(name = "booking_seat_instances", joinColumns = @JoinColumn(name = "booking_id"))
     @Column(name = "seat_instance_id")
-    private List<Long> seatInstanceIds;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private List<UUID> seatInstanceIds;
 
     // Cross-service ref: FlightCabinAncillary IDs (ancillary-service)
     @ElementCollection
     @CollectionTable(name = "booking_ancillaries", joinColumns = @JoinColumn(name = "booking_id"))
     @Column(name = "ancillary_id")
-    private List<Long> ancillaryIds;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private List<UUID> ancillaryIds;
 
     // Cross-service ref: FlightMeal IDs (ancillary-service)
     @ElementCollection
     @CollectionTable(name = "booking_meals",
             joinColumns = @JoinColumn(name = "booking_id"))
     @Column(name = "meal_id")
-    private List<Long> mealIds;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private List<UUID> mealIds;
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
     private Set<Ticket> tickets=new HashSet<>();
 
-    private Long paymentId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID paymentId;
 
     @Enumerated(EnumType.STRING)
     private BookingStatus status;

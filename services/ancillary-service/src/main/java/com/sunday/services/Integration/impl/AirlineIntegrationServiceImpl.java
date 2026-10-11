@@ -1,5 +1,6 @@
 package com.sunday.services.Integration.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
@@ -22,7 +23,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     private final AirlineClient airlineClient;
 
     @Override
-    public void requireMembership(Long userId, Long airlineId) {
+    public void requireMembership(UUID userId, UUID airlineId) {
         List<AirlineResponse> airlines;
         try {
             airlines = airlineClient.getMyAirlines(userId);
@@ -42,7 +43,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     }
 
     @Override
-    public void requirePermission(Long userId, Long airlineId, String permission) {
+    public void requirePermission(UUID userId, UUID airlineId, String permission) {
         List<String> permissions;
         try {
             permissions = airlineClient.getMyPermissions(airlineId, userId);
@@ -60,7 +61,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     }
 
     @Override
-    public void requirePermission(Long userId, Collection<Long> airlineIds, String permission) {
+    public void requirePermission(UUID userId, Collection<UUID> airlineIds, String permission) {
         if (airlineIds.isEmpty()) {
             return;
         }
@@ -75,7 +76,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     }
 
     @Override
-    public AircraftResponse getAircraftById(Long aircraftId) {
+    public AircraftResponse getAircraftById(UUID aircraftId) {
         try {
             return airlineClient.getAircraftById(aircraftId);
         } catch (FeignException.NotFound e) {

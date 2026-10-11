@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.SeatPermissions;
 import com.sunday.common_lib.enums.SeatType;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
@@ -88,7 +89,7 @@ public class SeatServiceImpl implements SeatService {
 
     @Override
     @Transactional(readOnly = true)
-    public SeatResponse getSeatById(Long userId, Long id) {
+    public SeatResponse getSeatById(UUID userId, UUID id) {
         Seat seat = seatRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, seat.getSeatMap().getAirlineId(), SeatPermissions.SEAT_READ);
@@ -96,11 +97,11 @@ public class SeatServiceImpl implements SeatService {
     }
 
     @Override
-    public SeatResponse updateSeat(Long userId, Long id, SeatRequest request) {
+    public SeatResponse updateSeat(UUID userId, UUID id, SeatRequest request) {
         Seat existing = seatRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_NOT_FOUND_BY_ID, id)));
 
-        Long currentAirlineId = existing.getSeatMap().getAirlineId();
+        UUID currentAirlineId = existing.getSeatMap().getAirlineId();
         airlineIntegrationService.requirePermission(userId, currentAirlineId, SeatPermissions.SEAT_CONFIG_MANAGE);
 
         SeatMap seatMap = seatMapRepository.findById(request.getSeatMapId())

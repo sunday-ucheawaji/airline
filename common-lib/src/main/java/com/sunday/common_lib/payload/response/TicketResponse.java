@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -14,23 +15,23 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class TicketResponse {
 
-    private Long id;
+    private UUID id;
     private String ticketNumber;
     private TicketStatus status;
     private LocalDateTime issuedAt;
 
     // Booking details
-    private Long bookingId;
+    private UUID bookingId;
     private String bookingReference;
 
     // Passenger details
-    private Long passengerId;
+    private UUID passengerId;
     private String passengerFirstName;
     private String passengerLastName;
     private String passengerEmail;
 
     // Payment details
-    private Long paymentId;
+    private UUID paymentId;
     private Double paymentAmount;
     private String paymentCurrency;
 }

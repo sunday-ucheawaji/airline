@@ -1,6 +1,7 @@
 package com.sunday.services.service;
 
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.FareRequest;
 import com.sunday.common_lib.payload.response.FareBulkCreateResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
@@ -17,15 +18,15 @@ import java.util.Map;
  */
 public interface FareService {
 
-    FareResponse createFare(Long userId, FareRequest request);
-    FareBulkCreateResponse createFares(Long userId, List<FareRequest> requests);
-    FareResponse getFareById(Long userId, Long id);
-    List<FareResponse> getFaresByFlightIdAndCabinClassId(Long userId, Long flightId, Long cabinClassId);
-    Page<FareResponse> getFaresByAirline(Long userId, Long airlineId, Pageable pageable);
-    FareResponse updateFare(Long userId, Long id, FareRequest request);
-    void deleteFare(Long userId, Long id);
+    FareResponse createFare(UUID userId, FareRequest request);
+    FareBulkCreateResponse createFares(UUID userId, List<FareRequest> requests);
+    FareResponse getFareById(UUID userId, UUID id);
+    List<FareResponse> getFaresByFlightIdAndCabinClassId(UUID userId, UUID flightId, UUID cabinClassId);
+    Page<FareResponse> getFaresByAirline(UUID userId, UUID airlineId, Pageable pageable);
+    FareResponse updateFare(UUID userId, UUID id, FareRequest request);
+    void deleteFare(UUID userId, UUID id);
 
-    FareResponse getFareByIdInternal(Long id);
+    FareResponse getFareByIdInternal(UUID id);
 
-    Map<Long, FareResponse> getFaresByIds(List<Long> ids);
+    Map<UUID, FareResponse> getFaresByIds(List<UUID> ids);
 }

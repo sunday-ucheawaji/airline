@@ -2,10 +2,10 @@
 -- FlightSchedule entity (including its @ElementCollection operatingDays child table),
 -- now that ddl-auto is `validate`.
 CREATE TABLE IF NOT EXISTS flight_schedules (
-    id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
-    flight_id             BIGINT NOT NULL,
-    departure_airport_id  BIGINT NOT NULL,
-    arrival_airport_id    BIGINT NOT NULL,
+    id                    CHAR(36) PRIMARY KEY,
+    flight_id             CHAR(36) NOT NULL,
+    departure_airport_id  CHAR(36) NOT NULL,
+    arrival_airport_id    CHAR(36) NOT NULL,
     departure_time        TIME NOT NULL,
     arrival_time          TIME NOT NULL,
     start_date            DATE NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS flight_schedules (
 );
 
 CREATE TABLE IF NOT EXISTS schedule_operating_days (
-    schedule_id  BIGINT NOT NULL,
+    schedule_id  CHAR(36) NOT NULL,
     day_of_week  ENUM('MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'),
     CONSTRAINT fk_schedule_operating_days_schedule FOREIGN KEY (schedule_id) REFERENCES flight_schedules (id)
 );

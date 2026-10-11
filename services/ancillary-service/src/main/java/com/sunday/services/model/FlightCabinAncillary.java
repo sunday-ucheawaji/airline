@@ -4,6 +4,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "flight_cabin_ancillaries")
@@ -15,16 +19,19 @@ import java.math.BigDecimal;
 public class FlightCabinAncillary {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     // Cross-service reference: Flight lives in flight-ops-service
     @Column(name = "flight_id", nullable = false)
-    private Long flightId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID flightId;
 
     // Cross-service reference: CabinClass lives in seat-service
     @Column(name = "cabin_class_id", nullable = false)
-    private Long cabinClassId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID cabinClassId;
 
     // Same bounded context: Ancillary lives in this service
     @ManyToOne(fetch = FetchType.LAZY)

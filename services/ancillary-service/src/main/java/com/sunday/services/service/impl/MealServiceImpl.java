@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.AncillaryPermissions;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
@@ -35,10 +36,10 @@ public class MealServiceImpl implements MealService {
 
     @Override
     @Transactional
-    public MealResponse create(Long userId, MealRequest request) {
+    public MealResponse create(UUID userId, MealRequest request) {
         log.debug("Creating meal with code: {}", request.getCode());
 
-        Long airlineId = request.getAirlineId();
+        UUID airlineId = request.getAirlineId();
         if (airlineId == null) {
             throw new BadRequestException(ErrorMessageUtil.AIRLINE_ID_REQUIRED);
         }
@@ -72,7 +73,7 @@ public class MealServiceImpl implements MealService {
 
     @Override
     @Transactional
-    public MealBulkCreateResponse bulkCreate(Long userId, List<MealRequest> requests) {
+    public MealBulkCreateResponse bulkCreate(UUID userId, List<MealRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return MealBulkCreateResponse.builder().created(List.of()).skipped(List.of()).build();
         }
@@ -88,7 +89,7 @@ public class MealServiceImpl implements MealService {
             }
         }
 
-        Set<Long> airlineIds = candidates.stream().map(MealRequest::getAirlineId).collect(Collectors.toSet());
+        Set<UUID> airlineIds = candidates.stream().map(MealRequest::getAirlineId).collect(Collectors.toSet());
         airlineIntegrationService.requirePermission(userId, airlineIds, AncillaryPermissions.MANAGE);
 
         List<String> codes = candidates.stream().map(MealRequest::getCode).distinct().toList();
@@ -141,7 +142,7 @@ public class MealServiceImpl implements MealService {
 
     @Override
     @Transactional(readOnly = true)
-    public MealResponse getById(Long id) {
+    public MealResponse getById(UUID id) {
         Meal meal = mealRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.MEAL_NOT_FOUND_BY_ID, id)));
@@ -150,7 +151,7 @@ public class MealServiceImpl implements MealService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<MealResponse> getByAirlineId(Long userId, Long airlineId) {
+    public List<MealResponse> getByAirlineId(UUID userId, UUID airlineId) {
         airlineIntegrationService.requireMembership(userId, airlineId);
         Specification<Meal> spec = MealSpecification.hasAirlineId(airlineId);
         return mealRepository.findAll(spec).stream()
@@ -160,7 +161,7 @@ public class MealServiceImpl implements MealService {
 
     @Override
     @Transactional
-    public MealResponse update(Long userId, Long id, MealRequest request) {
+    public MealResponse update(UUID userId, UUID id, MealRequest request) {
         log.debug("Updating meal with id: {}", id);
 
         Meal meal = mealRepository.findById(id)
@@ -194,7 +195,7 @@ public class MealServiceImpl implements MealService {
 
     @Override
     @Transactional
-    public void delete(Long userId, Long id) {
+    public void delete(UUID userId, UUID id) {
         Meal meal = mealRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.MEAL_NOT_FOUND_BY_ID, id)));
@@ -205,7 +206,7 @@ public class MealServiceImpl implements MealService {
 
     @Override
     @Transactional
-    public MealResponse updateAvailability(Long userId, Long id, Boolean available) {
+    public MealResponse updateAvailability(UUID userId, UUID id, Boolean available) {
         Meal meal = mealRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.MEAL_NOT_FOUND_BY_ID, id)));

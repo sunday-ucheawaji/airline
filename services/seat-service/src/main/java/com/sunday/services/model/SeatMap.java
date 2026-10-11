@@ -4,6 +4,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.List;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "seat_maps")
@@ -15,8 +19,9 @@ import java.util.List;
 public class SeatMap {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Column(nullable = false)
     private String name;
@@ -30,7 +35,8 @@ public class SeatMap {
     private int leftSeatsPerRow;
 
     @Column(name = "airline_id", nullable = false)
-    private Long airlineId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID airlineId;
 
     @OneToMany(mappedBy = "seatMap", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Seat> seats;

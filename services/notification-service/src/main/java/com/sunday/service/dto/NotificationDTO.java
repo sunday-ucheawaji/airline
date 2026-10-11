@@ -1,5 +1,6 @@
 package com.sunday.service.dto;
 
+import java.util.UUID;
 import com.sunday.service.model.NotificationChannel;
 import com.sunday.service.model.NotificationEventType;
 import com.sunday.service.model.NotificationStatus;
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class NotificationDTO {
-    private Long id;
+    private UUID id;
     private NotificationEventType eventType;
     private String reference;
     private NotificationChannel channel;

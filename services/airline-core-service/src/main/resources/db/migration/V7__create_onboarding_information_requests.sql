@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS onboarding_information_requests (
-    id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
-    application_id        BIGINT NOT NULL,
+    id                    CHAR(36) PRIMARY KEY,
+    application_id        CHAR(36) NOT NULL,
     stage                 ENUM('COMPLIANCE', 'COMMERCIAL', 'TECHNICAL'),
-    requested_by_user_id  BIGINT NOT NULL,
+    requested_by_user_id  CHAR(36) NOT NULL,
     message               TEXT NOT NULL,
     status                ENUM('OPEN', 'ANSWERED', 'CANCELLED') NOT NULL DEFAULT 'OPEN',
     response              TEXT,

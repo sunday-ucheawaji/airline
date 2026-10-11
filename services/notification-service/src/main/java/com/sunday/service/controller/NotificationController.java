@@ -1,5 +1,6 @@
 package com.sunday.service.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.service.dto.NotificationDTO;
@@ -34,7 +35,7 @@ public class NotificationController {
     }
 
     @PostMapping("/{id}/resend")
-    public ResponseEntity<NotificationDTO> resend(@PathVariable Long id) {
+    public ResponseEntity<NotificationDTO> resend(@PathVariable UUID id) {
         Notification record = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.NOTIFICATION_NOT_FOUND_BY_ID, id)));
         return ResponseEntity.ok(NotificationMapper.toDTO(dispatchService.resend(record)));

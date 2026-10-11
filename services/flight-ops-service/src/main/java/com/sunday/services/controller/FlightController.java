@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.common_lib.payload.request.FlightRequest;
 import com.sunday.common_lib.payload.response.FlightResponse;
@@ -24,7 +25,7 @@ public class FlightController {
 
     @PostMapping
     public ResponseEntity<FlightResponse> createFlight(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody FlightRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(flightService.createFlight(userId, request));
@@ -32,19 +33,19 @@ public class FlightController {
 
     @PostMapping("/bulk")
     public ResponseEntity<List<FlightResponse>> createFlights(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody List<FlightRequest> requests) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(flightService.createFlights(userId, requests));
     }
 
     @PostMapping("/batch")
-    public ResponseEntity<Map<Long, FlightResponse>> getFlightsByIds(@RequestBody List<Long> ids) {
+    public ResponseEntity<Map<UUID, FlightResponse>> getFlightsByIds(@RequestBody List<UUID> ids) {
         return ResponseEntity.ok(flightService.getFlightsByIds(ids));
     }
 
-    @GetMapping("/{id:\\d+}")
-    public ResponseEntity<FlightResponse> getFlightById(@PathVariable Long id)  {
+    @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    public ResponseEntity<FlightResponse> getFlightById(@PathVariable UUID id)  {
         return ResponseEntity.ok(flightService.getFlightById(id));
     }
 
@@ -56,10 +57,10 @@ public class FlightController {
 
     @GetMapping("/airline")
     public ResponseEntity<Page<FlightResponse>> getFlightsByAirline(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestParam Long airlineId,
-            @RequestParam(required = false) Long departureAirportId,
-            @RequestParam(required = false) Long arrivalAirportId,
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestParam UUID airlineId,
+            @RequestParam(required = false) UUID departureAirportId,
+            @RequestParam(required = false) UUID arrivalAirportId,
             Pageable pageable) {
         return ResponseEntity.ok(flightService.getFlightsByAirline(
                 userId,
@@ -70,26 +71,26 @@ public class FlightController {
         ));
     }
 
-    @PutMapping("/{id:\\d+}")
+    @PutMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<FlightResponse> updateFlight(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody FlightRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(flightService.updateFlight(id, request, userId));
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<FlightResponse> changeStatus(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestParam FlightStatus status,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(flightService.changeStatus(id, status, userId));
     }
 
-    @DeleteMapping("/{id:\\d+}")
+    @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<Void> deleteFlight(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         flightService.deleteFlight(id, userId);
         return ResponseEntity.noContent().build();
     }

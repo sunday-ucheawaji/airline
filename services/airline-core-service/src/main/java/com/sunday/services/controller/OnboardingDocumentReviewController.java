@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.OnboardingActionRequest;
 import com.sunday.common_lib.payload.response.DocumentResponse;
 import com.sunday.common_lib.payload.response.DownloadUrlResponse;
@@ -22,27 +23,27 @@ public class OnboardingDocumentReviewController {
     private final OnboardingDocumentService documentService;
 
     @GetMapping
-    public ResponseEntity<List<DocumentResponse>> getDocuments(@PathVariable Long applicationId) {
+    public ResponseEntity<List<DocumentResponse>> getDocuments(@PathVariable UUID applicationId) {
         return ResponseEntity.ok(documentService.getDocumentsForReview(applicationId));
     }
 
     @GetMapping("/{documentId}/download-url")
-    public ResponseEntity<DownloadUrlResponse> getDownloadUrl(@PathVariable Long applicationId, @PathVariable Long documentId) {
+    public ResponseEntity<DownloadUrlResponse> getDownloadUrl(@PathVariable UUID applicationId, @PathVariable UUID documentId) {
         return ResponseEntity.ok(documentService.getDownloadUrlForReview(applicationId, documentId));
     }
 
     @PostMapping("/{documentId}/verify")
     public ResponseEntity<DocumentResponse> verify(
-            @PathVariable Long applicationId, @PathVariable Long documentId, @RequestHeader("X-User-Id") Long actorUserId) {
+            @PathVariable UUID applicationId, @PathVariable UUID documentId, @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(documentService.verify(applicationId, documentId, actorUserId));
     }
 
     @PostMapping("/{documentId}/reject")
     public ResponseEntity<DocumentResponse> reject(
-            @PathVariable Long applicationId,
-            @PathVariable Long documentId,
+            @PathVariable UUID applicationId,
+            @PathVariable UUID documentId,
             @RequestBody(required = false) OnboardingActionRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(documentService.reject(applicationId, documentId, actorUserId, request == null ? null : request.getComments()));
     }
 }

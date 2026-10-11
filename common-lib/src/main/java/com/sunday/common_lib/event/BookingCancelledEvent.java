@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.UUID;
 
 /** Published whenever a booking is abandoned before or after confirmation, so its held/booked seats are released. */
 @Data
@@ -13,9 +14,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BookingCancelledEvent {
-    private Long bookingId;
+    private UUID bookingId;
     private String bookingReference;
-    private List<Long> seatInstanceIds;
+    private List<UUID> seatInstanceIds;
 
     // Contact (booking.contactInfo or first passenger fallback), null when the booking never got far
     // enough to have passengers (e.g. a saga compensation before any Passenger row existed) — consumers

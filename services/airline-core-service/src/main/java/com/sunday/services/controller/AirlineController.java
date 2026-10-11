@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.AirlineStatus;
 import com.sunday.common_lib.payload.request.AirlineRequest;
 import com.sunday.common_lib.payload.response.AirlineDropdownItem;
@@ -27,20 +28,20 @@ public class AirlineController {
 
     @GetMapping("/mine")
     public ResponseEntity<List<AirlineResponse>> getMyAirlines(
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(airlineService.getMyAirlines(userId));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AirlineResponse> getAirlineById(
-            @PathVariable Long id, @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id, @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(airlineService.getAirlineById(id, userId));
     }
 
     @GetMapping("/{airlineId}/permissions")
     public ResponseEntity<List<String>> getMyPermissions(
-            @PathVariable Long airlineId,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID airlineId,
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(airlineService.getMyPermissions(airlineId, userId));
     }
 
@@ -48,9 +49,9 @@ public class AirlineController {
     // (e.g. a bulk create spanning multiple airlines) — one round trip instead of one per airline.
     @GetMapping("/permissions/check")
     public ResponseEntity<Void> requirePermission(
-            @RequestParam List<Long> airlineIds,
+            @RequestParam List<UUID> airlineIds,
             @RequestParam String permission,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         airlineService.requirePermission(userId, airlineIds, permission);
         return ResponseEntity.noContent().build();
     }
@@ -67,16 +68,16 @@ public class AirlineController {
 
     @PutMapping("/{id}")
     public ResponseEntity<AirlineResponse> updateAirline(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody AirlineRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(airlineService.updateAirline(id, request, userId));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAirline(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         airlineService.deleteAirline(id, userId);
         return ResponseEntity.noContent().build();
     }
@@ -84,17 +85,17 @@ public class AirlineController {
     // Reinstates a SUSPENDED/BANNED airline. Not an approval — onboarding approval already creates
     // airlines ACTIVE (see OnboardingController).
     @PostMapping("/{id}/activate")
-    public ResponseEntity<AirlineResponse> activateAirline(@PathVariable Long id) {
+    public ResponseEntity<AirlineResponse> activateAirline(@PathVariable UUID id) {
         return ResponseEntity.ok(airlineService.changeStatusByAdmin(id, AirlineStatus.ACTIVE));
     }
 
     @PostMapping("/{id}/suspend")
-    public ResponseEntity<AirlineResponse> suspendAirline(@PathVariable Long id) {
+    public ResponseEntity<AirlineResponse> suspendAirline(@PathVariable UUID id) {
         return ResponseEntity.ok(airlineService.changeStatusByAdmin(id, AirlineStatus.SUSPENDED));
     }
 
     @PostMapping("/{id}/ban")
-    public ResponseEntity<AirlineResponse> banAirline(@PathVariable Long id) {
+    public ResponseEntity<AirlineResponse> banAirline(@PathVariable UUID id) {
         return ResponseEntity.ok(airlineService.changeStatusByAdmin(id, AirlineStatus.BANNED));
     }
 }

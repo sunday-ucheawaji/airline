@@ -27,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -48,9 +49,18 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public Role getRoleById(Long id) {
+    public Role getRoleById(UUID id) {
         return roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.ROLE_NOT_FOUND_BY_ID, id)));
+    }
+
+    @Override
+    public Role getRoleByName(String name) {
+        Role role = roleRepository.findByName(name);
+        if (role == null) {
+            throw new ResourceNotFoundException(String.format(ErrorMessageUtil.ROLE_NOT_FOUND_BY_NAME, name));
+        }
+        return role;
     }
 
     @Override
@@ -69,7 +79,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Permission> getPermissionsForRole(Long roleId) {
+    public List<Permission> getPermissionsForRole(UUID roleId) {
         getRoleById(roleId);
 
         return rolePermissionRepository.findByRoleId(roleId).stream()
@@ -79,10 +89,10 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     @Transactional
-    public List<Permission> assignPermissionsToRole(Long roleId, AssignPermissionsRequest request) {
+    public List<Permission> assignPermissionsToRole(UUID roleId, AssignPermissionsRequest request) {
         Role role = getRoleById(roleId);
 
-        for (Long permissionId : request.getPermissionIds()) {
+        for (UUID permissionId : request.getPermissionIds()) {
             Permission permission = permissionRepository.findById(permissionId)
                     .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PERMISSION_NOT_FOUND_BY_ID, permissionId)));
 
@@ -98,7 +108,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public void unassignPermissionFromRole(Long roleId, Long permissionId) {
+    public void unassignPermissionFromRole(UUID roleId, UUID permissionId) {
         getRoleById(roleId);
 
         RolePermission rolePermission = rolePermissionRepository
@@ -111,7 +121,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Role> getPlatformRolesForUser(Long userId) {
+    public List<Role> getPlatformRolesForUser(UUID userId) {
         getUserOrThrow(userId);
 
         return userPlatformRoleRepository.findByUserId(userId).stream()
@@ -135,7 +145,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public void assignPlatformRoleToUser(Long roleId, Long userId, Long grantorUserId, Collection<String> grantorRoles) {
+    public void assignPlatformRoleToUser(UUID roleId, UUID userId, UUID grantorUserId, Collection<String> grantorRoles) {
         Role role = getRoleById(roleId);
         if (role.getScope() != RoleScope.PLATFORM) {
             throw new OperationNotPermittedException(
@@ -166,7 +176,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public void unassignPlatformRoleFromUser(Long roleId, Long userId, Collection<String> grantorRoles) {
+    public void unassignPlatformRoleFromUser(UUID roleId, UUID userId, Collection<String> grantorRoles) {
         Role role = getRoleById(roleId);
         requireSuperAdminForSuperAdminRole(role, grantorRoles);
         getUserOrThrow(userId);
@@ -187,7 +197,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     /** A platform user cannot be an airline member; fails closed (503) when airline-core-service cannot answer. */
-    private void requireNotAirlineMember(Long userId) {
+    private void requireNotAirlineMember(UUID userId) {
         boolean member;
         try {
             member = membershipClient.hasMembership(userId);
@@ -199,7 +209,7 @@ public class RoleServiceImpl implements RoleService {
         }
     }
 
-    private User getUserOrThrow(Long userId) {
+    private User getUserOrThrow(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.USER_NOT_FOUND_BY_ID, userId)));
     }

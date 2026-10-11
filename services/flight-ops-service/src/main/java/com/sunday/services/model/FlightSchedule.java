@@ -8,6 +8,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "flight_schedules")
@@ -21,8 +25,9 @@ import java.util.List;
 public class FlightSchedule {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "flight_id", nullable = false)
@@ -30,11 +35,13 @@ public class FlightSchedule {
 
     // Cross-service ref: Airport is in location-service
     @Column(name = "departure_airport_id", nullable = false)
-    private Long departureAirportId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID departureAirportId;
 
     // Cross-service ref: Airport is in location-service
     @Column(name = "arrival_airport_id", nullable = false)
-    private Long arrivalAirportId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID arrivalAirportId;
 
     @Column(nullable = false)
     private LocalTime departureTime;

@@ -7,6 +7,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -14,9 +15,9 @@ import java.util.List;
 @AllArgsConstructor
 public class FlightScheduleResponse {
 
-    private Long id;
+    private UUID id;
 
-    private Long flightId;
+    private UUID flightId;
     private String flightNumber;
 
     private AirportResponse departureAirport;

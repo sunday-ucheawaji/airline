@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.PaymentInitiateRequest;
 import com.sunday.common_lib.payload.response.PaymentDTO;
 import com.sunday.common_lib.payload.response.PaymentInitiateResponse;
@@ -31,7 +32,7 @@ public class PaymentClientFallbackFactory
             @Override
             public PaymentInitiateResponse initiatePayment(
                     PaymentInitiateRequest request,
-                    Long userId) {
+                    UUID userId) {
 
                 log.error(
                         "PaymentClient.initiatePayment FAILED. " +
@@ -49,7 +50,7 @@ public class PaymentClientFallbackFactory
             }
 
             @Override
-            public PaymentDTO getPaymentByBookingId(Long bookingId) {
+            public PaymentDTO getPaymentByBookingId(UUID bookingId) {
                 throw new ResponseStatusException(
                         HttpStatus.SERVICE_UNAVAILABLE,
                         "Payment service is unavailable"
@@ -57,8 +58,8 @@ public class PaymentClientFallbackFactory
             }
 
             @Override
-            public Map<Long, PaymentDTO> getPaymentsByBookingIds(
-                    List<Long> bookingIds) {
+            public Map<UUID, PaymentDTO> getPaymentsByBookingIds(
+                    List<UUID> bookingIds) {
 
                 throw new ResponseStatusException(
                         HttpStatus.SERVICE_UNAVAILABLE,

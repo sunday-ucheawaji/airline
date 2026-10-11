@@ -14,26 +14,21 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/**
- * Seeds a local/dev-only admin account so there's something to log in with
- * without a manual DB insert. Never runs outside the "local" profile —
- * this must not seed a known-password account into a real environment.
- *
- * The admin is also granted the PLATFORM-scoped SUPER_ADMIN role (seeded by Flyway): the api-gateway
- * restricts role assignment (and every other admin endpoint) to that role, so
- * without this seed nobody could ever be granted the first one through the API.
- */
+// Never runs outside "local" (must not seed a known-password account into a real environment);
+// grants SUPER_ADMIN because the gateway restricts role assignment to that role, so without this
+// seed nobody could ever be granted the first one through the API.
 @Component
 @Profile("local")
 @RequiredArgsConstructor
 public class DataInitializationComponent implements CommandLineRunner {
 
-    private static final String ADMIN_EMAIL = "codewithzosh@gmail.com";
-
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserPlatformRoleRepository userPlatformRoleRepository;
     private final PasswordEncoder passwordEncoder;
+
+    @Value("${bootstrap.admin.email}")
+    private String adminEmail;
 
     @Value("${bootstrap.admin.password}")
     private String adminPassword;
@@ -45,16 +40,16 @@ public class DataInitializationComponent implements CommandLineRunner {
     }
 
     private User initializeAdminUser() {
-        User existing = userRepository.findByEmail(ADMIN_EMAIL);
+        User existing = userRepository.findByEmail(adminEmail);
         if (existing != null) {
             return existing;
         }
 
         User adminUser = new User();
         adminUser.setPassword(passwordEncoder.encode(adminPassword));
-        adminUser.setFirstName("Zosh");
+        adminUser.setFirstName("Sunday");
         adminUser.setLastName("Admin");
-        adminUser.setEmail(ADMIN_EMAIL);
+        adminUser.setEmail(adminEmail);
         adminUser.setEmailVerified(true);
 
         return userRepository.save(adminUser);

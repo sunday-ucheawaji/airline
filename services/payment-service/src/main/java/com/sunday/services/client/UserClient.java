@@ -1,5 +1,6 @@
 package com.sunday.services.client;
 
+import java.util.UUID;
 import com.sunday.common_lib.dto.UserDTO;
 import com.sunday.common_lib.exception.UserException;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -11,5 +12,5 @@ public interface UserClient {
 
     @GetMapping("/api/users/{userId}")
     UserDTO getUserById(
-            @PathVariable Long userId) throws UserException;
+            @PathVariable UUID userId) throws UserException;
 }

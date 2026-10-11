@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.AncillaryPermissions;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.InsuranceCoverageRequest;
@@ -33,7 +34,7 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
 
     @Override
     @Transactional
-    public InsuranceCoverageResponse createCoverage(Long userId, InsuranceCoverageRequest request) {
+    public InsuranceCoverageResponse createCoverage(UUID userId, InsuranceCoverageRequest request) {
         Ancillary ancillary = ancillaryRepository.findById(request.getAncillaryId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.ANCILLARY_NOT_FOUND_BY_ID, request.getAncillaryId())));
@@ -47,19 +48,19 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
 
     @Override
     @Transactional
-    public InsuranceCoverageBulkCreateResponse createCoveragesBulk(Long userId, List<InsuranceCoverageRequest> requests) {
+    public InsuranceCoverageBulkCreateResponse createCoveragesBulk(UUID userId, List<InsuranceCoverageRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return InsuranceCoverageBulkCreateResponse.builder().created(List.of()).skipped(List.of()).build();
         }
 
-        List<Long> ancillaryIds = requests.stream()
+        List<UUID> ancillaryIds = requests.stream()
                 .map(InsuranceCoverageRequest::getAncillaryId)
                 .distinct()
                 .toList();
-        Map<Long, Ancillary> ancillaryById = ancillaryRepository.findAllById(ancillaryIds).stream()
+        Map<UUID, Ancillary> ancillaryById = ancillaryRepository.findAllById(ancillaryIds).stream()
                 .collect(Collectors.toMap(Ancillary::getId, a -> a));
 
-        Set<Long> airlineIds = ancillaryById.values().stream()
+        Set<UUID> airlineIds = ancillaryById.values().stream()
                 .map(Ancillary::getAirlineId)
                 .collect(Collectors.toSet());
         airlineIntegrationService.requirePermission(userId, airlineIds, AncillaryPermissions.INSURANCE_MANAGE);
@@ -87,7 +88,7 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
 
     @Override
     @Transactional
-    public InsuranceCoverageResponse updateCoverage(Long userId, Long id, InsuranceCoverageRequest request) {
+    public InsuranceCoverageResponse updateCoverage(UUID userId, UUID id, InsuranceCoverageRequest request) {
         InsuranceCoverage existing = coverageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.INSURANCE_COVERAGE_NOT_FOUND_BY_ID, id)));
@@ -113,7 +114,7 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
 
     @Override
     @Transactional
-    public void deleteCoverage(Long userId, Long id) {
+    public void deleteCoverage(UUID userId, UUID id) {
         InsuranceCoverage coverage = coverageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.INSURANCE_COVERAGE_NOT_FOUND_BY_ID, id)));
@@ -123,7 +124,7 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
     }
 
     @Override
-    public InsuranceCoverageResponse getCoverageById(Long id) {
+    public InsuranceCoverageResponse getCoverageById(UUID id) {
         InsuranceCoverage coverage = coverageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.INSURANCE_COVERAGE_NOT_FOUND_BY_ID, id)));
@@ -131,14 +132,14 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
     }
 
     @Override
-    public List<InsuranceCoverageResponse> getCoveragesByAncillaryId(Long ancillaryId) {
+    public List<InsuranceCoverageResponse> getCoveragesByAncillaryId(UUID ancillaryId) {
         return coverageRepository.findByAncillaryIdAndActiveTrue(ancillaryId).stream()
                 .map(InsuranceCoverageMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<InsuranceCoverageResponse> getActiveCoveragesByAncillaryId(Long ancillaryId) {
+    public List<InsuranceCoverageResponse> getActiveCoveragesByAncillaryId(UUID ancillaryId) {
         return coverageRepository.findByAncillaryIdAndActiveTrue(ancillaryId).stream()
                 .map(InsuranceCoverageMapper::toResponse)
                 .collect(Collectors.toList());

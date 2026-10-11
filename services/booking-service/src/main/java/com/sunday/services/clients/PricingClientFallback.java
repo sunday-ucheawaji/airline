@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
@@ -14,17 +15,17 @@ import java.util.Map;
 public class PricingClientFallback implements PricingClient {
 
     @Override
-    public FareResponse getFareById(Long id) {
+    public FareResponse getFareById(UUID id) {
         return null;
     }
 
     @Override
-    public Map<Long, FareResponse> getFaresByIds(List<Long> ids) {
+    public Map<UUID, FareResponse> getFaresByIds(List<UUID> ids) {
         return Collections.emptyMap();
     }
 
     @Override
-    public FareQuoteResponse quoteFare(Long id, Long flightId, CabinClassType cabinClass, LocalDate departureDate) {
+    public FareQuoteResponse quoteFare(UUID id, UUID flightId, CabinClassType cabinClass, LocalDate departureDate) {
         return null;
     }
 }

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS airlines (
-    id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                    CHAR(36) PRIMARY KEY,
     legal_name            VARCHAR(255) NOT NULL,
     name                  VARCHAR(255) NOT NULL,
     alias                 VARCHAR(255),
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS airlines (
     email                 VARCHAR(255),
     phone                 VARCHAR(255),
     hours                 VARCHAR(255),
-    headquarters_city_id  BIGINT,
+    headquarters_city_id  CHAR(36),
     created_at            DATETIME(6) NOT NULL,
     updated_at            DATETIME(6) NOT NULL,
     CONSTRAINT uk_airlines_iata_code UNIQUE (iata_code),

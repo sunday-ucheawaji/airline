@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import java.util.UUID;
 import com.sunday.services.enums.MembershipStatus;
 import com.sunday.services.model.AirlineMembership;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,21 +10,21 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface AirlineMembershipRepository extends JpaRepository<AirlineMembership, Long> {
+public interface AirlineMembershipRepository extends JpaRepository<AirlineMembership, UUID> {
 
-    List<AirlineMembership> findByAirlineId(Long airlineId);
+    List<AirlineMembership> findByAirlineId(UUID airlineId);
 
-    Optional<AirlineMembership> findByUserIdAndAirlineId(Long userId, Long airlineId);
+    Optional<AirlineMembership> findByUserIdAndAirlineId(UUID userId, UUID airlineId);
 
-    List<AirlineMembership> findByUserIdAndStatus(Long userId, MembershipStatus status);
+    List<AirlineMembership> findByUserIdAndStatus(UUID userId, MembershipStatus status);
 
-    boolean existsByUserIdAndStatusNot(Long userId, MembershipStatus status);
+    boolean existsByUserIdAndStatusNot(UUID userId, MembershipStatus status);
 
-    boolean existsByUserIdAndStatusIn(Long userId, Collection<MembershipStatus> statuses);
+    boolean existsByUserIdAndStatusIn(UUID userId, Collection<MembershipStatus> statuses);
 
-    boolean existsByUserIdAndAirlineIdAndStatus(Long userId, Long airlineId, MembershipStatus status);
+    boolean existsByUserIdAndAirlineIdAndStatus(UUID userId, UUID airlineId, MembershipStatus status);
 
-    long countByAirlineIdAndRoleIdAndStatus(Long airlineId, Long roleId, MembershipStatus status);
+    long countByAirlineIdAndRoleIdAndStatus(UUID airlineId, UUID roleId, MembershipStatus status);
 
     List<AirlineMembership> findByStatusAndExpiresAtBefore(MembershipStatus status, Instant cutoff);
 }

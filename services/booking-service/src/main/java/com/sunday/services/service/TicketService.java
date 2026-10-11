@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.services.model.Booking;
 import com.sunday.services.model.Ticket;
 
@@ -9,15 +10,15 @@ public interface TicketService {
 
     List<Ticket> generateTicketsForBooking(Booking booking);
 
-    Ticket getTicketByNumber(String ticketNumber, Long userId);
+    Ticket getTicketByNumber(String ticketNumber, UUID userId);
 
-    List<Ticket> getTicketsByBooking(Long bookingId, Long userId);
+    List<Ticket> getTicketsByBooking(UUID bookingId, UUID userId);
 
-    List<Ticket> getTicketsByPassenger(Long passengerId, Long userId);
+    List<Ticket> getTicketsByPassenger(UUID passengerId, UUID userId);
 
-    Ticket cancelTicket(Long ticketId, Long userId);
+    Ticket cancelTicket(UUID ticketId, UUID userId);
 
-    Ticket markTicketAsUsed(Long ticketId, Long userId);
+    Ticket markTicketAsUsed(UUID ticketId, UUID userId);
 
-    Ticket refundTicket(Long ticketId, Long userId);
+    Ticket refundTicket(UUID ticketId, UUID userId);
 }

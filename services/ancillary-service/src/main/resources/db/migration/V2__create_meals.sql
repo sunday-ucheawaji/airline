@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS meals (
-    id                       BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                       CHAR(36) PRIMARY KEY,
     code                     VARCHAR(10) NOT NULL,
     name                     VARCHAR(200) NOT NULL,
     meal_type                VARCHAR(50) NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS meals (
     requires_advance_booking BIT(1) NOT NULL,
     advance_booking_hours    INT,
     display_order            INT,
-    airline_id               BIGINT NOT NULL,
+    airline_id               CHAR(36) NOT NULL,
     created_at               DATETIME(6) NOT NULL,
     updated_at               DATETIME(6) NOT NULL,
     CONSTRAINT uk_meals_code UNIQUE (code),

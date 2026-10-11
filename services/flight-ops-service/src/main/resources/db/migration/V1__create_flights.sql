@@ -5,11 +5,11 @@
 -- aircraft_id moved to flight_instances (see V3) — a route/template has no aircraft of
 -- its own; a specific dated departure does, independently reassignable.
 CREATE TABLE IF NOT EXISTS flights (
-    id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                    CHAR(36) PRIMARY KEY,
     flight_number         VARCHAR(10) NOT NULL,
-    airline_id            BIGINT NOT NULL,
-    departure_airport_id  BIGINT NOT NULL,
-    arrival_airport_id    BIGINT NOT NULL,
+    airline_id            CHAR(36) NOT NULL,
+    departure_airport_id  CHAR(36) NOT NULL,
+    arrival_airport_id    CHAR(36) NOT NULL,
     status                ENUM('SCHEDULED','BOARDING','DEPARTED','IN_AIR','LANDED',
                                 'ARRIVED','DELAYED','CANCELLED','DIVERTED','COMPLETED'),
     created_at            DATETIME(6) NOT NULL,

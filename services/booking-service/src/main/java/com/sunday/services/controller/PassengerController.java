@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.PassengerResponse;
 import com.sunday.services.service.BookingService;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +17,8 @@ public class PassengerController {
 
     @GetMapping("/booking/{bookingId}")
     public List<PassengerResponse> getPassengersByBooking(
-            @PathVariable Long bookingId,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID bookingId,
+            @RequestHeader("X-User-Id") UUID userId) {
         return bookingService.getPassengersByBooking(bookingId, userId);
     }
 }

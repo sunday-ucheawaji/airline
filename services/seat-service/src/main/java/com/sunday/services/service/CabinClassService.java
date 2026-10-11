@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.request.CabinClassRequest;
 import com.sunday.common_lib.payload.response.CabinClassBulkCreateResponse;
@@ -9,11 +10,11 @@ import java.util.List;
 
 public interface CabinClassService {
 
-    CabinClassResponse createCabinClass(Long userId, CabinClassRequest request);
-    CabinClassBulkCreateResponse createCabinClasses(Long userId, List<CabinClassRequest> requests);
-    CabinClassResponse getCabinClassById(Long userId, Long id);
-    List<CabinClassResponse> getCabinClassesByAircraftId(Long userId, Long aircraftId);
-    CabinClassResponse getByAircraftIdAndName(Long userId, Long aircraftId, CabinClassType name);
-    CabinClassResponse updateCabinClass(Long userId, Long id, CabinClassRequest request);
-    void deleteCabinClass(Long userId, Long id);
+    CabinClassResponse createCabinClass(UUID userId, CabinClassRequest request);
+    CabinClassBulkCreateResponse createCabinClasses(UUID userId, List<CabinClassRequest> requests);
+    CabinClassResponse getCabinClassById(UUID userId, UUID id);
+    List<CabinClassResponse> getCabinClassesByAircraftId(UUID userId, UUID aircraftId);
+    CabinClassResponse getByAircraftIdAndName(UUID userId, UUID aircraftId, CabinClassType name);
+    CabinClassResponse updateCabinClass(UUID userId, UUID id, CabinClassRequest request);
+    void deleteCabinClass(UUID userId, UUID id);
 }

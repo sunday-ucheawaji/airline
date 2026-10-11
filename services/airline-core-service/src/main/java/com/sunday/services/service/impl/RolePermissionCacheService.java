@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.dto.PermissionDTO;
 import com.sunday.services.client.RoleClient;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class RolePermissionCacheService {
     private final RoleClient roleClient;
 
     @Cacheable(cacheNames = "rolePermissions", key = "#roleId")
-    public List<String> getPermissionNamesForRole(Long roleId) {
+    public List<String> getPermissionNamesForRole(UUID roleId) {
         List<PermissionDTO> permissions = roleClient.getPermissionsForRole(roleId);
         if (permissions == null) {
             throw new RuntimeException("user-service unavailable");

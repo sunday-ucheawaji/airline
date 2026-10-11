@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS flight_meals (
-    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
-    flight_id     BIGINT NOT NULL,
-    meal_id       BIGINT NOT NULL,
+    id            CHAR(36) PRIMARY KEY,
+    flight_id     CHAR(36) NOT NULL,
+    meal_id       CHAR(36) NOT NULL,
     available     BIT(1) NOT NULL,
     price         DECIMAL(12,2),
     display_order INT,

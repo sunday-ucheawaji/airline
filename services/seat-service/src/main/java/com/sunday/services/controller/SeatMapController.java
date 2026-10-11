@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.SeatMapRequest;
 import com.sunday.common_lib.payload.response.SeatMapBulkCreateResponse;
 import com.sunday.common_lib.payload.response.SeatMapResponse;
@@ -21,7 +22,7 @@ public class SeatMapController {
 
     @PostMapping
     public ResponseEntity<SeatMapResponse> createSeatMap(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody SeatMapRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(seatMapService.createSeatMap(userId, request));
@@ -29,7 +30,7 @@ public class SeatMapController {
 
     @PostMapping("/create/bulk")
     public ResponseEntity<SeatMapBulkCreateResponse> createSeatMaps(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody List<SeatMapRequest> requests) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(seatMapService.createSeatMaps(userId, requests));
@@ -37,30 +38,30 @@ public class SeatMapController {
 
     @GetMapping("/{id}")
     public ResponseEntity<SeatMapResponse> getSeatMapById(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         return ResponseEntity.ok(seatMapService.getSeatMapById(userId, id));
     }
 
     @GetMapping("/cabin-class/{cabinClassId}")
     public ResponseEntity<SeatMapResponse> getSeatMapsByCabinClass(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long cabinClassId) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID cabinClassId) {
         return ResponseEntity.ok(seatMapService.getSeatMapsByCabinClass(userId, cabinClassId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<SeatMapResponse> updateSeatMap(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id,
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id,
             @Valid @RequestBody SeatMapRequest request) {
         return ResponseEntity.ok(seatMapService.updateSeatMap(userId, id, request));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSeatMap(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         seatMapService.deleteSeatMap(userId, id);
         return ResponseEntity.noContent().build();
     }

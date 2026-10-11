@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS email_verification_tokens (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id     BIGINT        NOT NULL,
+    id          CHAR(36)    PRIMARY KEY,
+    user_id     CHAR(36)    NOT NULL,
     token_hash  VARCHAR(255)  NOT NULL,
     expires_at  DATETIME      NOT NULL,
     used_at     DATETIME,

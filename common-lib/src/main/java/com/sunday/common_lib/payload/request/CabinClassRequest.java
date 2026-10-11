@@ -5,6 +5,7 @@ import com.sunday.common_lib.enums.SeatType;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -23,7 +24,7 @@ public class CabinClassRequest {
     private String description;
 
     @NotNull
-    private Long aircraftId;
+    private UUID aircraftId;
 
     private Integer displayOrder;
     private Boolean isActive;

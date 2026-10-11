@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/roles")
@@ -48,21 +49,28 @@ public class RoleController {
 
     @GetMapping("/{roleId}")
     public ResponseEntity<RoleDTO> getRoleById(
-            @PathVariable Long roleId) {
+            @PathVariable UUID roleId) {
         Role role = roleService.getRoleById(roleId);
+        return ResponseEntity.ok(RoleMapper.toDTO(role));
+    }
+
+    @GetMapping("/by-name/{name}")
+    public ResponseEntity<RoleDTO> getRoleByName(
+            @PathVariable String name) {
+        Role role = roleService.getRoleByName(name);
         return ResponseEntity.ok(RoleMapper.toDTO(role));
     }
 
     @GetMapping("/{roleId}/permissions")
     public ResponseEntity<List<PermissionDTO>> getRolePermissions(
-            @PathVariable Long roleId) {
+            @PathVariable UUID roleId) {
         List<Permission> permissions = roleService.getPermissionsForRole(roleId);
         return ResponseEntity.ok(PermissionMapper.toDTOList(permissions));
     }
 
     @PostMapping("/{roleId}/permissions")
     public ResponseEntity<List<PermissionDTO>> assignPermissionsToRole(
-            @PathVariable Long roleId,
+            @PathVariable UUID roleId,
             @Valid @RequestBody AssignPermissionsRequest request) {
         List<Permission> permissions = roleService.assignPermissionsToRole(roleId, request);
         return ResponseEntity.ok(PermissionMapper.toDTOList(permissions));
@@ -70,17 +78,17 @@ public class RoleController {
 
     @DeleteMapping("/{roleId}/permissions/{permissionId}")
     public ResponseEntity<Void> unassignPermissionFromRole(
-            @PathVariable Long roleId,
-            @PathVariable Long permissionId) {
+            @PathVariable UUID roleId,
+            @PathVariable UUID permissionId) {
         roleService.unassignPermissionFromRole(roleId, permissionId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{roleId}/users/{userId}")
     public ResponseEntity<Void> assignPlatformRoleToUser(
-            @PathVariable Long roleId,
-            @PathVariable Long userId,
-            @RequestHeader("X-User-Id") Long grantorUserId,
+            @PathVariable UUID roleId,
+            @PathVariable UUID userId,
+            @RequestHeader("X-User-Id") UUID grantorUserId,
             @RequestHeader(value = "X-User-Roles", defaultValue = "") String grantorRoles) {
         roleService.assignPlatformRoleToUser(roleId, userId, grantorUserId, parseRoles(grantorRoles));
         return ResponseEntity.noContent().build();
@@ -88,8 +96,8 @@ public class RoleController {
 
     @DeleteMapping("/{roleId}/users/{userId}")
     public ResponseEntity<Void> unassignPlatformRoleFromUser(
-            @PathVariable Long roleId,
-            @PathVariable Long userId,
+            @PathVariable UUID roleId,
+            @PathVariable UUID userId,
             @RequestHeader(value = "X-User-Roles", defaultValue = "") String grantorRoles) {
         roleService.unassignPlatformRoleFromUser(roleId, userId, parseRoles(grantorRoles));
         return ResponseEntity.noContent().build();

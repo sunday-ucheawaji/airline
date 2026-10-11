@@ -5,20 +5,21 @@ import com.sunday.common_lib.payload.request.MemberRoleUpdateRequest;
 import com.sunday.common_lib.payload.request.MemberStatusUpdateRequest;
 import com.sunday.common_lib.payload.response.AirlineMembershipResponse;
 
+import java.util.UUID;
 import java.util.List;
 
 public interface AirlineMembershipService {
 
-    AirlineMembershipResponse invite(Long airlineId, AirlineInvitationRequest request, Long actorUserId);
+    AirlineMembershipResponse invite(UUID airlineId, AirlineInvitationRequest request, UUID actorUserId);
 
-    List<AirlineMembershipResponse> listMembers(Long airlineId, Long actorUserId);
+    List<AirlineMembershipResponse> listMembers(UUID airlineId, UUID actorUserId);
 
-    AirlineMembershipResponse accept(Long airlineId, Long membershipId, Long actorUserId);
+    AirlineMembershipResponse accept(UUID airlineId, UUID membershipId, UUID actorUserId);
 
-    AirlineMembershipResponse updateRole(Long airlineId, Long membershipId, MemberRoleUpdateRequest request, Long actorUserId);
+    AirlineMembershipResponse updateRole(UUID airlineId, UUID membershipId, MemberRoleUpdateRequest request, UUID actorUserId);
 
-    AirlineMembershipResponse updateStatus(Long airlineId, Long membershipId, MemberStatusUpdateRequest request, Long actorUserId);
+    AirlineMembershipResponse updateStatus(UUID airlineId, UUID membershipId, MemberStatusUpdateRequest request, UUID actorUserId);
 
     /** Revokes a still-PENDING invite, or removes an ACTIVE/SUSPENDED member, depending on the row's current status. */
-    void removeOrRevoke(Long airlineId, Long membershipId, Long actorUserId);
+    void removeOrRevoke(UUID airlineId, UUID membershipId, UUID actorUserId);
 }

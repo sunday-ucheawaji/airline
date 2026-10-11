@@ -4,6 +4,7 @@ import com.sunday.common_lib.enums.FlightStatus;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -11,15 +12,15 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class FlightInstanceResponse {
 
-    private Long id;
+    private UUID id;
 
-    private Long flightId;
+    private UUID flightId;
     private String flightNumber;
 
-    private Long airlineId;
+    private UUID airlineId;
     private String airlineName;
     private String airlineLogo;
-    private Long aircraftId;
+    private UUID aircraftId;
     private String aircraftModal;
     private String aircraftCode;
     private AirportResponse departureAirport;

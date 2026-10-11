@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.event.FlightInstanceAircraftChangedEvent;
@@ -53,17 +54,17 @@ public class CabinInventoryServiceImpl implements CabinInventoryService {
 
     @Override
     public void materializeForFlightInstances(FlightInstancesBulkCreatedEvent event) {
-        List<Long> requestedIds = event.getFlightInstanceIds();
+        List<UUID> requestedIds = event.getFlightInstanceIds();
         if (requestedIds == null || requestedIds.isEmpty()) {
             return;
         }
         log.info("Received FlightInstancesBulkCreatedEvent: flightId={}, aircraftId={}, count={}",
                 event.getFlightId(), event.getAircraftId(), requestedIds.size());
 
-        Set<Long> alreadyProcessed = flightInstanceCabinRepository.findAllByFlightInstanceIdIn(requestedIds).stream()
+        Set<UUID> alreadyProcessed = flightInstanceCabinRepository.findAllByFlightInstanceIdIn(requestedIds).stream()
                 .map(FlightInstanceCabin::getFlightInstanceId)
                 .collect(Collectors.toSet());
-        List<Long> pendingIds = requestedIds.stream().filter(id -> !alreadyProcessed.contains(id)).toList();
+        List<UUID> pendingIds = requestedIds.stream().filter(id -> !alreadyProcessed.contains(id)).toList();
 
         if (pendingIds.isEmpty()) {
             log.info("Bulk event for flightId={} aircraftId={}: all {} instances already processed — skipping",
@@ -104,6 +105,9 @@ public class CabinInventoryServiceImpl implements CabinInventoryService {
                 continue;
             }
 
+            fic.setCabinClass(cabinClass);
+            fic.setTotalSeats(desiredCount);
+            flightInstanceCabinRepository.save(fic);
             reconcileCabinSeats(fic, desiredSeats, desiredCount, event.getFlightId(), event.getFlightInstanceId());
         }
 
@@ -117,10 +121,10 @@ public class CabinInventoryServiceImpl implements CabinInventoryService {
                 event.getFlightInstanceId(), event.getNewAircraftId());
     }
 
-    private void materializeCabinsAndSeats(Long aircraftId, Long flightId, List<Long> flightInstanceIds) {
+    private void materializeCabinsAndSeats(UUID aircraftId, UUID flightId, List<UUID> flightInstanceIds) {
         List<CabinClass> cabinClasses = cabinClassRepository.findByAircraftId(aircraftId);
 
-        Map<Long, List<Seat>> seatsByCabinClassId = new HashMap<>();
+        Map<UUID, List<Seat>> seatsByCabinClassId = new HashMap<>();
         for (CabinClass cabinClass : cabinClasses) {
             List<Seat> seats = cabinClass.getSeatMap() != null
                     ? seatRepository.findBySeatMapId(cabinClass.getSeatMap().getId())
@@ -129,7 +133,7 @@ public class CabinInventoryServiceImpl implements CabinInventoryService {
         }
 
         List<FlightInstanceCabin> cabinsToSave = new ArrayList<>();
-        for (Long flightInstanceId : flightInstanceIds) {
+        for (UUID flightInstanceId : flightInstanceIds) {
             for (CabinClass cabinClass : cabinClasses) {
                 cabinsToSave.add(FlightInstanceCabin.builder()
                         .flightInstanceId(flightInstanceId)
@@ -152,12 +156,12 @@ public class CabinInventoryServiceImpl implements CabinInventoryService {
     }
 
     private void reconcileCabinSeats(FlightInstanceCabin fic, List<Seat> desiredSeats, int desiredCount,
-                                     Long flightId, Long flightInstanceId) {
+                                     UUID flightId, UUID flightInstanceId) {
         List<SeatInstance> currentSeats = seatInstanceRepository.findByFlightInstanceCabinId(fic.getId());
         int currentTotal = currentSeats.size();
 
         if (currentTotal < desiredCount) {
-            Set<Long> usedSeatIds = currentSeats.stream().map(si -> si.getSeat().getId()).collect(Collectors.toSet());
+            Set<UUID> usedSeatIds = currentSeats.stream().map(si -> si.getSeat().getId()).collect(Collectors.toSet());
             List<Seat> unusedSeats = desiredSeats.stream().filter(s -> !usedSeatIds.contains(s.getId())).toList();
             int toAdd = desiredCount - currentTotal;
             seatInstanceRepository.saveAll(buildAvailableSeatInstances(
@@ -176,7 +180,7 @@ public class CabinInventoryServiceImpl implements CabinInventoryService {
     }
 
     private List<SeatInstance> buildAvailableSeatInstances(List<Seat> seats, FlightInstanceCabin fic,
-                                                           Long flightId, Long flightInstanceId) {
+                                                           UUID flightId, UUID flightInstanceId) {
         return seats.stream()
                 .map(seat -> SeatInstance.builder()
                         .flightId(flightId)

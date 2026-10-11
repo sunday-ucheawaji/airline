@@ -5,6 +5,10 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 /**
  * Inbox-pattern dedup row for the booking.confirmed/booking.cancelled consumers: a unique
@@ -22,11 +26,13 @@ import java.time.LocalDateTime;
 public class ProcessedBookingEvent {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Column(name = "booking_id", nullable = false)
-    private Long bookingId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID bookingId;
 
     @Column(name = "event_type", nullable = false, length = 50)
     private String eventType;

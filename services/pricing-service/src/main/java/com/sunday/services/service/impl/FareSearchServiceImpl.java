@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.FareStatus;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.payload.request.FareSearchRequest;
@@ -42,12 +43,12 @@ public class FareSearchServiceImpl implements FareSearchService {
             throw new BadRequestException(String.format(ErrorMessageUtil.FARE_SEARCH_TOO_LARGE, MAX_DEPARTURES));
         }
 
-        Set<Long> flightIds = departures.stream().map(FlightDeparture::getFlightId).collect(Collectors.toSet());
+        Set<UUID> flightIds = departures.stream().map(FlightDeparture::getFlightId).collect(Collectors.toSet());
         LocalDate firstDate = departures.stream().map(FlightDeparture::getDepartureDate).min(LocalDate::compareTo).orElseThrow();
         LocalDate lastDate = departures.stream().map(FlightDeparture::getDepartureDate).max(LocalDate::compareTo).orElseThrow();
         Instant now = Instant.now(clock);
 
-        Map<Long, List<Fare>> candidatesByFlight = fareRepository
+        Map<UUID, List<Fare>> candidatesByFlight = fareRepository
                 .findSearchCandidates(flightIds, request.getCabinClass(), FareStatus.PUBLISHED, now, firstDate, lastDate)
                 .stream()
                 .collect(Collectors.groupingBy(Fare::getFlightId));

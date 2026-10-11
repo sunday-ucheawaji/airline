@@ -1,5 +1,6 @@
 package com.sunday.services.integration;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
 
@@ -12,5 +13,5 @@ public interface PricingIntegrationService {
      * it does not belong to {@code flightId}/{@code cabinClass} — a fare priced for a different flight or cabin
      * must never be attached to this booking.
      */
-    FareQuoteResponse quoteFare(Long fareId, Long flightId, CabinClassType cabinClass, LocalDate departureDate);
+    FareQuoteResponse quoteFare(UUID fareId, UUID flightId, CabinClassType cabinClass, LocalDate departureDate);
 }

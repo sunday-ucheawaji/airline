@@ -5,6 +5,10 @@ import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "flight_instance_cabins")
@@ -18,11 +22,13 @@ import java.util.List;
 public class FlightInstanceCabin {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Column(name = "flight_instance_id", nullable = false)
-    private Long flightInstanceId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID flightInstanceId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "cabin_class_id", nullable = false)

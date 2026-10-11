@@ -1,5 +1,6 @@
 package com.sunday.services.specification;
 
+import java.util.UUID;
 import com.sunday.services.model.FlightMeal;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
@@ -9,7 +10,7 @@ import java.util.List;
 
 public class FlightMealSpecification {
 
-    public static Specification<FlightMeal> hasFlightId(Long flightId) {
+    public static Specification<FlightMeal> hasFlightId(UUID flightId) {
         return (root, query, criteriaBuilder) -> {
             if (flightId == null) {
                 return criteriaBuilder.conjunction();
@@ -18,7 +19,7 @@ public class FlightMealSpecification {
         };
     }
 
-    public static Specification<FlightMeal> hasMealId(Long mealId) {
+    public static Specification<FlightMeal> hasMealId(UUID mealId) {
         return (root, query, criteriaBuilder) -> {
             if (mealId == null) {
                 return criteriaBuilder.conjunction();
@@ -36,7 +37,7 @@ public class FlightMealSpecification {
         };
     }
 
-    public static Specification<FlightMeal> hasFlightIdAndMealId(Long flightId, Long mealId) {
+    public static Specification<FlightMeal> hasFlightIdAndMealId(UUID flightId, UUID mealId) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (flightId != null) {
@@ -62,7 +63,7 @@ public class FlightMealSpecification {
     }
 
     public static Specification<FlightMeal> buildSpecification(
-            Long flightId, Long mealId, Boolean available) {
+            UUID flightId, UUID mealId, Boolean available) {
         return Specification
                 .where(hasFlightId(flightId))
                 .and(hasMealId(mealId))

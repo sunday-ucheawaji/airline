@@ -5,6 +5,7 @@ import com.sunday.common_lib.enums.AirlineStatus;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -13,7 +14,7 @@ import java.time.Instant;
 @Builder
 public class AirlineResponse {
 
-    private Long id;
+    private UUID id;
 
     private String legalName;
     private String name;
@@ -31,7 +32,7 @@ public class AirlineResponse {
     private AirlineStatus status;
     private String alliance;
 
-    private Long headquartersCityId;
+    private UUID headquartersCityId;
 
     private Instant createdAt;
     private Instant updatedAt;

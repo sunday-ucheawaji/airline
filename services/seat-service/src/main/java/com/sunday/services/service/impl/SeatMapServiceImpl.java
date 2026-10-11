@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.SeatPermissions;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
@@ -39,12 +40,12 @@ public class SeatMapServiceImpl implements SeatMapService {
     private final AirlineIntegrationService airlineIntegrationService;
 
     @Override
-    public SeatMapResponse createSeatMap(Long userId, SeatMapRequest request) {
+    public SeatMapResponse createSeatMap(UUID userId, SeatMapRequest request) {
         CabinClass cabinClass = cabinClassRepository.findById(request.getCabinClassId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.CABIN_CLASS_NOT_FOUND_BY_ID, request.getCabinClassId())));
 
-        Long airlineId = airlineIntegrationService.resolveAirlineIdForAircraft(cabinClass.getAircraftId());
+        UUID airlineId = airlineIntegrationService.resolveAirlineIdForAircraft(cabinClass.getAircraftId());
         airlineIntegrationService.requirePermission(userId, airlineId, SeatPermissions.SEAT_CONFIG_MANAGE);
 
         if (seatMapRepository.existsByAirlineIdAndCabinClassIdAndName(
@@ -62,16 +63,16 @@ public class SeatMapServiceImpl implements SeatMapService {
     }
 
     @Override
-    public SeatMapBulkCreateResponse createSeatMaps(Long userId, List<SeatMapRequest> requests) {
+    public SeatMapBulkCreateResponse createSeatMaps(UUID userId, List<SeatMapRequest> requests) {
         if (requests.isEmpty()) {
             return SeatMapBulkCreateResponse.builder().created(List.of()).skipped(List.of()).build();
         }
 
-        Set<Long> cabinClassIds = requests.stream()
+        Set<UUID> cabinClassIds = requests.stream()
                 .map(SeatMapRequest::getCabinClassId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        Map<Long, CabinClass> cabinClassesById = cabinClassRepository.findAllById(cabinClassIds).stream()
+        Map<UUID, CabinClass> cabinClassesById = cabinClassRepository.findAllById(cabinClassIds).stream()
                 .collect(Collectors.toMap(CabinClass::getId, Function.identity()));
 
         List<SeatMapBulkCreateResponse.SkippedRequest> skipped = new ArrayList<>();
@@ -84,14 +85,14 @@ public class SeatMapServiceImpl implements SeatMapService {
             }
         }
 
-        Set<Long> aircraftIds = withCabinClass.stream()
+        Set<UUID> aircraftIds = withCabinClass.stream()
                 .map(req -> cabinClassesById.get(req.getCabinClassId()).getAircraftId())
                 .collect(Collectors.toSet());
-        Map<Long, Long> airlineIdByAircraft = airlineIntegrationService.resolveAirlineIdsForAircrafts(aircraftIds);
+        Map<UUID, UUID> airlineIdByAircraft = airlineIntegrationService.resolveAirlineIdsForAircrafts(aircraftIds);
 
         List<SeatMapRequest> resolvable = new ArrayList<>();
         for (SeatMapRequest req : withCabinClass) {
-            Long aircraftId = cabinClassesById.get(req.getCabinClassId()).getAircraftId();
+            UUID aircraftId = cabinClassesById.get(req.getCabinClassId()).getAircraftId();
             if (airlineIdByAircraft.containsKey(aircraftId)) {
                 resolvable.add(req);
             } else {
@@ -99,25 +100,25 @@ public class SeatMapServiceImpl implements SeatMapService {
             }
         }
 
-        Set<Long> airlineIds = resolvable.stream()
+        Set<UUID> airlineIds = resolvable.stream()
                 .map(req -> airlineIdByAircraft.get(cabinClassesById.get(req.getCabinClassId()).getAircraftId()))
                 .collect(Collectors.toSet());
         airlineIntegrationService.requirePermission(userId, airlineIds, SeatPermissions.SEAT_CONFIG_MANAGE);
 
-        Set<Long> resolvableCabinClassIds = resolvable.stream()
+        Set<UUID> resolvableCabinClassIds = resolvable.stream()
                 .map(SeatMapRequest::getCabinClassId)
                 .collect(Collectors.toSet());
-        Set<Long> cabinClassesWithSeatMap = resolvableCabinClassIds.isEmpty()
+        Set<UUID> cabinClassesWithSeatMap = resolvableCabinClassIds.isEmpty()
                 ? Set.of()
                 : seatMapRepository.findByCabinClassIdIn(resolvableCabinClassIds).stream()
                         .map(sm -> sm.getCabinClass().getId())
                         .collect(Collectors.toSet());
 
-        Set<Long> seenCabinClassIds = new HashSet<>();
+        Set<UUID> seenCabinClassIds = new HashSet<>();
         List<SeatMap> toSave = new ArrayList<>();
         for (SeatMapRequest req : resolvable) {
             CabinClass cabinClass = cabinClassesById.get(req.getCabinClassId());
-            Long cabinClassId = cabinClass.getId();
+            UUID cabinClassId = cabinClass.getId();
             if (cabinClassesWithSeatMap.contains(cabinClassId)) {
                 skipped.add(skip(req, String.format(ErrorMessageUtil.SEAT_MAP_CABIN_CLASS_ALREADY_HAS_SEAT_MAP, cabinClassId)));
             } else if (!seenCabinClassIds.add(cabinClassId)) {
@@ -144,7 +145,7 @@ public class SeatMapServiceImpl implements SeatMapService {
 
     @Override
     @Transactional(readOnly = true)
-    public SeatMapResponse getSeatMapById(Long userId, Long id) {
+    public SeatMapResponse getSeatMapById(UUID userId, UUID id) {
         SeatMap seatMap = seatMapRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_MAP_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, seatMap.getAirlineId(), SeatPermissions.SEAT_READ);
@@ -153,7 +154,7 @@ public class SeatMapServiceImpl implements SeatMapService {
 
     @Override
     @Transactional(readOnly = true)
-    public SeatMapResponse getSeatMapsByCabinClass(Long userId, Long cabinClassId) {
+    public SeatMapResponse getSeatMapsByCabinClass(UUID userId, UUID cabinClassId) {
         cabinClassRepository.findById(cabinClassId).orElseThrow(
                 () -> new ResourceNotFoundException(String.format(ErrorMessageUtil.CABIN_CLASS_NOT_FOUND_BY_ID, cabinClassId))
         );
@@ -169,7 +170,7 @@ public class SeatMapServiceImpl implements SeatMapService {
     }
 
     @Override
-    public SeatMapResponse updateSeatMap(Long userId, Long id, SeatMapRequest request) {
+    public SeatMapResponse updateSeatMap(UUID userId, UUID id, SeatMapRequest request) {
         SeatMap existing = seatMapRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_MAP_NOT_FOUND_BY_ID, id)));
 
@@ -186,7 +187,7 @@ public class SeatMapServiceImpl implements SeatMapService {
     }
 
     @Override
-    public void deleteSeatMap(Long userId, Long id) {
+    public void deleteSeatMap(UUID userId, UUID id) {
         SeatMap existing = seatMapRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_MAP_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, existing.getAirlineId(), SeatPermissions.SEAT_CONFIG_MANAGE);

@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.CaseOwnerChangeRequest;
 import com.sunday.common_lib.payload.request.InformationRequestCreateRequest;
 import com.sunday.common_lib.payload.request.InformationResponseRequest;
@@ -19,31 +20,31 @@ import java.util.List;
 public interface OnboardingWorkflowService {
 
     // ----- Case ownership (onboarding officer) -----
-    OnboardingApplicationResponse claim(Long applicationId, Long actorUserId);
-    OnboardingApplicationResponse transfer(Long applicationId, Long actorUserId, CaseOwnerChangeRequest request);
-    OnboardingApplicationResponse release(Long applicationId, Long actorUserId, String reason);
-    OnboardingApplicationResponse takeOver(Long applicationId, Long actorUserId, Collection<String> actorRoles, CaseOwnerChangeRequest request);
-    List<CaseOwnerHistoryResponse> getCaseOwnerHistory(Long applicationId);
+    OnboardingApplicationResponse claim(UUID applicationId, UUID actorUserId);
+    OnboardingApplicationResponse transfer(UUID applicationId, UUID actorUserId, CaseOwnerChangeRequest request);
+    OnboardingApplicationResponse release(UUID applicationId, UUID actorUserId, String reason);
+    OnboardingApplicationResponse takeOver(UUID applicationId, UUID actorUserId, Collection<String> actorRoles, CaseOwnerChangeRequest request);
+    List<CaseOwnerHistoryResponse> getCaseOwnerHistory(UUID applicationId);
     /** Officers when {@code stage} is null, otherwise the specialists holding that stage's role. */
     List<ReviewerResponse> getReviewers(OnboardingStage stage);
 
     // ----- Stages -----
-    OnboardingStageResponse assignStage(Long applicationId, OnboardingStage stage, Long actorUserId, StageAssigneeRequest request);
-    OnboardingStageResponse decideStage(Long applicationId, OnboardingStage stage, boolean approve, Long actorUserId, String comments);
-    List<OnboardingStageResponse> getStages(Long applicationId);
+    OnboardingStageResponse assignStage(UUID applicationId, OnboardingStage stage, UUID actorUserId, StageAssigneeRequest request);
+    OnboardingStageResponse decideStage(UUID applicationId, OnboardingStage stage, boolean approve, UUID actorUserId, String comments);
+    List<OnboardingStageResponse> getStages(UUID applicationId);
 
     // ----- Information requests, comments -----
     /** {@code stage} null means the case owner is asking, on behalf of the whole review. */
-    InformationRequestResponse requestInformation(Long applicationId, OnboardingStage stage, Long actorUserId, String message);
-    List<InformationRequestResponse> getInformationRequests(Long applicationId);
-    OnboardingReviewResponse comment(Long applicationId, Long actorUserId, String message);
+    InformationRequestResponse requestInformation(UUID applicationId, OnboardingStage stage, UUID actorUserId, String message);
+    List<InformationRequestResponse> getInformationRequests(UUID applicationId);
+    OnboardingReviewResponse comment(UUID applicationId, UUID actorUserId, String message);
 
     // ----- Hand-off to final approval -----
-    OnboardingApplicationResponse refer(Long applicationId, Long actorUserId, String comments);
-    OnboardingApplicationResponse sendBack(Long applicationId, Long actorUserId, String comments);
+    OnboardingApplicationResponse refer(UUID applicationId, UUID actorUserId, String comments);
+    OnboardingApplicationResponse sendBack(UUID applicationId, UUID actorUserId, String comments);
 
     // ----- Applicant side -----
-    OnboardingApplicationResponse withdraw(Long applicationId, Long applicantUserId);
-    List<InformationRequestResponse> getMyInformationRequests(Long applicationId, Long applicantUserId);
-    InformationRequestResponse respond(Long applicationId, Long requestId, Long applicantUserId, InformationResponseRequest request);
+    OnboardingApplicationResponse withdraw(UUID applicationId, UUID applicantUserId);
+    List<InformationRequestResponse> getMyInformationRequests(UUID applicationId, UUID applicantUserId);
+    InformationRequestResponse respond(UUID applicationId, UUID requestId, UUID applicantUserId, InformationResponseRequest request);
 }

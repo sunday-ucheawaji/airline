@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -42,7 +43,7 @@ public class PassengerRequest {
     private String seatNumber;
 
     @NotNull(message = ErrorMessageUtil.PASSENGER_SEAT_INSTANCE_ID_MANDATORY)
-    private Long seatInstanceId;
+    private UUID seatInstanceId;
 
     private String passportNumber;
     private String nationality;

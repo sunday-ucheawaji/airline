@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.common_lib.payload.request.FlightRequest;
 import com.sunday.common_lib.payload.response.FlightResponse;
@@ -11,18 +12,18 @@ import java.util.Map;
 
 public interface FlightService {
 
-    FlightResponse createFlight(Long userId, FlightRequest request);
-    List<FlightResponse> createFlights(Long userId, List<FlightRequest> requests);
-    FlightResponse getFlightById(Long id);
+    FlightResponse createFlight(UUID userId, FlightRequest request);
+    List<FlightResponse> createFlights(UUID userId, List<FlightRequest> requests);
+    FlightResponse getFlightById(UUID id);
     FlightResponse getFlightByNumber(String flightNumber);
-    Page<FlightResponse> getFlightsByAirline(Long userId,
-                                             Long airlineId,
-                                             Long departureAirportId,
-                                             Long arrivalAirportId,
+    Page<FlightResponse> getFlightsByAirline(UUID userId,
+                                             UUID airlineId,
+                                             UUID departureAirportId,
+                                             UUID arrivalAirportId,
                                              Pageable pageable);
-    FlightResponse updateFlight(Long id, FlightRequest request, Long userId);
-    FlightResponse changeStatus(Long id, FlightStatus status, Long userId);
-    void deleteFlight(Long id, Long userId);
+    FlightResponse updateFlight(UUID id, FlightRequest request, UUID userId);
+    FlightResponse changeStatus(UUID id, FlightStatus status, UUID userId);
+    void deleteFlight(UUID id, UUID userId);
 
-    Map<Long, FlightResponse> getFlightsByIds(List<Long> ids);
+    Map<UUID, FlightResponse> getFlightsByIds(List<UUID> ids);
 }

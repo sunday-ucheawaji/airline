@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public class BookingPerformanceRepositoryImpl implements BookingPerformanceRepository {
@@ -18,7 +19,7 @@ public class BookingPerformanceRepositoryImpl implements BookingPerformanceRepos
     private EntityManager entityManager;
 
     @Override
-    public Long countBookingsByFlightIdAndDateRange(Long flightId, LocalDateTime startDate, LocalDateTime endDate) {
+    public Long countBookingsByFlightIdAndDateRange(UUID flightId, LocalDateTime startDate, LocalDateTime endDate) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Long> query = cb.createQuery(Long.class);
         Root<Booking> booking = query.from(Booking.class);
@@ -35,7 +36,7 @@ public class BookingPerformanceRepositoryImpl implements BookingPerformanceRepos
     }
 
     @Override
-    public Double sumRevenueByFlightIdAndDateRange(Long flightId, LocalDateTime startDate, LocalDateTime endDate) {
+    public Double sumRevenueByFlightIdAndDateRange(UUID flightId, LocalDateTime startDate, LocalDateTime endDate) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Double> query = cb.createQuery(Double.class);
         Root<Booking> booking = query.from(Booking.class);
@@ -56,7 +57,7 @@ public class BookingPerformanceRepositoryImpl implements BookingPerformanceRepos
 
     @Override
     public List<Booking> findBookingsByFlightIdAndDateRange(
-            Long flightId, LocalDateTime startDate, LocalDateTime endDate) {
+            UUID flightId, LocalDateTime startDate, LocalDateTime endDate) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Booking> query = cb.createQuery(Booking.class);
         Root<Booking> booking = query.from(Booking.class);

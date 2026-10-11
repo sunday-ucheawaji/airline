@@ -6,14 +6,14 @@
 -- an irreversible money-movement action, kept independently revocable even though both are granted to the same
 -- roles today. PAYMENT_SUPPORT_READ mirrors BOOKING_SUPPORT_READ: platform staff only, never an airline role.
 
-INSERT INTO permissions (name, created_at, updated_at) VALUES
-    ('PAYMENT_READ', NOW(), NOW()),
-    ('PAYMENT_REFUND_EXECUTE', NOW(), NOW()),
-    ('PAYMENT_READ_OWN', NOW(), NOW()),
-    ('PAYMENT_SUPPORT_READ', NOW(), NOW());
+INSERT INTO permissions (id, name, created_at, updated_at) VALUES
+    (UUID(), 'PAYMENT_READ', NOW(), NOW()),
+    (UUID(), 'PAYMENT_REFUND_EXECUTE', NOW(), NOW()),
+    (UUID(), 'PAYMENT_READ_OWN', NOW(), NOW()),
+    (UUID(), 'PAYMENT_SUPPORT_READ', NOW(), NOW());
 
-INSERT INTO role_permissions (role_id, permission_id, created_at)
-SELECT r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN (
+INSERT INTO role_permissions (id, role_id, permission_id, created_at)
+SELECT UUID(), r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN (
     -- SUPER_ADMIN and platform support: platform permission only, never an airline one
     ('SUPER_ADMIN', 'PAYMENT_SUPPORT_READ'),
     ('GDS_PLATFORM_ADMIN', 'PAYMENT_SUPPORT_READ'),

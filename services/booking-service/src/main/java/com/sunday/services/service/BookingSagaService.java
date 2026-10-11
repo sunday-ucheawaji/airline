@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.BookingRequest;
 import com.sunday.common_lib.payload.response.PaymentInitiateResponse;
 import com.sunday.services.model.BookingSaga;
@@ -15,26 +16,26 @@ import java.util.List;
  */
 public interface BookingSagaService {
 
-    String hashRequest(BookingRequest request, Long userId);
+    String hashRequest(BookingRequest request, UUID userId);
 
     /** Claims a new saga row for (userId, idempotencyKey), or returns the existing one. A FAILED/CANCELLED
      *  row whose stored requestHash still matches is reset to STARTED so it can be retried. */
-    BookingSaga tryStart(Long userId, String idempotencyKey, String requestHash);
+    BookingSaga tryStart(UUID userId, String idempotencyKey, String requestHash);
 
     PaymentInitiateResponse readResponse(BookingSaga saga);
 
-    void recordSeatsHeld(Long sagaId, String bookingReference, List<Long> seatInstanceIds);
+    void recordSeatsHeld(UUID sagaId, String bookingReference, List<UUID> seatInstanceIds);
 
-    void recordBookingCreated(Long sagaId, Long bookingId);
+    void recordBookingCreated(UUID sagaId, UUID bookingId);
 
-    void recordPaymentInitiated(Long sagaId, PaymentInitiateResponse response);
+    void recordPaymentInitiated(UUID sagaId, PaymentInitiateResponse response);
 
-    void complete(Long bookingId);
+    void complete(UUID bookingId);
 
-    void cancel(Long bookingId);
+    void cancel(UUID bookingId);
 
-    void fail(Long sagaId, String error);
+    void fail(UUID sagaId, String error);
 
     /** True the first time this (paymentId, eventType) pair is seen; false on a redelivered duplicate. */
-    boolean claimPaymentEvent(Long paymentId, String eventType);
+    boolean claimPaymentEvent(UUID paymentId, String eventType);
 }

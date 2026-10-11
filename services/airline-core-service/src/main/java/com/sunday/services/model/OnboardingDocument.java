@@ -8,6 +8,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 /**
  * Metadata of a document uploaded for an onboarding application. The file itself lives in private object storage
@@ -24,8 +28,9 @@ import java.time.Instant;
 public class OnboardingDocument {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "application_id", nullable = false)
@@ -77,10 +82,12 @@ public class OnboardingDocument {
 
     // Logical cross-service references to user-service's User — not physical FKs.
     @Column(name = "uploaded_by_user_id", nullable = false)
-    private Long uploadedByUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID uploadedByUserId;
 
     @Column(name = "verified_by_user_id")
-    private Long verifiedByUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID verifiedByUserId;
 
     @Column(name = "verified_at")
     private Instant verifiedAt;

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -14,13 +15,13 @@ import java.math.BigDecimal;
 public class FlightCabinAncillaryRequest {
 
     @NotNull(message = "Flight ID is required")
-    private Long flightId;
+    private UUID flightId;
 
     @NotNull(message = "Cabin Class ID is required")
-    private Long cabinClassId;
+    private UUID cabinClassId;
 
     @NotNull(message = "Ancillary ID is required")
-    private Long ancillaryId;
+    private UUID ancillaryId;
 
     @NotNull(message = "Availability status is required")
     private Boolean available;

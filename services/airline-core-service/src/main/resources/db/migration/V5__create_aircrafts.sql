@@ -2,7 +2,7 @@
 -- (out of scope) — this migration only formalizes the table Hibernate was previously
 -- auto-generating for the pre-existing Aircraft entity, now that ddl-auto is `validate`.
 CREATE TABLE IF NOT EXISTS aircrafts (
-    id                       BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                       CHAR(36) PRIMARY KEY,
     aircraft_code            VARCHAR(20) NOT NULL,
     model                    VARCHAR(50) NOT NULL,
     manufacturer             VARCHAR(50) NOT NULL,
@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS aircrafts (
     next_maintenance_date    DATE,
     status                   ENUM('ACTIVE', 'MAINTENANCE', 'INACTIVE', 'RETIRED') NOT NULL DEFAULT 'ACTIVE',
     is_available              BOOLEAN NOT NULL DEFAULT TRUE,
-    airline_id               BIGINT NOT NULL,
-    current_airport_id       BIGINT,
+    airline_id               CHAR(36) NOT NULL,
+    current_airport_id       CHAR(36),
     created_at                DATETIME(6) NOT NULL,
     updated_at                DATETIME(6) NOT NULL,
     CONSTRAINT uk_aircrafts_code UNIQUE (aircraft_code),

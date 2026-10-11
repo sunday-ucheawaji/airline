@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.PlatformRoles;
 import com.sunday.common_lib.enums.ReviewDecision;
 import com.sunday.common_lib.exception.BadRequestException;
@@ -66,7 +67,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public OnboardingApplicationResponse claim(Long applicationId, Long actorUserId) {
+    public OnboardingApplicationResponse claim(UUID applicationId, UUID actorUserId) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, Set.of(OnboardingStatus.SUBMITTED), ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_CLAIMABLE);
         if (application.getCaseOwnerUserId() != null) {
@@ -83,7 +84,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public OnboardingApplicationResponse transfer(Long applicationId, Long actorUserId, CaseOwnerChangeRequest request) {
+    public OnboardingApplicationResponse transfer(UUID applicationId, UUID actorUserId, CaseOwnerChangeRequest request) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, UNDER_REVIEW, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_UNDER_REVIEW);
         support.requireCaseOwner(application, actorUserId);
@@ -92,7 +93,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public OnboardingApplicationResponse release(Long applicationId, Long actorUserId, String reason) {
+    public OnboardingApplicationResponse release(UUID applicationId, UUID actorUserId, String reason) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, UNDER_REVIEW, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_UNDER_REVIEW);
         support.requireCaseOwner(application, actorUserId);
@@ -106,7 +107,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public OnboardingApplicationResponse takeOver(Long applicationId, Long actorUserId, Collection<String> actorRoles,
+    public OnboardingApplicationResponse takeOver(UUID applicationId, UUID actorUserId, Collection<String> actorRoles,
                                                   CaseOwnerChangeRequest request) {
         if (!actorRoles.contains(PlatformRoles.SUPER_ADMIN)) {
             throw new OperationNotPermittedException(ErrorMessageUtil.ONBOARDING_TAKEOVER_SUPER_ADMIN_ONLY);
@@ -124,7 +125,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional(readOnly = true)
-    public List<CaseOwnerHistoryResponse> getCaseOwnerHistory(Long applicationId) {
+    public List<CaseOwnerHistoryResponse> getCaseOwnerHistory(UUID applicationId) {
         support.getVisibleOrThrow(applicationId);
         return caseOwnerHistoryRepository.findByApplicationIdOrderByCreatedAtAsc(applicationId).stream()
                 .map(OnboardingMapper::toCaseOwnerHistoryResponse)
@@ -140,12 +141,12 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public OnboardingStageResponse assignStage(Long applicationId, OnboardingStage stage, Long actorUserId, StageAssigneeRequest request) {
+    public OnboardingStageResponse assignStage(UUID applicationId, OnboardingStage stage, UUID actorUserId, StageAssigneeRequest request) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, UNDER_REVIEW, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_UNDER_REVIEW);
         support.requireCaseOwner(application, actorUserId);
 
-        Long assigneeUserId = request.getAssigneeUserId();
+        UUID assigneeUserId = request.getAssigneeUserId();
         if (support.isParty(application, assigneeUserId)) {
             throw new ConflictException(String.format(ErrorMessageUtil.ONBOARDING_REVIEWER_IS_PARTY, applicationId));
         }
@@ -162,7 +163,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public OnboardingStageResponse decideStage(Long applicationId, OnboardingStage stage, boolean approve, Long actorUserId, String comments) {
+    public OnboardingStageResponse decideStage(UUID applicationId, OnboardingStage stage, boolean approve, UUID actorUserId, String comments) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, UNDER_REVIEW, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_UNDER_REVIEW);
 
@@ -187,7 +188,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional(readOnly = true)
-    public List<OnboardingStageResponse> getStages(Long applicationId) {
+    public List<OnboardingStageResponse> getStages(UUID applicationId) {
         support.getVisibleOrThrow(applicationId);
         return stageRepository.findByApplicationId(applicationId).stream()
                 .sorted(Comparator.comparing(OnboardingStageReview::getStage))
@@ -199,7 +200,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public InformationRequestResponse requestInformation(Long applicationId, OnboardingStage stage, Long actorUserId, String message) {
+    public InformationRequestResponse requestInformation(UUID applicationId, OnboardingStage stage, UUID actorUserId, String message) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, UNDER_REVIEW, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_UNDER_REVIEW);
 
@@ -221,7 +222,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional(readOnly = true)
-    public List<InformationRequestResponse> getInformationRequests(Long applicationId) {
+    public List<InformationRequestResponse> getInformationRequests(UUID applicationId) {
         support.getVisibleOrThrow(applicationId);
         return informationRequestRepository.findByApplicationIdOrderByCreatedAtAsc(applicationId).stream()
                 .map(OnboardingMapper::toInformationRequestResponse)
@@ -230,7 +231,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public OnboardingReviewResponse comment(Long applicationId, Long actorUserId, String message) {
+    public OnboardingReviewResponse comment(UUID applicationId, UUID actorUserId, String message) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         return OnboardingMapper.toReviewResponse(
                 support.record(application, actorUserId, ReviewDecision.COMMENTED, message, null, null));
@@ -240,7 +241,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public OnboardingApplicationResponse refer(Long applicationId, Long actorUserId, String comments) {
+    public OnboardingApplicationResponse refer(UUID applicationId, UUID actorUserId, String comments) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, UNDER_REVIEW, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_UNDER_REVIEW);
         support.requireCaseOwner(application, actorUserId);
@@ -266,7 +267,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public OnboardingApplicationResponse sendBack(Long applicationId, Long actorUserId, String comments) {
+    public OnboardingApplicationResponse sendBack(UUID applicationId, UUID actorUserId, String comments) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, Set.of(OnboardingStatus.PENDING_APPROVAL),
                 ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_PENDING_APPROVAL);
@@ -284,7 +285,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public OnboardingApplicationResponse withdraw(Long applicationId, Long applicantUserId) {
+    public OnboardingApplicationResponse withdraw(UUID applicationId, UUID applicantUserId) {
         AirlineOnboardingApplication application = support.getOrThrow(applicationId);
         support.requireOwnedByApplicant(application, applicantUserId);
         support.requireStatus(application, WITHDRAWABLE, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_WITHDRAWABLE);
@@ -298,7 +299,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional(readOnly = true)
-    public List<InformationRequestResponse> getMyInformationRequests(Long applicationId, Long applicantUserId) {
+    public List<InformationRequestResponse> getMyInformationRequests(UUID applicationId, UUID applicantUserId) {
         support.requireOwnedByApplicant(support.getOrThrow(applicationId), applicantUserId);
         return informationRequestRepository.findByApplicationIdOrderByCreatedAtAsc(applicationId).stream()
                 .map(OnboardingMapper::toInformationRequestResponse)
@@ -307,7 +308,7 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     @Override
     @Transactional
-    public InformationRequestResponse respond(Long applicationId, Long requestId, Long applicantUserId, InformationResponseRequest request) {
+    public InformationRequestResponse respond(UUID applicationId, UUID requestId, UUID applicantUserId, InformationResponseRequest request) {
         AirlineOnboardingApplication application = support.getOrThrow(applicationId);
         support.requireOwnedByApplicant(application, applicantUserId);
 
@@ -328,9 +329,9 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
 
     // ---------- Helpers ----------
 
-    private OnboardingApplicationResponse changeCaseOwner(AirlineOnboardingApplication application, Long actorUserId,
-                                                          Long newOwnerUserId, CaseOwnerAction action, String reason) {
-        Long currentOwner = application.getCaseOwnerUserId();
+    private OnboardingApplicationResponse changeCaseOwner(AirlineOnboardingApplication application, UUID actorUserId,
+                                                          UUID newOwnerUserId, CaseOwnerAction action, String reason) {
+        UUID currentOwner = application.getCaseOwnerUserId();
         if (newOwnerUserId.equals(currentOwner)) {
             throw new BadRequestException(String.format(ErrorMessageUtil.ONBOARDING_CASE_ALREADY_CLAIMED, application.getId()));
         }
@@ -344,14 +345,14 @@ public class OnboardingWorkflowServiceImpl implements OnboardingWorkflowService 
         return OnboardingMapper.toResponse(saved);
     }
 
-    private void requireNotParty(AirlineOnboardingApplication application, Long userId) {
+    private void requireNotParty(AirlineOnboardingApplication application, UUID userId) {
         if (support.isParty(application, userId)) {
             throw new ConflictException(String.format(ErrorMessageUtil.ONBOARDING_CASE_OWNER_IS_PARTY, application.getId()));
         }
     }
 
     private void requireAssignedTo(OnboardingStageReview review, AirlineOnboardingApplication application,
-                                   OnboardingStage stage, Long actorUserId) {
+                                   OnboardingStage stage, UUID actorUserId) {
         if (!actorUserId.equals(review.getAssigneeUserId())) {
             throw new OperationNotPermittedException(
                     String.format(ErrorMessageUtil.ONBOARDING_STAGE_NOT_ASSIGNED_TO_USER, stage, application.getId()));

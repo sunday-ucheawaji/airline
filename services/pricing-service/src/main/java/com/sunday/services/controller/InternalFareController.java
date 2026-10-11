@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.request.FareSearchRequest;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
@@ -31,19 +32,19 @@ public class InternalFareController {
     private final FareSearchService fareSearchService;
 
     @GetMapping("/{id}")
-    public FareResponse getFareById(@PathVariable Long id) {
+    public FareResponse getFareById(@PathVariable UUID id) {
         return fareService.getFareByIdInternal(id);
     }
 
     @PostMapping("/batch")
-    public Map<Long, FareResponse> getFaresByIds(@RequestBody List<Long> ids) {
+    public Map<UUID, FareResponse> getFaresByIds(@RequestBody List<UUID> ids) {
         return fareService.getFaresByIds(ids);
     }
 
     @GetMapping("/{id}/quote")
     public FareQuoteResponse quote(
-            @PathVariable Long id,
-            @RequestParam Long flightId,
+            @PathVariable UUID id,
+            @RequestParam UUID flightId,
             @RequestParam CabinClassType cabinClass,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate) {
         return fareQuoteService.quote(id, flightId, cabinClass, departureDate);

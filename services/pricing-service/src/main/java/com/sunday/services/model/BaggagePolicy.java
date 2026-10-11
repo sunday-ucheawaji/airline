@@ -5,6 +5,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "baggage_policies")
@@ -17,8 +21,9 @@ import java.time.Instant;
 public class BaggagePolicy {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fare_id", nullable = false)
@@ -60,17 +65,20 @@ public class BaggagePolicy {
 
     // Cross-service ref: Airline. Copied from the fare on write, never taken from the request.
     @Column(name = "airline_id", nullable = false)
-    private Long airlineId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID airlineId;
 
     @Version
     @Column(nullable = false)
     private Long version;
 
     @Column(name = "created_by")
-    private Long createdBy;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID createdBy;
 
     @Column(name = "updated_by")
-    private Long updatedBy;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID updatedBy;
 
     // Audit
     @Column(updatable = false, nullable = false)

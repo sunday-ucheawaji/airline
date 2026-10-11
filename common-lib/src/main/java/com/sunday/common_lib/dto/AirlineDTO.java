@@ -5,11 +5,12 @@ import com.sunday.common_lib.enums.AirlineStatus;
 import lombok.Data;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 public class AirlineDTO {
 
-    private Long id;
+    private UUID id;
 
     private String iataCode;
     private String icaoCode;
@@ -30,8 +31,8 @@ public class AirlineDTO {
     private Instant createdAt;
     private Instant updatedAt;
 
-    private Long baggagePolicyId;
+    private UUID baggagePolicyId;
 
-    private Long userId;
-    private Long updatedByUserId;
+    private UUID userId;
+    private UUID updatedByUserId;
 }

@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.UUID;
 
 /** Published after flight-ops-service commits an aircraft reassignment on a FlightInstance, so seat-service can reconcile its cabin/seat inventory. */
 @Data
@@ -11,8 +12,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FlightInstanceAircraftChangedEvent {
-    private Long flightInstanceId;
-    private Long flightId;
-    private Long oldAircraftId;
-    private Long newAircraftId;
+    private UUID flightInstanceId;
+    private UUID flightId;
+    private UUID oldAircraftId;
+    private UUID newAircraftId;
 }

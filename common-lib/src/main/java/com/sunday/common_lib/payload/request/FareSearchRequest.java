@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -29,7 +30,7 @@ public class FareSearchRequest {
     public static class FlightDeparture {
 
         @NotNull(message = "Flight ID is required")
-        private Long flightId;
+        private UUID flightId;
 
         @NotNull(message = "Departure date is required")
         private LocalDate departureDate;

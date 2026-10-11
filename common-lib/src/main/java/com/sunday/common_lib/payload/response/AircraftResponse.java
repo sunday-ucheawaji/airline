@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -15,7 +16,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class AircraftResponse {
 
-    private Long id;
+    private UUID id;
     private String code;
     private String model;
     private String manufacturer;
@@ -33,12 +34,12 @@ public class AircraftResponse {
     private AircraftStatus status;
     private Boolean isAvailable;
 
-    private Long airlineId;
+    private UUID airlineId;
     private String airlineName;
     private String airlineIataCode;
 
-    private Long currentAirportId;
-    private Long currentAirportCity;
+    private UUID currentAirportId;
+    private UUID currentAirportCity;
     private String currentAirportCode;
     private String currentAirportName;
 

@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.FlightOpsPermissions;
 import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.common_lib.exception.BadRequestException;
@@ -41,12 +42,12 @@ public class FlightServiceImpl implements FlightService {
     private final AirlineIntegrationService airlineIntegrationService;
 
     @Override
-    public FlightResponse createFlight(Long userId, FlightRequest request) {
+    public FlightResponse createFlight(UUID userId, FlightRequest request) {
         if (flightRepository.existsByFlightNumber(request.getFlightNumber())) {
             throw new IllegalArgumentException(
                     String.format(ErrorMessageUtil.FLIGHT_NUMBER_ALREADY_EXISTS, request.getFlightNumber()));
         }
-        Long airlineId = request.getAirlineId();
+        UUID airlineId = request.getAirlineId();
         if (airlineId == null) {
             throw new BadRequestException(ErrorMessageUtil.AIRLINE_ID_REQUIRED);
         }
@@ -58,11 +59,11 @@ public class FlightServiceImpl implements FlightService {
     }
 
     @Override
-    public List<FlightResponse> createFlights(Long userId, List<FlightRequest> requests) {
+    public List<FlightResponse> createFlights(UUID userId, List<FlightRequest> requests) {
         if (requests.stream().anyMatch(req -> req.getAirlineId() == null)) {
             throw new BadRequestException(ErrorMessageUtil.AIRLINE_ID_REQUIRED);
         }
-        Set<Long> airlineIds = requests.stream().map(FlightRequest::getAirlineId).collect(Collectors.toSet());
+        Set<UUID> airlineIds = requests.stream().map(FlightRequest::getAirlineId).collect(Collectors.toSet());
         airlineIntegrationService.requirePermission(userId, airlineIds, FlightOpsPermissions.FLIGHT_MANAGE);
 
         // Single DB call to find all already-existing flight numbers
@@ -77,12 +78,12 @@ public class FlightServiceImpl implements FlightService {
         List<Flight> saved = flightRepository.saveAll(toSave);
 
         // One round trip per external service instead of one per distinct id.
-        List<Long> distinctAirlineIds = saved.stream().map(Flight::getAirlineId).distinct().toList();
-        List<Long> distinctAirportIds = saved.stream()
+        List<UUID> distinctAirlineIds = saved.stream().map(Flight::getAirlineId).distinct().toList();
+        List<UUID> distinctAirportIds = saved.stream()
                 .flatMap(f -> Stream.of(f.getDepartureAirportId(), f.getArrivalAirportId()))
                 .distinct().toList();
-        Map<Long, AirlineResponse> airlines = airlineClient.getAirlinesByIdsInternal(distinctAirlineIds);
-        Map<Long, AirportResponse> airports = locationClient.getAirportsByIds(distinctAirportIds);
+        Map<UUID, AirlineResponse> airlines = airlineClient.getAirlinesByIdsInternal(distinctAirlineIds);
+        Map<UUID, AirportResponse> airports = locationClient.getAirportsByIds(distinctAirportIds);
 
         List<FlightResponse> responses = new ArrayList<>();
         for (Flight flight : saved) {
@@ -97,7 +98,7 @@ public class FlightServiceImpl implements FlightService {
 
     @Override
     @Transactional(readOnly = true)
-    public FlightResponse getFlightById(Long id)  {
+    public FlightResponse getFlightById(UUID id)  {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
@@ -116,7 +117,7 @@ public class FlightServiceImpl implements FlightService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<FlightResponse> getFlightsByAirline(Long userId, Long airlineId, Long departureAirportId, Long arrivalAirportId, Pageable pageable) {
+    public Page<FlightResponse> getFlightsByAirline(UUID userId, UUID airlineId, UUID departureAirportId, UUID arrivalAirportId, Pageable pageable) {
         airlineIntegrationService.requirePermission(userId, airlineId, FlightOpsPermissions.FLIGHT_READ);
         return flightRepository.findByAirlineIdAndOptionalRoute(
                         airlineId,
@@ -128,7 +129,7 @@ public class FlightServiceImpl implements FlightService {
     }
 
     @Override
-    public FlightResponse updateFlight(Long id, FlightRequest request, Long userId) {
+    public FlightResponse updateFlight(UUID id, FlightRequest request, UUID userId) {
         Flight existing = flightRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, existing.getAirlineId(), FlightOpsPermissions.FLIGHT_MANAGE);
@@ -145,7 +146,7 @@ public class FlightServiceImpl implements FlightService {
     }
 
     @Override
-    public FlightResponse changeStatus(Long id, FlightStatus status, Long userId) {
+    public FlightResponse changeStatus(UUID id, FlightStatus status, UUID userId) {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, flight.getAirlineId(), FlightOpsPermissions.FLIGHT_MANAGE);
@@ -154,7 +155,7 @@ public class FlightServiceImpl implements FlightService {
     }
 
     @Override
-    public void deleteFlight(Long id, Long userId) {
+    public void deleteFlight(UUID id, UUID userId) {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, flight.getAirlineId(), FlightOpsPermissions.FLIGHT_MANAGE);
@@ -163,19 +164,19 @@ public class FlightServiceImpl implements FlightService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, FlightResponse> getFlightsByIds(List<Long> ids) {
+    public Map<UUID, FlightResponse> getFlightsByIds(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) return Map.of();
         List<Flight> flights = flightRepository.findAllById(ids);
 
         // One round trip per external service instead of one per distinct id.
-        List<Long> distinctAirlineIds = flights.stream().map(Flight::getAirlineId).distinct().toList();
-        List<Long> distinctAirportIds = flights.stream()
+        List<UUID> distinctAirlineIds = flights.stream().map(Flight::getAirlineId).distinct().toList();
+        List<UUID> distinctAirportIds = flights.stream()
                 .flatMap(f -> Stream.of(f.getDepartureAirportId(), f.getArrivalAirportId()))
                 .distinct().toList();
-        Map<Long, AirlineResponse> airlines = airlineClient.getAirlinesByIdsInternal(distinctAirlineIds);
-        Map<Long, AirportResponse> airports = locationClient.getAirportsByIds(distinctAirportIds);
+        Map<UUID, AirlineResponse> airlines = airlineClient.getAirlinesByIdsInternal(distinctAirlineIds);
+        Map<UUID, AirportResponse> airports = locationClient.getAirportsByIds(distinctAirportIds);
 
-        Map<Long, FlightResponse> result = new HashMap<>();
+        Map<UUID, FlightResponse> result = new HashMap<>();
         for (Flight flight : flights) {
             result.put(flight.getId(), FlightMapper.toResponse(
                     flight,

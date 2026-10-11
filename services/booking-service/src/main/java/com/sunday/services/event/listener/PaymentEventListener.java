@@ -1,5 +1,6 @@
 package com.sunday.services.event.listener;
 
+import java.util.UUID;
 import com.sunday.common_lib.dto.UserDTO;
 import com.sunday.common_lib.enums.BookingStatus;
 import com.sunday.common_lib.event.PaymentCompletedEvent;
@@ -108,7 +109,7 @@ public class PaymentEventListener {
 
     // ── Private Helpers ───────────────────────────────────────────────────────
 
-    private FlightInstanceResponse fetchFlightInstance(Long flightInstanceId) {
+    private FlightInstanceResponse fetchFlightInstance(UUID flightInstanceId) {
         if (flightInstanceId == null) return null;
         try {
             return flightClient.getFlightInstanceResponse(flightInstanceId);
@@ -119,7 +120,7 @@ public class PaymentEventListener {
         }
     }
 
-    private FareResponse fetchFare(Long fareId) {
+    private FareResponse fetchFare(UUID fareId) {
         if (fareId == null) return null;
         try {
             return pricingClient.getFareById(fareId);
@@ -130,7 +131,7 @@ public class PaymentEventListener {
         }
     }
 
-    private UserDTO fetchUser(Long userId) {
+    private UserDTO fetchUser(UUID userId) {
         if (userId == null) return null;
         try {
             return userClient.getUserById(userId);

@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.OnboardingActionRequest;
 import com.sunday.common_lib.payload.request.OwnerAssignmentRequest;
 import com.sunday.common_lib.payload.response.OnboardingApplicationResponse;
@@ -30,57 +31,57 @@ public class OnboardingReviewController {
     @GetMapping
     public ResponseEntity<Page<OnboardingApplicationResponse>> getApplicationsForReview(
             @RequestParam(required = false) OnboardingStatus status,
-            @RequestParam(required = false) Long caseOwner, Pageable pageable) {
+            @RequestParam(required = false) UUID caseOwner, Pageable pageable) {
         return ResponseEntity.ok(onboardingService.getApplicationsForReview(status, caseOwner, pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OnboardingApplicationResponse> getApplicationForReview(@PathVariable Long id) {
+    public ResponseEntity<OnboardingApplicationResponse> getApplicationForReview(@PathVariable UUID id) {
         return ResponseEntity.ok(onboardingService.getApplicationForReview(id));
     }
 
     @GetMapping("/{id}/reviews")
-    public ResponseEntity<List<OnboardingReviewResponse>> getReviewHistory(@PathVariable Long id) {
+    public ResponseEntity<List<OnboardingReviewResponse>> getReviewHistory(@PathVariable UUID id) {
         return ResponseEntity.ok(onboardingService.getReviewHistory(id));
     }
 
     @PostMapping("/{id}/return")
     public ResponseEntity<OnboardingApplicationResponse> returnApplication(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestBody(required = false) OnboardingActionRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(onboardingService.returnApplication(id, comments(request), actorUserId));
     }
 
     @PostMapping("/{id}/approve")
     public ResponseEntity<OnboardingApplicationResponse> approveApplication(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestBody(required = false) OnboardingActionRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(onboardingService.approveApplication(id, comments(request), actorUserId));
     }
 
     @PostMapping("/{id}/reject")
     public ResponseEntity<OnboardingApplicationResponse> rejectApplication(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestBody(required = false) OnboardingActionRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(onboardingService.rejectApplication(id, comments(request), actorUserId));
     }
 
     @PutMapping("/{id}/owner")
     public ResponseEntity<OnboardingApplicationResponse> assignOwner(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody OwnerAssignmentRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(onboardingService.assignOwner(id, request, actorUserId));
     }
 
     @PostMapping("/{id}/provision")
     public ResponseEntity<OnboardingApplicationResponse> provisionApplication(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestBody(required = false) OnboardingActionRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(onboardingService.provisionApplication(id, comments(request), actorUserId));
     }
 

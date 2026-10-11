@@ -4,14 +4,15 @@ import com.sunday.services.model.Booking;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 public interface BookingPerformanceRepository {
 
     // Booking Statistics
-    Long countBookingsByFlightIdAndDateRange(Long flightId, LocalDateTime startDate, LocalDateTime endDate);
+    Long countBookingsByFlightIdAndDateRange(UUID flightId, LocalDateTime startDate, LocalDateTime endDate);
 
-    Double sumRevenueByFlightIdAndDateRange(Long flightId, LocalDateTime startDate, LocalDateTime endDate);
+    Double sumRevenueByFlightIdAndDateRange(UUID flightId, LocalDateTime startDate, LocalDateTime endDate);
 
     List<Booking> findBookingsByFlightIdAndDateRange(
-            Long flightId, LocalDateTime startDate, LocalDateTime endDate);
+            UUID flightId, LocalDateTime startDate, LocalDateTime endDate);
 }

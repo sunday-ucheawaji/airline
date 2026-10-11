@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -30,7 +31,7 @@ public class UserController {
 
     @GetMapping("/api/users/{userId}")
     public ResponseEntity<AuthUserDTO> getUserById(
-            @PathVariable Long userId) {
+            @PathVariable UUID userId) {
         User user = userService.getUserById(userId);
         return ResponseEntity.ok(UserMapper.toAuthUserDTO(user));
     }
@@ -43,7 +44,7 @@ public class UserController {
 
     @GetMapping("/api/users/{userId}/roles")
     public ResponseEntity<List<RoleDTO>> getPlatformRolesForUser(
-            @PathVariable Long userId) {
+            @PathVariable UUID userId) {
         List<Role> roles = roleService.getPlatformRolesForUser(userId);
         return ResponseEntity.ok(RoleMapper.toDTOList(roles));
     }

@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.SeatPermissions;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.enums.SeatType;
@@ -36,7 +37,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
     private final AirlineIntegrationService airlineIntegrationService;
 
     @Override
-    public FlightInstanceCabinResponse createFlightInstanceCabin(Long userId, FlightInstanceCabinRequest request) {
+    public FlightInstanceCabinResponse createFlightInstanceCabin(UUID userId, FlightInstanceCabinRequest request) {
         CabinClass cabinClass = cabinClassRepository.findById(request.getCabinClassId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.CABIN_CLASS_NOT_FOUND_BY_ID, request.getCabinClassId())));
@@ -85,7 +86,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
 
     @Override
     @Transactional(readOnly = true)
-    public FlightInstanceCabinResponse getFlightInstanceCabinById(Long userId, Long id) {
+    public FlightInstanceCabinResponse getFlightInstanceCabinById(UUID userId, UUID id) {
         FlightInstanceCabin fic = flightInstanceCabinRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_CABIN_NOT_FOUND_BY_ID, id)));
@@ -96,7 +97,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
 
     @Override
     @Transactional(readOnly = true)
-    public Page<FlightInstanceCabinResponse> getByFlightInstanceId(Long userId, Long flightInstanceId, Pageable pageable) {
+    public Page<FlightInstanceCabinResponse> getByFlightInstanceId(UUID userId, UUID flightInstanceId, Pageable pageable) {
         Page<FlightInstanceCabin> page = flightInstanceCabinRepository.findByFlightInstanceId(flightInstanceId, pageable);
         if (page.hasContent()) {
             FlightInstanceCabin first = page.getContent().get(0);
@@ -108,7 +109,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
 
     @Override
     @Transactional(readOnly = true)
-    public FlightInstanceCabinResponse getByFlightInstanceIdAndCabinClassId(Long userId, Long flightInstanceId, Long cabinClassId) {
+    public FlightInstanceCabinResponse getByFlightInstanceIdAndCabinClassId(UUID userId, UUID flightInstanceId, UUID cabinClassId) {
         FlightInstanceCabin cabin = flightInstanceCabinRepository.findByFlightInstanceIdAndCabinClassId(
                 flightInstanceId, cabinClassId);
         if (cabin == null) {
@@ -122,7 +123,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
     }
 
     @Override
-    public FlightInstanceCabinResponse updateFlightInstanceCabin(Long userId, Long id, FlightInstanceCabinRequest request) {
+    public FlightInstanceCabinResponse updateFlightInstanceCabin(UUID userId, UUID id, FlightInstanceCabinRequest request) {
         FlightInstanceCabin existing = flightInstanceCabinRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_CABIN_NOT_FOUND_BY_ID, id)));
@@ -147,7 +148,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
     }
 
     @Override
-    public void deleteFlightInstanceCabin(Long userId, Long id) {
+    public void deleteFlightInstanceCabin(UUID userId, UUID id) {
         FlightInstanceCabin fic = flightInstanceCabinRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_CABIN_NOT_FOUND_BY_ID, id)));

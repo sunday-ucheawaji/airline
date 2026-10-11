@@ -4,13 +4,14 @@ import com.sunday.common_lib.enums.SeatType;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class SeatResponse {
-    private Long id;
+    private UUID id;
     private String seatNumber;
     private Integer seatRow;
     private Character columnLetter;
@@ -38,9 +39,9 @@ public class SeatResponse {
     private Integer seatWidth;
     private Integer reclineAngle;
 
-    private Long seatMapId;
+    private UUID seatMapId;
     private String seatMapName;
-    private Long cabinClassId;
+    private UUID cabinClassId;
     private String cabinClassName;
 
     private LocalDateTime createdAt;

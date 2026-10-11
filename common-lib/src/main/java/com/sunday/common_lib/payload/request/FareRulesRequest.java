@@ -6,6 +6,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -17,7 +18,7 @@ public class FareRulesRequest {
     private String ruleName;
 
     @NotNull(message = "Fare ID is required")
-    private Long fareId;
+    private UUID fareId;
 
     private Boolean isRefundable;
 

@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.CaseOwnerChangeRequest;
 import com.sunday.common_lib.payload.request.InformationRequestCreateRequest;
 import com.sunday.common_lib.payload.request.OnboardingActionRequest;
@@ -36,106 +37,106 @@ public class OnboardingWorkflowController {
 
     @PostMapping("/{id}/claim")
     public ResponseEntity<OnboardingApplicationResponse> claim(
-            @PathVariable Long id, @RequestHeader("X-User-Id") Long actorUserId) {
+            @PathVariable UUID id, @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.claim(id, actorUserId));
     }
 
     @PutMapping("/{id}/case-owner")
     public ResponseEntity<OnboardingApplicationResponse> transfer(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody CaseOwnerChangeRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.transfer(id, actorUserId, request));
     }
 
     @PostMapping("/{id}/release")
     public ResponseEntity<OnboardingApplicationResponse> release(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestBody(required = false) OnboardingActionRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.release(id, actorUserId, comments(request)));
     }
 
     /** Super admin only (checked against the forwarded roles): forces the case to another officer, reason required. */
     @PostMapping("/{id}/take-over")
     public ResponseEntity<OnboardingApplicationResponse> takeOver(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody CaseOwnerChangeRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId,
+            @RequestHeader("X-User-Id") UUID actorUserId,
             @RequestHeader(value = "X-User-Roles", defaultValue = "") String actorRoles) {
         return ResponseEntity.ok(workflowService.takeOver(id, actorUserId, parseRoles(actorRoles), request));
     }
 
     @GetMapping("/{id}/case-owner-history")
-    public ResponseEntity<List<CaseOwnerHistoryResponse>> getCaseOwnerHistory(@PathVariable Long id) {
+    public ResponseEntity<List<CaseOwnerHistoryResponse>> getCaseOwnerHistory(@PathVariable UUID id) {
         return ResponseEntity.ok(workflowService.getCaseOwnerHistory(id));
     }
 
     // ---------- Stages ----------
 
     @GetMapping("/{id}/stages")
-    public ResponseEntity<List<OnboardingStageResponse>> getStages(@PathVariable Long id) {
+    public ResponseEntity<List<OnboardingStageResponse>> getStages(@PathVariable UUID id) {
         return ResponseEntity.ok(workflowService.getStages(id));
     }
 
     @PutMapping("/{id}/stages/{stage}/assignee")
     public ResponseEntity<OnboardingStageResponse> assignStage(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @PathVariable String stage,
             @Valid @RequestBody StageAssigneeRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.assignStage(id, OnboardingStage.fromPath(stage), actorUserId, request));
     }
 
     @PostMapping("/{id}/stages/{stage}/approve")
     public ResponseEntity<OnboardingStageResponse> approveStage(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @PathVariable String stage,
             @RequestBody(required = false) OnboardingActionRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.decideStage(id, OnboardingStage.fromPath(stage), true, actorUserId, comments(request)));
     }
 
     @PostMapping("/{id}/stages/{stage}/reject")
     public ResponseEntity<OnboardingStageResponse> rejectStage(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @PathVariable String stage,
             @RequestBody(required = false) OnboardingActionRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.decideStage(id, OnboardingStage.fromPath(stage), false, actorUserId, comments(request)));
     }
 
     // ---------- Information requests and comments ----------
 
     @GetMapping("/{id}/information-requests")
-    public ResponseEntity<List<InformationRequestResponse>> getInformationRequests(@PathVariable Long id) {
+    public ResponseEntity<List<InformationRequestResponse>> getInformationRequests(@PathVariable UUID id) {
         return ResponseEntity.ok(workflowService.getInformationRequests(id));
     }
 
     /** The case owner asking the applicant on behalf of the whole review. */
     @PostMapping("/{id}/information-requests")
     public ResponseEntity<InformationRequestResponse> requestInformation(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody InformationRequestCreateRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.requestInformation(id, null, actorUserId, request.getMessage()));
     }
 
     /** An assigned specialist asking the applicant about their own stage. */
     @PostMapping("/{id}/stages/{stage}/information-requests")
     public ResponseEntity<InformationRequestResponse> requestStageInformation(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @PathVariable String stage,
             @Valid @RequestBody InformationRequestCreateRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.requestInformation(id, OnboardingStage.fromPath(stage), actorUserId, request.getMessage()));
     }
 
     @PostMapping("/{id}/comments")
     public ResponseEntity<OnboardingReviewResponse> comment(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody OnboardingCommentRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.comment(id, actorUserId, request.getMessage()));
     }
 
@@ -143,17 +144,17 @@ public class OnboardingWorkflowController {
 
     @PostMapping("/{id}/refer")
     public ResponseEntity<OnboardingApplicationResponse> refer(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestBody(required = false) OnboardingActionRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.refer(id, actorUserId, comments(request)));
     }
 
     @PostMapping("/{id}/send-back")
     public ResponseEntity<OnboardingApplicationResponse> sendBack(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestBody(required = false) OnboardingActionRequest request,
-            @RequestHeader("X-User-Id") Long actorUserId) {
+            @RequestHeader("X-User-Id") UUID actorUserId) {
         return ResponseEntity.ok(workflowService.sendBack(id, actorUserId, comments(request)));
     }
 

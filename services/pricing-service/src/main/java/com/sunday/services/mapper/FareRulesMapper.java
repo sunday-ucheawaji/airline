@@ -1,5 +1,6 @@
 package com.sunday.services.mapper;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.FareRulesRequest;
 import com.sunday.common_lib.payload.response.FareRulesResponse;
 import com.sunday.services.model.Fare;
@@ -7,7 +8,7 @@ import com.sunday.services.model.FareRules;
 
 public class FareRulesMapper {
 
-    public static FareRules toEntity(FareRulesRequest request, Fare fare, Long userId) {
+    public static FareRules toEntity(FareRulesRequest request, Fare fare, UUID userId) {
         if (request == null) return null;
         return FareRules.builder()
                 .ruleName(request.getRuleName())
@@ -42,7 +43,7 @@ public class FareRulesMapper {
                 .build();
     }
 
-    public static void updateEntity(FareRulesRequest request, FareRules existing, Long userId) {
+    public static void updateEntity(FareRulesRequest request, FareRules existing, UUID userId) {
         if (request == null || existing == null) return;
         if (request.getRuleName() != null) existing.setRuleName(request.getRuleName());
         existing.setUpdatedBy(userId);

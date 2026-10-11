@@ -10,6 +10,10 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "cabin_classes")
@@ -22,8 +26,9 @@ import java.time.Instant;
 public class CabinClass {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -40,7 +45,8 @@ public class CabinClass {
     private SeatMap seatMap;
 
     @Column(name = "aircraft_id")
-    private Long aircraftId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID aircraftId;
 
     @Column(nullable = false)
     private Integer displayOrder = 0;

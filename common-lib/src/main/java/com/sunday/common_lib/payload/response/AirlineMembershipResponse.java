@@ -3,6 +3,7 @@ package com.sunday.common_lib.payload.response;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -11,12 +12,12 @@ import java.time.Instant;
 @Builder
 public class AirlineMembershipResponse {
 
-    private Long id;
-    private Long airlineId;
-    private Long userId;
-    private Long roleId;
+    private UUID id;
+    private UUID airlineId;
+    private UUID userId;
+    private UUID roleId;
     private String status;
-    private Long invitedByUserId;
+    private UUID invitedByUserId;
     private Instant expiresAt;
     private Instant joinedAt;
     private Instant createdAt;

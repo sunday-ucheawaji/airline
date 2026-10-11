@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -12,7 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class FlightResponse {
 
-    private Long id;
+    private UUID id;
     private String flightNumber;
     private AirlineResponse airline;
     private AirportResponse departureAirport;

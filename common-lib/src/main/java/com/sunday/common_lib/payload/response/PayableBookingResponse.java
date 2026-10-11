@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 /** What payment-service needs to check a payment request against a booking: its owner, its stored total and status. */
 @Data
@@ -15,9 +16,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class PayableBookingResponse {
 
-    private Long bookingId;
-    private Long userId;
-    private Long airlineId;
+    private UUID bookingId;
+    private UUID userId;
+    private UUID airlineId;
     private BigDecimal totalAmount;
     private BookingStatus status;
 }

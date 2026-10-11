@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -17,10 +18,10 @@ import java.util.List;
 public class BookingRequest {
 
     @NotNull(message = ErrorMessageUtil.FLIGHT_ID_MANDATORY)
-    private Long flightId;
+    private UUID flightId;
 
     @NotNull(message = ErrorMessageUtil.FLIGHT_INSTANCE_ID_MANDATORY)
-    private Long flightInstanceId;
+    private UUID flightInstanceId;
 
     @NotNull(message = ErrorMessageUtil.SEARCH_CABIN_CLASS_MANDATORY)
     private CabinClassType cabinClass;
@@ -29,7 +30,7 @@ public class BookingRequest {
     private TripType tripType;
 
     @NotNull(message = ErrorMessageUtil.FARE_ID_MANDATORY)
-    private Long fareId;
+    private UUID fareId;
 
     @NotNull(message = ErrorMessageUtil.AT_LEAST_ONE_PASSENGER_REQUIRED)
     @Size(min = 1, message = ErrorMessageUtil.AT_LEAST_ONE_PASSENGER_REQUIRED)
@@ -37,8 +38,8 @@ public class BookingRequest {
 
     private ContactInfo contactInfo;
 
-    private List<Long> ancillaryIds;
-    private List<Long> mealIds;
+    private List<UUID> ancillaryIds;
+    private List<UUID> mealIds;
 
     private String promoCode;
 

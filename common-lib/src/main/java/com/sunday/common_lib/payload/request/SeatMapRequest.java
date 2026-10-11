@@ -3,6 +3,7 @@ package com.sunday.common_lib.payload.request;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -25,5 +26,5 @@ public class SeatMapRequest {
     @Positive
     private Integer rightSeatsPerRow;
 
-    private Long cabinClassId;
+    private UUID cabinClassId;
 }

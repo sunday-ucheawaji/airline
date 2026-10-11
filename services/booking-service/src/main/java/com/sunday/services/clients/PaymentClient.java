@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.PaymentInitiateRequest;
 import com.sunday.common_lib.payload.response.PaymentDTO;
 import com.sunday.common_lib.payload.response.PaymentInitiateResponse;
@@ -20,11 +21,11 @@ public interface PaymentClient {
     @PostMapping("/api/payments/initiate")
     PaymentInitiateResponse initiatePayment(
             @Valid @RequestBody PaymentInitiateRequest request,
-            @RequestHeader("X-User-Id") Long userId);
+            @RequestHeader("X-User-Id") UUID userId);
 
     @GetMapping("/internal/payments/booking/{bookingId}")
-    PaymentDTO getPaymentByBookingId(@PathVariable Long bookingId);
+    PaymentDTO getPaymentByBookingId(@PathVariable UUID bookingId);
 
     @PostMapping("/internal/payments/batch/bookings")
-    Map<Long, PaymentDTO> getPaymentsByBookingIds(@RequestBody List<Long> bookingIds);
+    Map<UUID, PaymentDTO> getPaymentsByBookingIds(@RequestBody List<UUID> bookingIds);
 }

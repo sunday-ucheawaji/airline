@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -125,14 +126,14 @@ public class StripeGatewayProvider implements PaymentGatewayProvider {
 
             if ("checkout.session".equals(objectKind)) {
                 String providerReference = object.path("payment_intent").asText(null);
-                Long internalPaymentId = parseLong(object.path("metadata").path("payment_id").asText(null));
+                UUID internalPaymentId = parseUuid(object.path("metadata").path("payment_id").asText(null));
                 PaymentStatus status = "paid".equalsIgnoreCase(object.path("payment_status").asText())
                         ? PaymentStatus.SUCCESS : PaymentStatus.PENDING;
                 return new ProviderWebhookEvent(eventType, providerReference, status,
                         MoneyUtil.fromSmallestUnit(object.path("amount_total").asLong(0)), internalPaymentId);
             }
             if ("payment_intent".equals(objectKind)) {
-                Long internalPaymentId = parseLong(object.path("metadata").path("payment_id").asText(null));
+                UUID internalPaymentId = parseUuid(object.path("metadata").path("payment_id").asText(null));
                 return new ProviderWebhookEvent(eventType, object.path("id").asText(), mapIntentStatus(object.path("status").asText()),
                         MoneyUtil.fromSmallestUnit(object.path("amount").asLong(0)), internalPaymentId);
             }
@@ -162,8 +163,8 @@ public class StripeGatewayProvider implements PaymentGatewayProvider {
         }
     }
 
-    private Long parseLong(String value) {
-        return value == null || value.isBlank() ? null : Long.parseLong(value);
+    private UUID parseUuid(String value) {
+        return value == null || value.isBlank() ? null : UUID.fromString(value);
     }
 
     private PaymentStatus mapIntentStatus(String stripeStatus) {

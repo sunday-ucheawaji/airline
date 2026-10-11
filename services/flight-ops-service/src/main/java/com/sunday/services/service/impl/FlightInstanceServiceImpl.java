@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.FlightOpsPermissions;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.event.FlightInstanceAircraftChangedEvent;
@@ -61,7 +62,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     @Transactional
     @CacheEvict(cacheNames = "flightInstances", allEntries = true)
     public FlightInstanceResponse createFlightInstanceWithCabins(
-            Long userId, FlightInstanceRequest request) {
+            UUID userId, FlightInstanceRequest request) {
 
         Flight flight = flightRepository.findById(request.getFlightId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -101,7 +102,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "flightInstances", key = "#id")
-    public FlightInstanceResponse getFlightInstanceById(Long id) {
+    public FlightInstanceResponse getFlightInstanceById(UUID id) {
         FlightInstance fi = flightInstanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
@@ -112,11 +113,11 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<FlightInstanceResponse> getByAirlineId(Long userId,
-                                                       Long airlineId,
-                                                       Long departureAirportId,
-                                                       Long arrivalAirportId,
-                                                       Long flightId,
+    public Page<FlightInstanceResponse> getByAirlineId(UUID userId,
+                                                       UUID airlineId,
+                                                       UUID departureAirportId,
+                                                       UUID arrivalAirportId,
+                                                       UUID flightId,
                                                        LocalDate onDate,
                                                        Pageable pageable) {
         airlineIntegrationService.requirePermission(userId, airlineId, FlightOpsPermissions.INSTANCE_READ);
@@ -130,7 +131,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     @Override
     @CacheEvict(cacheNames = "flightInstances", key = "#id")
-    public FlightInstanceResponse updateFlightInstance(Long id, FlightInstanceRequest request, Long userId) {
+    public FlightInstanceResponse updateFlightInstance(UUID id, FlightInstanceRequest request, UUID userId) {
         FlightInstance existing = flightInstanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
@@ -141,7 +142,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     @Override
     @CacheEvict(cacheNames = "flightInstances", key = "#id")
-    public void deleteFlightInstance(Long id, Long userId) {
+    public void deleteFlightInstance(UUID id, UUID userId) {
         FlightInstance fi = flightInstanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
@@ -151,21 +152,21 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, FlightInstanceResponse> getFlightInstancesByIds(List<Long> ids) {
+    public Map<UUID, FlightInstanceResponse> getFlightInstancesByIds(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) return Map.of();
         List<FlightInstance> instances = flightInstanceRepository.findAllByIdInWithFlight(ids);
 
         // One round trip per external service instead of one per distinct id.
-        List<Long> distinctAirlineIds = instances.stream().map(FlightInstance::getAirlineId).distinct().toList();
-        List<Long> distinctAircraftIds = instances.stream().map(FlightInstance::getAircraftId).distinct().toList();
-        List<Long> distinctAirportIds = instances.stream()
+        List<UUID> distinctAirlineIds = instances.stream().map(FlightInstance::getAirlineId).distinct().toList();
+        List<UUID> distinctAircraftIds = instances.stream().map(FlightInstance::getAircraftId).distinct().toList();
+        List<UUID> distinctAirportIds = instances.stream()
                 .flatMap(fi -> Stream.of(fi.getDepartureAirportId(), fi.getArrivalAirportId()))
                 .distinct().toList();
-        Map<Long, AirlineResponse> airlines = airlineClient.getAirlinesByIdsInternal(distinctAirlineIds);
-        Map<Long, AircraftResponse> aircrafts = airlineIntegrationService.getAircraftsByIdsInternal(distinctAircraftIds);
-        Map<Long, AirportResponse> airports = locationClient.getAirportsByIds(distinctAirportIds);
+        Map<UUID, AirlineResponse> airlines = airlineClient.getAirlinesByIdsInternal(distinctAirlineIds);
+        Map<UUID, AircraftResponse> aircrafts = airlineIntegrationService.getAircraftsByIdsInternal(distinctAircraftIds);
+        Map<UUID, AirportResponse> airports = locationClient.getAirportsByIds(distinctAirportIds);
 
-        Map<Long, FlightInstanceResponse> result = new HashMap<>();
+        Map<UUID, FlightInstanceResponse> result = new HashMap<>();
         for (FlightInstance fi : instances) {
             result.put(fi.getId(), FlightInstanceMapper.toResponse(
                     fi,
@@ -179,7 +180,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     @Override
     @CacheEvict(cacheNames = "flightInstances", key = "#id")
-    public FlightInstanceResponse reassignAircraft(Long id, Long newAircraftId, Long userId) {
+    public FlightInstanceResponse reassignAircraft(UUID id, UUID newAircraftId, UUID userId) {
         FlightInstance instance = flightInstanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
@@ -214,7 +215,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
             }
         }
 
-        Long oldAircraftId = instance.getAircraftId();
+        UUID oldAircraftId = instance.getAircraftId();
         instance.setAircraftId(newAircraftId);
         instance.setTotalSeats(newAircraft.getTotalSeats());
         instance.setAvailableSeats(newAircraft.getTotalSeats() - (int) totalNonAvailable);
@@ -242,7 +243,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     }
 
     // seat-service consumes this to materialize per-cabin seat inventory for the new instance
-    private void publishInstanceCreated(FlightInstance flightInstance, Long flightId) {
+    private void publishInstanceCreated(FlightInstance flightInstance, UUID flightId) {
         flightInstanceEventProducer.sendFlightInstanceCreated(
                 FlightInstanceCreatedEvent.builder()
                         .flightInstanceId(flightInstance.getId())

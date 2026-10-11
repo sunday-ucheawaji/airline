@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.SeatPermissions;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
@@ -59,7 +60,7 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
     private long holdDurationMinutes;
 
     @Override
-    public SeatInstanceResponse createSeatInstance(Long userId, SeatInstanceRequest request) {
+    public SeatInstanceResponse createSeatInstance(UUID userId, SeatInstanceRequest request) {
         Seat seat = seatRepository.findById(request.getSeatId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.SEAT_NOT_FOUND_BY_ID, request.getSeatId())));
@@ -85,7 +86,7 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public SeatInstanceResponse getSeatInstanceById(Long userId, Long id) {
+    public SeatInstanceResponse getSeatInstanceById(UUID userId, UUID id) {
         SeatInstance si = seatInstanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_INSTANCE_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(
@@ -95,7 +96,7 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SeatInstanceResponse> getSeatInstancesByFlightId(Long userId, Long flightId) {
+    public List<SeatInstanceResponse> getSeatInstancesByFlightId(UUID userId, UUID flightId) {
         List<SeatInstance> instances = seatInstanceRepository.findByFlightId(flightId);
         requirePermissionForFirst(userId, instances, SeatPermissions.SEAT_READ);
         return instances.stream().map(SeatInstanceMapper::toResponse).collect(Collectors.toList());
@@ -103,7 +104,7 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SeatInstanceResponse> getAvailableSeatsByFlightId(Long userId, Long flightId) {
+    public List<SeatInstanceResponse> getAvailableSeatsByFlightId(UUID userId, UUID flightId) {
         List<SeatInstance> instances = seatInstanceRepository.findAvailableByFlightId(flightId);
         requirePermissionForFirst(userId, instances, SeatPermissions.SEAT_READ);
         return instances.stream().map(SeatInstanceMapper::toResponse).collect(Collectors.toList());
@@ -111,7 +112,7 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SeatInstanceResponse> getAllByIds(Long userId, List<Long> ids) {
+    public List<SeatInstanceResponse> getAllByIds(UUID userId, List<UUID> ids) {
         List<SeatInstance> seatInstances = seatInstanceRepository.findAllById(ids);
         requirePermissionForAirlines(userId, seatInstances, SeatPermissions.SEAT_READ);
         return seatInstances.stream().map(SeatInstanceMapper::toResponse).collect(Collectors.toList());
@@ -119,7 +120,7 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Long countAvailableByFlightId(Long userId, Long flightId) {
+    public Long countAvailableByFlightId(UUID userId, UUID flightId) {
         List<SeatInstance> sample = seatInstanceRepository.findByFlightId(flightId);
         requirePermissionForFirst(userId, sample, SeatPermissions.SEAT_READ);
         return seatInstanceRepository.countAvailableByFlightId(flightId);
@@ -127,21 +128,21 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public BigDecimal calculateSeatPrice(Long userId, List<Long> seatInstanceIds) {
+    public BigDecimal calculateSeatPrice(UUID userId, List<UUID> seatInstanceIds) {
         List<SeatInstance> seatInstances = seatInstanceRepository.findAllById(seatInstanceIds);
         requirePermissionForAirlines(userId, seatInstances, SeatPermissions.SEAT_READ);
         return sumPremiums(seatInstances);
     }
 
     @Override
-    public List<SeatInstanceResponse> getAllByIdsInternal(List<Long> ids) {
+    public List<SeatInstanceResponse> getAllByIdsInternal(List<UUID> ids) {
         return seatInstanceRepository.findAllById(ids).stream()
                 .map(SeatInstanceMapper::toResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public BigDecimal calculateSeatPriceInternal(List<Long> seatInstanceIds) {
+    public BigDecimal calculateSeatPriceInternal(List<UUID> seatInstanceIds) {
         return sumPremiums(seatInstanceRepository.findAllById(seatInstanceIds));
     }
 
@@ -153,7 +154,7 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
     }
 
     @Override
-    public SeatInstanceResponse updateSeatInstanceStatus(Long userId, Long id, SeatAvailabilityStatus status) {
+    public SeatInstanceResponse updateSeatInstanceStatus(UUID userId, UUID id, SeatAvailabilityStatus status) {
         SeatInstance si = seatInstanceRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_INSTANCE_NOT_FOUND_BY_ID, id)));
 
@@ -168,7 +169,7 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
     }
 
     @Override
-    public SeatInstanceResponse releaseSeatInstance(Long userId, Long id) {
+    public SeatInstanceResponse releaseSeatInstance(UUID userId, UUID id) {
         SeatInstance si = seatInstanceRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_INSTANCE_NOT_FOUND_BY_ID, id)));
 
@@ -188,7 +189,7 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CabinSeatStatusResponse> getSeatStatusSummary(Long flightInstanceId) {
+    public List<CabinSeatStatusResponse> getSeatStatusSummary(UUID flightInstanceId) {
         List<SeatInstance> instances = seatInstanceRepository.findByFlightInstanceId(flightInstanceId);
         Map<CabinClassType, Long> counts = instances.stream()
                 .filter(si -> si.getStatus() != SeatAvailabilityStatus.AVAILABLE)
@@ -206,12 +207,12 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
 
     @Override
     public SeatHoldResponse holdSeats(SeatHoldRequest request) {
-        List<Long> ids = request.getSeatInstanceIds().stream().distinct().sorted().toList();
+        List<UUID> ids = request.getSeatInstanceIds().stream().distinct().sorted().toList();
         List<SeatInstance> seats = seatInstanceRepository.findAllByIdForUpdate(ids);
-        Map<Long, SeatInstance> byId = seats.stream().collect(Collectors.toMap(SeatInstance::getId, s -> s));
+        Map<UUID, SeatInstance> byId = seats.stream().collect(Collectors.toMap(SeatInstance::getId, s -> s));
 
         List<String> failures = new ArrayList<>();
-        for (Long id : ids) {
+        for (UUID id : ids) {
             SeatInstance si = byId.get(id);
             boolean alreadyHeldByThisBooking = si != null && si.getStatus() == SeatAvailabilityStatus.HELD
                     && Objects.equals(si.getHeldByBookingReference(), request.getBookingReference());
@@ -246,12 +247,12 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
     }
 
     @Override
-    public void markSeatsBookedBatch(String bookingReference, List<Long> seatInstanceIds) {
-        List<Long> ids = seatInstanceIds.stream().distinct().sorted().toList();
+    public void markSeatsBookedBatch(String bookingReference, List<UUID> seatInstanceIds) {
+        List<UUID> ids = seatInstanceIds.stream().distinct().sorted().toList();
         List<SeatInstance> seats = seatInstanceRepository.findAllByIdForUpdate(ids);
-        Map<Long, SeatInstance> byId = seats.stream().collect(Collectors.toMap(SeatInstance::getId, s -> s));
+        Map<UUID, SeatInstance> byId = seats.stream().collect(Collectors.toMap(SeatInstance::getId, s -> s));
 
-        for (Long id : ids) {
+        for (UUID id : ids) {
             SeatInstance si = byId.get(id);
             if (si == null) {
                 log.error("Seat instance {} not found while confirming booking {}", id, bookingReference);
@@ -271,11 +272,11 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
     }
 
     @Override
-    public void releaseSeatsBatch(List<Long> seatInstanceIds) {
+    public void releaseSeatsBatch(List<UUID> seatInstanceIds) {
         if (seatInstanceIds == null || seatInstanceIds.isEmpty()) {
             return;
         }
-        List<Long> ids = seatInstanceIds.stream().distinct().sorted().toList();
+        List<UUID> ids = seatInstanceIds.stream().distinct().sorted().toList();
         List<SeatInstance> seats = seatInstanceRepository.findAllByIdForUpdate(ids);
         for (SeatInstance si : seats) {
             if (si.getStatus() == SeatAvailabilityStatus.HELD || si.getStatus() == SeatAvailabilityStatus.BOOKED) {
@@ -295,16 +296,16 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
         }
     }
 
-    private void requirePermissionForFirst(Long userId, List<SeatInstance> instances, String permission) {
+    private void requirePermissionForFirst(UUID userId, List<SeatInstance> instances, String permission) {
         if (instances.isEmpty()) {
             return;
         }
-        Long airlineId = instances.get(0).getSeat().getSeatMap().getAirlineId();
+        UUID airlineId = instances.get(0).getSeat().getSeatMap().getAirlineId();
         airlineIntegrationService.requirePermission(userId, airlineId, permission);
     }
 
-    private void requirePermissionForAirlines(Long userId, List<SeatInstance> instances, String permission) {
-        Set<Long> airlineIds = instances.stream()
+    private void requirePermissionForAirlines(UUID userId, List<SeatInstance> instances, String permission) {
+        Set<UUID> airlineIds = instances.stream()
                 .map(si -> si.getSeat().getSeatMap().getAirlineId())
                 .collect(Collectors.toSet());
         airlineIntegrationService.requirePermission(userId, airlineIds, permission);

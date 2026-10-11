@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
 import java.util.List;
 import java.util.Set;
 
@@ -51,7 +52,7 @@ public class    CityController {
     // ---------- READ ----------
 
     @GetMapping("/{id}")
-    public ResponseEntity<CityResponse> getCityById(@PathVariable Long id) {
+    public ResponseEntity<CityResponse> getCityById(@PathVariable UUID id) {
         return ResponseEntity.ok(cityService.getCityById(id));
     }
 
@@ -80,7 +81,7 @@ public class    CityController {
 
     @PutMapping("/{id}")
     public ResponseEntity<CityResponse> updateCity(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody CityRequest request) {
         return ResponseEntity.ok(cityService.updateCity(id, request));
     }
@@ -88,7 +89,7 @@ public class    CityController {
     // ---------- DELETE ----------
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse> deleteCity(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse> deleteCity(@PathVariable UUID id) {
         cityService.deleteCity(id);
         return ResponseEntity.ok(new ApiResponse("City deleted successfully"));
     }

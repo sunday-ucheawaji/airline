@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -13,5 +14,5 @@ import java.util.List;
 public class AssignPermissionsRequest {
 
     @NotEmpty
-    private List<Long> permissionIds;
+    private List<UUID> permissionIds;
 }

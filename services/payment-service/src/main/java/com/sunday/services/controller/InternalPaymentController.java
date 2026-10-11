@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.PaymentDTO;
 import com.sunday.services.service.PaymentService;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +18,12 @@ public class InternalPaymentController {
     private final PaymentService paymentService;
 
     @GetMapping("/booking/{bookingId}")
-    public PaymentDTO getPaymentByBookingId(@PathVariable Long bookingId) {
+    public PaymentDTO getPaymentByBookingId(@PathVariable UUID bookingId) {
         return paymentService.getPaymentByBookingId(bookingId);
     }
 
     @PostMapping("/batch/bookings")
-    public Map<Long, PaymentDTO> getPaymentsByBookingIds(@RequestBody List<Long> bookingIds) {
+    public Map<UUID, PaymentDTO> getPaymentsByBookingIds(@RequestBody List<UUID> bookingIds) {
         return paymentService.getPaymentsByBookingIds(bookingIds);
     }
 }

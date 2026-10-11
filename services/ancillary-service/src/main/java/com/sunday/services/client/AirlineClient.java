@@ -1,5 +1,6 @@
 package com.sunday.services.client;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.common_lib.payload.response.AirlineResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -14,17 +15,17 @@ import java.util.List;
 public interface AirlineClient {
 
     @GetMapping("/api/airlines/mine")
-    List<AirlineResponse> getMyAirlines(@RequestHeader("X-User-Id") Long userId);
+    List<AirlineResponse> getMyAirlines(@RequestHeader("X-User-Id") UUID userId);
 
     @GetMapping("/api/airlines/{airlineId}/permissions")
-    List<String> getMyPermissions(@PathVariable Long airlineId, @RequestHeader("X-User-Id") Long userId);
+    List<String> getMyPermissions(@PathVariable UUID airlineId, @RequestHeader("X-User-Id") UUID userId);
 
     @GetMapping("/api/airlines/permissions/check")
     void requirePermission(
-            @RequestParam List<Long> airlineIds,
+            @RequestParam List<UUID> airlineIds,
             @RequestParam String permission,
-            @RequestHeader("X-User-Id") Long userId);
+            @RequestHeader("X-User-Id") UUID userId);
 
     @GetMapping("/api/aircrafts/{id}")
-    AircraftResponse getAircraftById(@PathVariable("id") Long id);
+    AircraftResponse getAircraftById(@PathVariable("id") UUID id);
 }

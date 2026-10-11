@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.InformationResponseRequest;
 import com.sunday.common_lib.payload.request.OnboardingApplicationRequest;
 import com.sunday.common_lib.payload.response.InformationRequestResponse;
@@ -27,59 +28,59 @@ public class OnboardingController {
     @PostMapping
     public ResponseEntity<OnboardingApplicationResponse> createDraft(
             @Validated(OnCreate.class) @RequestBody OnboardingApplicationRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         OnboardingApplicationResponse response = onboardingService.createDraft(request, userId);
         return ResponseEntity.created(URI.create("/api/onboarding/applications/" + response.getId())).body(response);
     }
 
     @GetMapping
     public ResponseEntity<List<OnboardingApplicationResponse>> getMyApplications(
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(onboardingService.getMyApplications(userId));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<OnboardingApplicationResponse> getMyApplicationById(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(onboardingService.getMyApplicationById(id, userId));
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<OnboardingApplicationResponse> updateDraft(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody OnboardingApplicationRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(onboardingService.updateDraft(id, request, userId));
     }
 
     @PostMapping("/{id}/withdraw")
     public ResponseEntity<OnboardingApplicationResponse> withdraw(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(workflowService.withdraw(id, userId));
     }
 
     @GetMapping("/{id}/information-requests")
     public ResponseEntity<List<InformationRequestResponse>> getMyInformationRequests(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(workflowService.getMyInformationRequests(id, userId));
     }
 
     @PostMapping("/{id}/information-requests/{requestId}/respond")
     public ResponseEntity<InformationRequestResponse> respond(
-            @PathVariable Long id,
-            @PathVariable Long requestId,
+            @PathVariable UUID id,
+            @PathVariable UUID requestId,
             @Valid @RequestBody InformationResponseRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(workflowService.respond(id, requestId, userId, request));
     }
 
     @PostMapping("/{id}/submit")
     public ResponseEntity<OnboardingApplicationResponse> submitApplication(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(onboardingService.submitApplication(id, userId));
     }
 }

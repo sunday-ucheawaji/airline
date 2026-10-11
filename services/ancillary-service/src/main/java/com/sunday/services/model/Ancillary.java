@@ -5,6 +5,10 @@ import com.sunday.common_lib.enums.AncillaryType;
 import com.sunday.services.converter.AncillaryMetadataConverter;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "ancillaries")
@@ -16,8 +20,9 @@ import lombok.*;
 public class Ancillary {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -43,5 +48,6 @@ public class Ancillary {
 
     // Cross-service reference: Airline lives in airline-core-service
     @Column(name = "airline_id", nullable = false)
-    private Long airlineId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID airlineId;
 }

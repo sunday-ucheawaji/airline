@@ -1,7 +1,9 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.FlightOpsPermissions;
 import com.sunday.common_lib.enums.FlightStatus;
+import com.sunday.common_lib.enums.RecurrenceType;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightInstanceRequest;
 import com.sunday.common_lib.payload.request.FlightScheduleRequest;
@@ -44,7 +46,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
 
     @Override
     @Transactional
-    public FlightScheduleResponse createFlightSchedule(Long userId, FlightScheduleRequest request) {
+    public FlightScheduleResponse createFlightSchedule(UUID userId, FlightScheduleRequest request) {
         Flight flight = flightRepository.findById(request.getFlightId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, request.getFlightId())));
@@ -61,7 +63,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
         // re-fetched (and the permission re-checked) on every iteration.
         AircraftResponse aircraft = airlineIntegrationService.getAircraftById(request.getAircraftId(), userId);
 
-        Set<DayOfWeek> operatingDays = new HashSet<>(schedule.getOperatingDays()); // e.g., MON, WED, FRI
+        Set<DayOfWeek> operatingDays = resolveOperatingDays(schedule);
         LocalDate startDate = schedule.getStartDate();
         LocalDate endDate = schedule.getEndDate();
 
@@ -87,9 +89,19 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
         return getFlightScheduleResponse(savedSchedule);
     }
 
+    private Set<DayOfWeek> resolveOperatingDays(FlightSchedule schedule) {
+        if (schedule.getOperatingDays() != null && !schedule.getOperatingDays().isEmpty()) {
+            return new HashSet<>(schedule.getOperatingDays());
+        }
+        if (schedule.getRecurrenceType() == RecurrenceType.DAILY) {
+            return new HashSet<>(List.of(DayOfWeek.values()));
+        }
+        throw new IllegalArgumentException(ErrorMessageUtil.SCHEDULE_OPERATING_DAYS_MANDATORY);
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public FlightScheduleResponse getFlightScheduleById(Long id, Long userId) {
+    public FlightScheduleResponse getFlightScheduleById(UUID id, UUID userId) {
         FlightSchedule schedule = flightScheduleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_SCHEDULE_NOT_FOUND_BY_ID, id)));
@@ -98,7 +110,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     }
 
     @Override
-    public List<FlightScheduleResponse> getFlightScheduleByAirline(Long userId, Long airlineId) {
+    public List<FlightScheduleResponse> getFlightScheduleByAirline(UUID userId, UUID airlineId) {
         airlineIntegrationService.requirePermission(userId, airlineId, FlightOpsPermissions.SCHEDULE_READ);
         List<FlightSchedule> schedules = flightScheduleRepository.findByFlightAirlineId(airlineId);
         return schedules
@@ -108,7 +120,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     }
 
     @Override
-    public FlightScheduleResponse updateFlightSchedule(Long id, FlightScheduleRequest request, Long userId) {
+    public FlightScheduleResponse updateFlightSchedule(UUID id, FlightScheduleRequest request, UUID userId) {
         FlightSchedule existing = flightScheduleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_SCHEDULE_NOT_FOUND_BY_ID, id)));
@@ -120,7 +132,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     }
 
     @Override
-    public void deleteFlightSchedule(Long id, Long userId) {
+    public void deleteFlightSchedule(UUID id, UUID userId) {
         FlightSchedule schedule = flightScheduleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_SCHEDULE_NOT_FOUND_BY_ID, id)));

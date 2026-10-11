@@ -6,6 +6,10 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 /** Append-only audit trail of who has owned an application's review, and how ownership changed hands. */
 @Entity
@@ -18,21 +22,25 @@ import java.time.Instant;
 public class OnboardingCaseOwnerHistory {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "application_id", nullable = false)
     private AirlineOnboardingApplication application;
 
     @Column(name = "from_user_id")
-    private Long fromUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID fromUserId;
 
     @Column(name = "to_user_id")
-    private Long toUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID toUserId;
 
     @Column(name = "actor_user_id", nullable = false)
-    private Long actorUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID actorUserId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

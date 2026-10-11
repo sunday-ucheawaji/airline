@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.BookingStatus;
 import com.sunday.common_lib.payload.request.BookingRequest;
 import com.sunday.common_lib.payload.response.BookingResponse;
@@ -12,40 +13,40 @@ import java.util.List;
 
 public interface BookingService {
 
-    PaymentInitiateResponse createBooking(BookingRequest request, Long userId, String idempotencyKey);
+    PaymentInitiateResponse createBooking(BookingRequest request, UUID userId, String idempotencyKey);
 
-    BookingResponse updateBooking(Long id, BookingRequest request, Long userId);
+    BookingResponse updateBooking(UUID id, BookingRequest request, UUID userId);
 
-    BookingResponse getBookingById(Long id, Long userId);
+    BookingResponse getBookingById(UUID id, UUID userId);
 
     /** Customer-care read by booking reference. Passport and date of birth are masked. Platform permission, enforced at the gateway. */
     BookingResponse getBookingForSupport(String bookingReference);
 
     List<BookingResponse> getBookingsByAirline(
-            Long userId,
-            Long airlineId,
+            UUID userId,
+            UUID airlineId,
             String searchQuery,
             BookingStatus status,
-            Long flightInstanceId,
+            UUID flightInstanceId,
             String sortDirection
     );
 
-    List<BookingResponse> getBookingsByUser(Long userId);
+    List<BookingResponse> getBookingsByUser(UUID userId);
 
-    List<PassengerResponse> getPassengersByBooking(Long bookingId, Long userId);
+    List<PassengerResponse> getPassengersByBooking(UUID bookingId, UUID userId);
 
-    BookingResponse cancelBooking(Long id, Long userId);
+    BookingResponse cancelBooking(UUID id, UUID userId);
 
-    void deleteBooking(Long id, Long userId);
+    void deleteBooking(UUID id, UUID userId);
 
-    boolean existsById(Long id);
+    boolean existsById(UUID id);
 
     long count();
 
-    long countByFlightId(Long userId, Long airlineId, Long flightInstanceId);
+    long countByFlightId(UUID userId, UUID airlineId, UUID flightInstanceId);
 
-    BookingStatisticsResponse getBookingStatisticsForAirline(Long userId, Long airlineId);
+    BookingStatisticsResponse getBookingStatisticsForAirline(UUID userId, UUID airlineId);
 
     /** Service-to-service: what payment-service needs to check a payment against this booking. */
-    PayableBookingResponse getPayableBooking(Long id);
+    PayableBookingResponse getPayableBooking(UUID id);
 }

@@ -4,13 +4,14 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class MealResponse {
-    private Long id;
+    private UUID id;
     private String code;
     private String name;
     private String description;
@@ -26,7 +27,7 @@ public class MealResponse {
     private Boolean requiresAdvanceBooking;
     private Integer advanceBookingHours;
     private Integer displayOrder;
-    private Long airlineId;
+    private UUID airlineId;
     private Instant createdAt;
     private Instant updatedAt;
 }

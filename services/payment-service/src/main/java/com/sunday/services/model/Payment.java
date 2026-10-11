@@ -9,6 +9,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "payments")
@@ -20,22 +24,26 @@ import java.time.LocalDateTime;
 public class Payment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     // Cross-service ref: User (user-service)
     @Column(name = "user_id")
-    private Long userId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID userId;
 
     // Cross-service ref: Booking (booking-service)
     @Column(name = "booking_id")
-    private Long bookingId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID bookingId;
 
     // Cross-service ref: Airline (airline-core-service). Denormalized at initiatePayment time from the
     // booking's own airlineId (same snapshot-at-creation pattern as Booking's fare fields) so every
     // airline-scoped permission check has it in hand without a Feign round trip per check.
     @Column(name = "airline_id")
-    private Long airlineId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID airlineId;
 
     private BigDecimal amount;
 
@@ -59,14 +67,14 @@ public class Payment {
     private String idempotencyKey;
 
     @Lob
-    @Column(name = "initiate_response_json")
+    @Column(name = "initiate_response_json", columnDefinition = "LONGTEXT")
     private String initiateResponseJson;
 
     @Version
     private Long version;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp

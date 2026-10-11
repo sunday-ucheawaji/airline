@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -121,8 +122,8 @@ public class RazorpayGatewayProvider implements PaymentGatewayProvider {
             long amountInPaise = entity.optLong("amount");
             String internalPaymentIdStr = entity.optJSONObject("notes") != null
                     ? entity.getJSONObject("notes").optString("payment_id", null) : null;
-            Long internalPaymentId = internalPaymentIdStr == null || internalPaymentIdStr.isBlank()
-                    ? null : Long.parseLong(internalPaymentIdStr);
+            UUID internalPaymentId = internalPaymentIdStr == null || internalPaymentIdStr.isBlank()
+                    ? null : UUID.fromString(internalPaymentIdStr);
             return new ProviderWebhookEvent(eventType, providerReference, mapStatus(status),
                     MoneyUtil.fromSmallestUnit(amountInPaise), internalPaymentId);
         } catch (Exception e) {

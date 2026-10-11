@@ -8,6 +8,10 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 /**
  * Append-only review history for an onboarding application — never updated
@@ -24,8 +28,9 @@ import java.time.Instant;
 public class OnboardingReview {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "application_id", nullable = false)
@@ -36,7 +41,8 @@ public class OnboardingReview {
     // Logical cross-service reference to user-service's User — not a physical FK.
     @Column(name = "actor_user_id", nullable = false)
     @NotNull
-    private Long actorUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID actorUserId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -47,7 +53,8 @@ public class OnboardingReview {
 
     // The user the entry is about: the nominated airline owner (OWNER_ASSIGNED / PROVISIONED) or a stage assignee.
     @Column(name = "target_user_id")
-    private Long targetUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID targetUserId;
 
     // The review stage the entry belongs to; null when it is about the whole review (e.g. the case owner acting).
     @Enumerated(EnumType.STRING)

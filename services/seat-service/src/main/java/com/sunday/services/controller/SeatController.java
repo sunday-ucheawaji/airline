@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.SeatRequest;
 import com.sunday.common_lib.payload.response.SeatResponse;
 import com.sunday.services.service.SeatService;
@@ -17,15 +18,15 @@ public class SeatController {
 
     @GetMapping("/{id}")
     public ResponseEntity<SeatResponse> getSeatById(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         return ResponseEntity.ok(seatService.getSeatById(userId, id));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<SeatResponse> updateSeat(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id,
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id,
             @Valid @RequestBody SeatRequest request) {
         return ResponseEntity.ok(seatService.updateSeat(userId, id, request));
     }

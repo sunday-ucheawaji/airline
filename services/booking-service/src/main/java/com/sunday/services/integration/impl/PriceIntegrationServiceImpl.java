@@ -1,5 +1,6 @@
 package com.sunday.services.integration.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
@@ -20,7 +21,7 @@ public class PriceIntegrationServiceImpl implements PricingIntegrationService {
     private final PricingClient pricingClient;
 
     @Override
-    public FareQuoteResponse quoteFare(Long fareId, Long flightId, CabinClassType cabinClass, LocalDate departureDate) {
+    public FareQuoteResponse quoteFare(UUID fareId, UUID flightId, CabinClassType cabinClass, LocalDate departureDate) {
         FareQuoteResponse quote;
         try {
             quote = pricingClient.quoteFare(fareId, flightId, cabinClass, departureDate);

@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.FlightResponse;
 import com.sunday.services.service.FlightService;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,7 @@ public class InternalFlightController {
     private final FlightService flightService;
 
     @PostMapping("/batch")
-    public Map<Long, FlightResponse> getFlightsByIds(@RequestBody List<Long> ids) {
+    public Map<UUID, FlightResponse> getFlightsByIds(@RequestBody List<UUID> ids) {
         return flightService.getFlightsByIds(ids);
     }
 }

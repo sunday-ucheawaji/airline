@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -15,7 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PassengerResponse {
 
-    private Long id;
+    private UUID id;
     private String firstName;
     private String lastName;
     private String email;
@@ -27,7 +28,7 @@ public class PassengerResponse {
     private String nationality;
     private String frequentFlyerNumber;
 
-    private Long primaryUserId;
+    private UUID primaryUserId;
     private String primaryUserName;
 
     private Boolean requiresWheelchairAssistance;

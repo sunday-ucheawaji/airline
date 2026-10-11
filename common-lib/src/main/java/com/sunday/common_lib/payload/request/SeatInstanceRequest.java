@@ -6,6 +6,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -14,19 +15,19 @@ import java.math.BigDecimal;
 public class SeatInstanceRequest {
 
     @NotNull(message = ErrorMessageUtil.FLIGHT_ID_MANDATORY)
-    private Long flightId;
+    private UUID flightId;
 
     @NotNull(message = ErrorMessageUtil.FLIGHT_INSTANCE_ID_MANDATORY)
-    private Long flightInstanceId;
+    private UUID flightInstanceId;
 
     @NotNull
-    private Long flightInstanceCabinId;
+    private UUID flightInstanceCabinId;
 
     @NotNull
-    private Long seatId;
+    private UUID seatId;
 
     private SeatAvailabilityStatus status;
     private String mealPreference;
     private BigDecimal fare;
-    private Long flightScheduleId;
+    private UUID flightScheduleId;
 }

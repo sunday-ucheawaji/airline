@@ -1,5 +1,6 @@
 package com.sunday.services.client;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.common_lib.payload.response.AirlineResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -17,35 +18,35 @@ import java.util.Map;
 public interface AirlineClient {
 
     @GetMapping("/api/airlines/{airlineId}/permissions")
-    List<String> getMyPermissions(@PathVariable Long airlineId, @RequestHeader("X-User-Id") Long userId);
+    List<String> getMyPermissions(@PathVariable UUID airlineId, @RequestHeader("X-User-Id") UUID userId);
 
     // Batch check for callers validating a permission across several airlines in one request
     // (e.g. a bulk create spanning multiple airlines) — one round trip instead of one per airline.
     @GetMapping("/api/airlines/permissions/check")
     void requirePermission(
-            @RequestParam List<Long> airlineIds,
+            @RequestParam List<UUID> airlineIds,
             @RequestParam String permission,
-            @RequestHeader("X-User-Id") Long userId);
+            @RequestHeader("X-User-Id") UUID userId);
 
     /** Unauthenticated, service-to-service only — for display-enrichment callers with no real caller identity to forward (airline-core-service's GET /api/airlines/{id} requires an active membership). */
     @GetMapping("/internal/airlines/{id}")
-    AirlineResponse getAirlineByIdInternal(@PathVariable("id") Long id);
+    AirlineResponse getAirlineByIdInternal(@PathVariable("id") UUID id);
 
     /** Batch variant of {@link #getAirlineByIdInternal}: one round trip instead of one per airline. */
     @PostMapping("/internal/airlines/batch")
-    Map<Long, AirlineResponse> getAirlinesByIdsInternal(@RequestBody List<Long> ids);
+    Map<UUID, AirlineResponse> getAirlinesByIdsInternal(@RequestBody List<UUID> ids);
 
     /** Permission-gated post-Aircraft-rework — requires the caller's real identity, used only on mutation/ownership-sensitive paths. */
     @GetMapping("/api/aircrafts/{id}")
-    AircraftResponse getAircraftById(@PathVariable("id") Long id, @RequestHeader("X-User-Id") Long userId);
+    AircraftResponse getAircraftById(@PathVariable("id") UUID id, @RequestHeader("X-User-Id") UUID userId);
 
     /** Unauthenticated, service-to-service only — for display-enrichment callers (search, batch responses) with no real caller identity to forward. */
     @GetMapping("/internal/aircrafts/{id}")
-    AircraftResponse getAircraftByIdInternal(@PathVariable("id") Long id);
+    AircraftResponse getAircraftByIdInternal(@PathVariable("id") UUID id);
 
     /** Batch variant of {@link #getAircraftByIdInternal}: one round trip instead of one per aircraft. */
     @PostMapping("/internal/aircrafts/batch")
-    Map<Long, AircraftResponse> getAircraftsByIdsInternal(@RequestBody List<Long> ids);
+    Map<UUID, AircraftResponse> getAircraftsByIdsInternal(@RequestBody List<UUID> ids);
 
     /**
      * Bulk-resolves a list of IATA codes to {@link AirlineResponse} objects.

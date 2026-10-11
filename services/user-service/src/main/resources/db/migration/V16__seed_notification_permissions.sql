@@ -3,12 +3,12 @@
 -- membership against — it's a side effect of a booking/payment event addressed to the customer),
 -- same reasoning as BOOKING_SUPPORT_READ (V14) / PAYMENT_SUPPORT_READ (V15). No new roles needed.
 
-INSERT INTO permissions (name, created_at, updated_at) VALUES
-    ('NOTIFICATION_SUPPORT_READ', NOW(), NOW()),
-    ('NOTIFICATION_RESEND', NOW(), NOW());
+INSERT INTO permissions (id, name, created_at, updated_at) VALUES
+    (UUID(), 'NOTIFICATION_SUPPORT_READ', NOW(), NOW()),
+    (UUID(), 'NOTIFICATION_RESEND', NOW(), NOW());
 
-INSERT INTO role_permissions (role_id, permission_id, created_at)
-SELECT r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN (
+INSERT INTO role_permissions (id, role_id, permission_id, created_at)
+SELECT UUID(), r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN (
     ('SUPER_ADMIN', 'NOTIFICATION_SUPPORT_READ'), ('SUPER_ADMIN', 'NOTIFICATION_RESEND'),
     ('GDS_PLATFORM_ADMIN', 'NOTIFICATION_SUPPORT_READ'), ('GDS_PLATFORM_ADMIN', 'NOTIFICATION_RESEND'),
     ('GDS_AUDITOR', 'NOTIFICATION_SUPPORT_READ')

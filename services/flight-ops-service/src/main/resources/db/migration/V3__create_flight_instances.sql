@@ -1,13 +1,13 @@
 -- Formalizes the table Hibernate was previously auto-generating for the pre-existing
 -- FlightInstance entity, now that ddl-auto is `validate`.
 CREATE TABLE IF NOT EXISTS flight_instances (
-    id                       BIGINT AUTO_INCREMENT PRIMARY KEY,
-    airline_id               BIGINT,
-    flight_id                BIGINT NOT NULL,
-    aircraft_id              BIGINT,
-    departure_airport_id     BIGINT NOT NULL,
-    arrival_airport_id       BIGINT NOT NULL,
-    schedule_id              BIGINT NOT NULL,
+    id                       CHAR(36) PRIMARY KEY,
+    airline_id               CHAR(36),
+    flight_id                CHAR(36) NOT NULL,
+    aircraft_id              CHAR(36),
+    departure_airport_id     CHAR(36) NOT NULL,
+    arrival_airport_id       CHAR(36) NOT NULL,
+    schedule_id              CHAR(36) NOT NULL,
     departure_date_time      DATETIME NOT NULL,
     arrival_date_time        DATETIME NOT NULL,
     total_seats              INT NOT NULL,

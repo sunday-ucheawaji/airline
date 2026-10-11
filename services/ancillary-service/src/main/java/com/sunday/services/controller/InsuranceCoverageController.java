@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.InsuranceCoverageRequest;
 import com.sunday.common_lib.payload.response.ApiResponse;
 import com.sunday.common_lib.payload.response.InsuranceCoverageBulkCreateResponse;
@@ -23,7 +24,7 @@ public class InsuranceCoverageController {
     @PostMapping
     public ResponseEntity<InsuranceCoverageResponse> createCoverage(
             @Valid @RequestBody InsuranceCoverageRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         InsuranceCoverageResponse response = coverageService.createCoverage(userId, request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -31,28 +32,28 @@ public class InsuranceCoverageController {
     @PostMapping("/bulk")
     public ResponseEntity<InsuranceCoverageBulkCreateResponse> createCoveragesBulk(
             @Valid @RequestBody List<InsuranceCoverageRequest> requests,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return new ResponseEntity<>(coverageService.createCoveragesBulk(userId, requests), HttpStatus.CREATED);
     }
 
-    @PutMapping("/{id:\\d+}")
+    @PutMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<InsuranceCoverageResponse> updateCoverage(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody InsuranceCoverageRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(coverageService.updateCoverage(userId, id, request));
     }
 
-    @DeleteMapping("/{id:\\d+}")
+    @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<ApiResponse> deleteCoverage(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         coverageService.deleteCoverage(userId, id);
         return ResponseEntity.ok(new ApiResponse("Coverage deleted successfully"));
     }
 
-    @GetMapping("/{id:\\d+}")
-    public ResponseEntity<InsuranceCoverageResponse> getCoverageById(@PathVariable Long id) {
+    @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    public ResponseEntity<InsuranceCoverageResponse> getCoverageById(@PathVariable UUID id) {
         return ResponseEntity.ok(coverageService.getCoverageById(id));
     }
 
@@ -61,15 +62,15 @@ public class InsuranceCoverageController {
         return ResponseEntity.ok(coverageService.getAllCoverages());
     }
 
-    @GetMapping("/ancillary/{ancillaryId:\\d+}")
+    @GetMapping("/ancillary/{ancillaryId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<List<InsuranceCoverageResponse>> getCoveragesByAncillaryId(
-            @PathVariable Long ancillaryId) {
+            @PathVariable UUID ancillaryId) {
         return ResponseEntity.ok(coverageService.getCoveragesByAncillaryId(ancillaryId));
     }
 
-    @GetMapping("/ancillary/{ancillaryId:\\d+}/active")
+    @GetMapping("/ancillary/{ancillaryId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/active")
     public ResponseEntity<List<InsuranceCoverageResponse>> getActiveCoveragesByAncillaryId(
-            @PathVariable Long ancillaryId) {
+            @PathVariable UUID ancillaryId) {
         return ResponseEntity.ok(coverageService.getActiveCoveragesByAncillaryId(ancillaryId));
     }
 }

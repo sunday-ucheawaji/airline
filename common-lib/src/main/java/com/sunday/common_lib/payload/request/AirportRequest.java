@@ -13,6 +13,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.ZoneId;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -33,7 +34,7 @@ public class AirportRequest {
     private Address address;
 
     @NotNull(message = "City ID is mandatory")
-    private Long cityId;
+    private UUID cityId;
 
     @Valid
     private GeoCode geoCode;

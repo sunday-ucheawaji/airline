@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sunday.common_lib.payload.request.BookingRequest;
 import com.sunday.common_lib.payload.response.PaymentInitiateResponse;
@@ -33,7 +34,7 @@ public class BookingSagaServiceImpl implements BookingSagaService {
     private final ObjectMapper objectMapper;
 
     @Override
-    public String hashRequest(BookingRequest request, Long userId) {
+    public String hashRequest(BookingRequest request, UUID userId) {
         try {
             String canonical = userId + ":" + objectMapper.writeValueAsString(request);
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(canonical.getBytes(StandardCharsets.UTF_8));
@@ -45,7 +46,7 @@ public class BookingSagaServiceImpl implements BookingSagaService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public BookingSaga tryStart(Long userId, String idempotencyKey, String requestHash) {
+    public BookingSaga tryStart(UUID userId, String idempotencyKey, String requestHash) {
         Optional<BookingSaga> existing = bookingSagaRepository.findByUserIdAndIdempotencyKey(userId, idempotencyKey);
         if (existing.isPresent()) {
             BookingSaga saga = existing.get();
@@ -85,7 +86,7 @@ public class BookingSagaServiceImpl implements BookingSagaService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordSeatsHeld(Long sagaId, String bookingReference, List<Long> seatInstanceIds) {
+    public void recordSeatsHeld(UUID sagaId, String bookingReference, List<UUID> seatInstanceIds) {
         BookingSaga saga = bookingSagaRepository.findById(sagaId).orElseThrow();
         saga.setBookingReference(bookingReference);
         saga.setSeatInstanceIds(seatInstanceIds);
@@ -95,7 +96,7 @@ public class BookingSagaServiceImpl implements BookingSagaService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordBookingCreated(Long sagaId, Long bookingId) {
+    public void recordBookingCreated(UUID sagaId, UUID bookingId) {
         BookingSaga saga = bookingSagaRepository.findById(sagaId).orElseThrow();
         saga.setBookingId(bookingId);
         saga.setStatus(SagaStatus.BOOKING_CREATED);
@@ -104,7 +105,7 @@ public class BookingSagaServiceImpl implements BookingSagaService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordPaymentInitiated(Long sagaId, PaymentInitiateResponse response) {
+    public void recordPaymentInitiated(UUID sagaId, PaymentInitiateResponse response) {
         BookingSaga saga = bookingSagaRepository.findById(sagaId).orElseThrow();
         try {
             saga.setResponseJson(objectMapper.writeValueAsString(response));
@@ -117,7 +118,7 @@ public class BookingSagaServiceImpl implements BookingSagaService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void complete(Long bookingId) {
+    public void complete(UUID bookingId) {
         bookingSagaRepository.findByBookingId(bookingId).ifPresent(saga -> {
             saga.setStatus(SagaStatus.COMPLETED);
             bookingSagaRepository.save(saga);
@@ -126,7 +127,7 @@ public class BookingSagaServiceImpl implements BookingSagaService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void cancel(Long bookingId) {
+    public void cancel(UUID bookingId) {
         bookingSagaRepository.findByBookingId(bookingId).ifPresent(saga -> {
             saga.setStatus(SagaStatus.CANCELLED);
             bookingSagaRepository.save(saga);
@@ -135,7 +136,7 @@ public class BookingSagaServiceImpl implements BookingSagaService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void fail(Long sagaId, String error) {
+    public void fail(UUID sagaId, String error) {
         bookingSagaRepository.findById(sagaId).ifPresent(saga -> {
             saga.setStatus(saga.getBookingId() != null ? SagaStatus.CANCELLED : SagaStatus.FAILED);
             saga.setLastError(error);
@@ -152,7 +153,7 @@ public class BookingSagaServiceImpl implements BookingSagaService {
      * constraint violation here never risks touching an already-poisoned session afterward.
      */
     @Override
-    public boolean claimPaymentEvent(Long paymentId, String eventType) {
+    public boolean claimPaymentEvent(UUID paymentId, String eventType) {
         try {
             processedPaymentEventRepository.saveAndFlush(
                     ProcessedPaymentEvent.builder().paymentId(paymentId).eventType(eventType).build());

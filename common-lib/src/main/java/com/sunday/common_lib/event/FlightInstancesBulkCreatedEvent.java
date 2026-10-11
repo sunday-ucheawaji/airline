@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.UUID;
 
 /** Published once per bulk instance creation (e.g. schedule generation) instead of one FlightInstanceCreatedEvent per instance — all instances here share the same flight/aircraft, so seat-service can resolve the aircraft's cabin configuration once and materialize every instance's seats in one batch. */
 @Data
@@ -13,7 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FlightInstancesBulkCreatedEvent {
-    private Long flightId;
-    private Long aircraftId;
-    private List<Long> flightInstanceIds;
+    private UUID flightId;
+    private UUID aircraftId;
+    private List<UUID> flightInstanceIds;
 }

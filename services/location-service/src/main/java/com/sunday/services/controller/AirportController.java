@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
 import java.util.List;
 import java.util.Map;
 
@@ -32,14 +33,14 @@ public class AirportController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AirportResponse> getAirportById(@PathVariable Long id) {
+    public ResponseEntity<AirportResponse> getAirportById(@PathVariable UUID id) {
         return ResponseEntity.ok(airportService.getAirportById(id));
     }
 
 
     /** Batch variant of {@code GET /{id}}: one round trip instead of one per airport. */
     @PostMapping("/batch")
-    public ResponseEntity<Map<Long, AirportResponse>> getAirportsByIds(@RequestBody List<Long> ids) {
+    public ResponseEntity<Map<UUID, AirportResponse>> getAirportsByIds(@RequestBody List<UUID> ids) {
         return ResponseEntity.ok(airportService.getAirportsByIds(ids));
     }
 
@@ -49,19 +50,19 @@ public class AirportController {
     }
 
     @GetMapping("/city/{cityId}")
-    public ResponseEntity<List<AirportResponse>> getAirportsByCityId(@PathVariable Long cityId) {
+    public ResponseEntity<List<AirportResponse>> getAirportsByCityId(@PathVariable UUID cityId) {
         return ResponseEntity.ok(airportService.getAirportsByCityId(cityId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<AirportResponse> updateAirport(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody AirportRequest request) {
         return ResponseEntity.ok(airportService.updateAirport(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse> deleteAirport(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse> deleteAirport(@PathVariable UUID id) {
         airportService.deleteAirport(id);
         return ResponseEntity.ok(new ApiResponse("Airport deleted successfully"));
     }

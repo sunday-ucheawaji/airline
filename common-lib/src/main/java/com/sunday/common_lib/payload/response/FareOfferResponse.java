@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * What a customer sees for one fare on a flight. Deliberately narrower than FareResponse: no ids of staff records,
@@ -17,7 +18,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class FareOfferResponse {
 
-    private Long id;
+    private UUID id;
     private String name;
     private Character rbdCode;
     private String fareLabel;

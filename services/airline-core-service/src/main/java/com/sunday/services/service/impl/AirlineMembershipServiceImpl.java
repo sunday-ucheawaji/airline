@@ -1,6 +1,8 @@
 package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.constants.AirlineMembershipPermissions;
+import com.sunday.common_lib.constants.AirlineRoles;
+import com.sunday.common_lib.dto.RoleDTO;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
@@ -12,6 +14,7 @@ import com.sunday.common_lib.payload.request.MemberStatusUpdateRequest;
 import com.sunday.common_lib.payload.response.AirlineMembershipResponse;
 import com.sunday.common_lib.payload.response.ReviewerResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.client.RoleClient;
 import com.sunday.services.client.UserClient;
 import com.sunday.services.enums.MembershipStatus;
 import com.sunday.services.mapper.AirlineMembershipMapper;
@@ -31,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Invitations, roster and role/status changes for a single airline's team. Reuses {@link AirlineMembership}
@@ -46,51 +50,19 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
     private final AirlineRepository airlineRepository;
     private final AirlineService airlineService;
     private final UserClient userClient;
+    private final RoleClient roleClient;
     private final PlatformUserGuard platformUserGuard;
-
-    @Value("${airline.admin-role-id}")
-    private Long adminRoleId;
-
-    @Value("${airline.viewer-role-id}")
-    private Long viewerRoleId;
-
-    @Value("${airline.owner-role-id}")
-    private Long ownerRoleId;
-
-    @Value("${airline.flight-dispatcher-role-id}")
-    private Long flightDispatcherRoleId;
-
-    @Value("${airline.fleet-assignment-officer-role-id}")
-    private Long fleetAssignmentOfficerRoleId;
-
-    @Value("${airline.seat-config-officer-role-id}")
-    private Long seatConfigOfficerRoleId;
-
-    @Value("${airline.inventory-control-officer-role-id}")
-    private Long inventoryControlOfficerRoleId;
-
-    @Value("${airline.reservations-officer-role-id}")
-    private Long reservationsOfficerRoleId;
-
-    @Value("${airline.ticketing-officer-role-id}")
-    private Long ticketingOfficerRoleId;
-
-    @Value("${airline.refund-approver-role-id}")
-    private Long refundApproverRoleId;
-
-    @Value("${airline.revenue-manager-role-id}")
-    private Long revenueManagerRoleId;
 
     @Value("${airline.invitation-expiry:7d}")
     private Duration invitationExpiry;
 
     @Override
-    public AirlineMembershipResponse invite(Long airlineId, AirlineInvitationRequest request, Long actorUserId) {
+    public AirlineMembershipResponse invite(UUID airlineId, AirlineInvitationRequest request, UUID actorUserId) {
         airlineService.requirePermission(actorUserId, List.of(airlineId), AirlineMembershipPermissions.INVITE);
         requireInvitableRole(request.getRoleId());
         Airline airline = getAirlineOrThrow(airlineId);
 
-        Long invitedUserId = resolveUserByEmail(request.getEmail());
+        UUID invitedUserId = resolveUserByEmail(request.getEmail());
         platformUserGuard.requireNotPlatformUser(invitedUserId,
                 String.format(ErrorMessageUtil.MEMBER_INVITE_TARGET_IS_PLATFORM_STAFF, invitedUserId));
 
@@ -116,14 +88,14 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AirlineMembershipResponse> listMembers(Long airlineId, Long actorUserId) {
+    public List<AirlineMembershipResponse> listMembers(UUID airlineId, UUID actorUserId) {
         airlineService.requirePermission(actorUserId, List.of(airlineId), AirlineMembershipPermissions.READ);
         return AirlineMembershipMapper.toResponseList(membershipRepository.findByAirlineId(airlineId));
     }
 
     @Override
     @CacheEvict(cacheNames = "airlinesByUser", allEntries = true)
-    public AirlineMembershipResponse accept(Long airlineId, Long membershipId, Long actorUserId) {
+    public AirlineMembershipResponse accept(UUID airlineId, UUID membershipId, UUID actorUserId) {
         AirlineMembership membership = getMembershipOrThrow(airlineId, membershipId);
         if (!membership.getUserId().equals(actorUserId)) {
             throw new OperationNotPermittedException(ErrorMessageUtil.MEMBERSHIP_ACCEPT_NOT_INVITEE);
@@ -144,11 +116,11 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
     }
 
     @Override
-    public AirlineMembershipResponse updateRole(Long airlineId, Long membershipId, MemberRoleUpdateRequest request, Long actorUserId) {
+    public AirlineMembershipResponse updateRole(UUID airlineId, UUID membershipId, MemberRoleUpdateRequest request, UUID actorUserId) {
         airlineService.requirePermission(actorUserId, List.of(airlineId), AirlineMembershipPermissions.UPDATE_ROLE);
         requireInvitableRole(request.getRoleId());
         AirlineMembership membership = getMembershipOrThrow(airlineId, membershipId);
-        if (ownerRoleId.equals(membership.getRoleId())) {
+        if (isOwnerRole(membership.getRoleId())) {
             throw new OperationNotPermittedException(ErrorMessageUtil.MEMBER_ROLE_UPDATE_OWNER_LOCKED);
         }
         if (membership.getStatus() != MembershipStatus.ACTIVE && membership.getStatus() != MembershipStatus.SUSPENDED) {
@@ -161,7 +133,7 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
 
     @Override
     @CacheEvict(cacheNames = "airlinesByUser", allEntries = true)
-    public AirlineMembershipResponse updateStatus(Long airlineId, Long membershipId, MemberStatusUpdateRequest request, Long actorUserId) {
+    public AirlineMembershipResponse updateStatus(UUID airlineId, UUID membershipId, MemberStatusUpdateRequest request, UUID actorUserId) {
         airlineService.requirePermission(actorUserId, List.of(airlineId), AirlineMembershipPermissions.UPDATE_STATUS);
         MembershipStatus target = parseActivatableStatus(request.getStatus());
         AirlineMembership membership = getMembershipOrThrow(airlineId, membershipId);
@@ -178,7 +150,7 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
 
     @Override
     @CacheEvict(cacheNames = "airlinesByUser", allEntries = true)
-    public void removeOrRevoke(Long airlineId, Long membershipId, Long actorUserId) {
+    public void removeOrRevoke(UUID airlineId, UUID membershipId, UUID actorUserId) {
         AirlineMembership membership = getMembershipOrThrow(airlineId, membershipId);
         if (membership.getStatus() == MembershipStatus.INVITED) {
             airlineService.requirePermission(actorUserId, List.of(airlineId), AirlineMembershipPermissions.INVITE);
@@ -195,12 +167,12 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
 
     // ---------- Helpers ----------
 
-    private Airline getAirlineOrThrow(Long airlineId) {
+    private Airline getAirlineOrThrow(UUID airlineId) {
         return airlineRepository.findById(airlineId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRLINE_NOT_FOUND_BY_ID, airlineId)));
     }
 
-    private AirlineMembership getMembershipOrThrow(Long airlineId, Long membershipId) {
+    private AirlineMembership getMembershipOrThrow(UUID airlineId, UUID membershipId) {
         AirlineMembership membership = membershipRepository.findById(membershipId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.MEMBERSHIP_NOT_FOUND, membershipId, airlineId)));
@@ -210,15 +182,24 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
         return membership;
     }
 
-    private void requireInvitableRole(Long roleId) {
-        if (!adminRoleId.equals(roleId) && !viewerRoleId.equals(roleId)
-                && !flightDispatcherRoleId.equals(roleId) && !fleetAssignmentOfficerRoleId.equals(roleId)
-                && !seatConfigOfficerRoleId.equals(roleId) && !inventoryControlOfficerRoleId.equals(roleId)
-                && !revenueManagerRoleId.equals(roleId)
-                && !reservationsOfficerRoleId.equals(roleId) && !ticketingOfficerRoleId.equals(roleId)
-                && !refundApproverRoleId.equals(roleId)) {
+    private void requireInvitableRole(UUID roleId) {
+        if (!AirlineRoles.INVITABLE_ROLES.contains(resolveRole(roleId).getName())) {
             throw new BadRequestException(String.format(ErrorMessageUtil.MEMBER_INVITE_TARGET_ROLE_INVALID, roleId));
         }
+    }
+
+    private boolean isOwnerRole(UUID roleId) {
+        return AirlineRoles.OWNER.equals(resolveRole(roleId).getName());
+    }
+
+    /** Fails closed (503) when user-service cannot resolve the role, including when it's unreachable
+     *  (RoleClient's fallback returns null for any Feign failure, indistinguishable from "not found"). */
+    private RoleDTO resolveRole(UUID roleId) {
+        RoleDTO role = roleClient.getRoleById(roleId);
+        if (role == null) {
+            throw new ServiceUnavailableException(String.format(ErrorMessageUtil.ROLE_LOOKUP_UNAVAILABLE, roleId));
+        }
+        return role;
     }
 
     private MembershipStatus parseActivatableStatus(String status) {
@@ -235,18 +216,18 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
     }
 
     private void requireNotLastActiveOwner(AirlineMembership membership) {
-        if (!ownerRoleId.equals(membership.getRoleId()) || membership.getStatus() != MembershipStatus.ACTIVE) {
+        if (membership.getStatus() != MembershipStatus.ACTIVE || !isOwnerRole(membership.getRoleId())) {
             return;
         }
         long activeOwners = membershipRepository.countByAirlineIdAndRoleIdAndStatus(
-                membership.getAirline().getId(), ownerRoleId, MembershipStatus.ACTIVE);
+                membership.getAirline().getId(), membership.getRoleId(), MembershipStatus.ACTIVE);
         if (activeOwners <= 1) {
             throw new ConflictException(String.format(ErrorMessageUtil.MEMBER_CANNOT_REMOVE_LAST_OWNER, membership.getAirline().getId()));
         }
     }
 
     /** Fails closed (503) when user-service cannot answer; 400 when the email matches no account. */
-    private Long resolveUserByEmail(String email) {
+    private UUID resolveUserByEmail(String email) {
         try {
             ReviewerResponse user = userClient.getUserByEmail(email);
             return user.getUserId();

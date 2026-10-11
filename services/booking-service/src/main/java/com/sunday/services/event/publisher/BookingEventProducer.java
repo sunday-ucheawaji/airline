@@ -1,5 +1,6 @@
 package com.sunday.services.event.publisher;
 
+import java.util.UUID;
 import com.sunday.common_lib.dto.UserDTO;
 import com.sunday.common_lib.event.BookingCancelledEvent;
 import com.sunday.common_lib.event.BookingConfirmedEvent;
@@ -39,7 +40,7 @@ public class BookingEventProducer {
 
         // ── Passengers ────────────────────────────────────────────────────────
         // Build a passengerId → ticketNumber lookup from the Ticket relation
-        Map<Long, String> ticketByPassenger = booking.getTickets().stream()
+        Map<UUID, String> ticketByPassenger = booking.getTickets().stream()
                 .filter(t -> t.getPassenger() != null)
                 .collect(Collectors.toMap(
                         t -> t.getPassenger().getId(),
@@ -183,11 +184,11 @@ public class BookingEventProducer {
     /** Overload for compensation paths (e.g. BookingSagaRecoverySweeper) that only have the saga's own
      *  record of what was held, not a persisted Booking row — so no contact info is available either;
      *  notification-service treats a blank contact as "nothing to notify", not an error. */
-    public void sendBookingCancelled(Long bookingId, String bookingReference, List<Long> seatInstanceIds) {
+    public void sendBookingCancelled(UUID bookingId, String bookingReference, List<UUID> seatInstanceIds) {
         sendBookingCancelled(bookingId, bookingReference, seatInstanceIds, null, null, null);
     }
 
-    private void sendBookingCancelled(Long bookingId, String bookingReference, List<Long> seatInstanceIds,
+    private void sendBookingCancelled(UUID bookingId, String bookingReference, List<UUID> seatInstanceIds,
                                        String contactEmail, String contactPhone, String reason) {
         if (seatInstanceIds == null || seatInstanceIds.isEmpty()) {
             return;

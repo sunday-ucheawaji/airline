@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.ReviewDecision;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
@@ -33,14 +34,14 @@ public class OnboardingSupport {
     private final OnboardingCaseOwnerHistoryRepository caseOwnerHistoryRepository;
     private final OnboardingInformationRequestRepository informationRequestRepository;
 
-    public AirlineOnboardingApplication getOrThrow(Long applicationId) {
+    public AirlineOnboardingApplication getOrThrow(UUID applicationId) {
         return applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_FOUND_BY_ID, applicationId)));
     }
 
     /** Staff can never see a draft, even by id: it is the applicant's private working copy. */
-    public AirlineOnboardingApplication getVisibleOrThrow(Long applicationId) {
+    public AirlineOnboardingApplication getVisibleOrThrow(UUID applicationId) {
         AirlineOnboardingApplication application = getOrThrow(applicationId);
         if (application.getStatus() == OnboardingStatus.DRAFT) {
             throw new ResourceNotFoundException(
@@ -56,14 +57,14 @@ public class OnboardingSupport {
         }
     }
 
-    public void requireOwnedByApplicant(AirlineOnboardingApplication application, Long applicantUserId) {
+    public void requireOwnedByApplicant(AirlineOnboardingApplication application, UUID applicantUserId) {
         if (!application.getApplicantUserId().equals(applicantUserId)) {
             throw new OperationNotPermittedException(String.format(
                     ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_OWNED_BY_APPLICANT, application.getId()));
         }
     }
 
-    public void requireNotApplicantOrNominee(AirlineOnboardingApplication application, Long actorUserId) {
+    public void requireNotApplicantOrNominee(AirlineOnboardingApplication application, UUID actorUserId) {
         if (actorUserId.equals(application.getApplicantUserId())) {
             throw new ConflictException(String.format(ErrorMessageUtil.ONBOARDING_SEGREGATION_OF_DUTIES, "submitted"));
         }
@@ -73,7 +74,7 @@ public class OnboardingSupport {
     }
 
     /** 409 if nobody has claimed the case yet, 403 if the actor is not the case owner. */
-    public void requireCaseOwner(AirlineOnboardingApplication application, Long actorUserId) {
+    public void requireCaseOwner(AirlineOnboardingApplication application, UUID actorUserId) {
         if (application.getCaseOwnerUserId() == null) {
             throw new ConflictException(String.format(ErrorMessageUtil.ONBOARDING_CASE_NOT_CLAIMED, application.getId()));
         }
@@ -83,12 +84,12 @@ public class OnboardingSupport {
     }
 
     /** True when the user is the applicant or the nominated airline owner of the application. */
-    public boolean isParty(AirlineOnboardingApplication application, Long userId) {
+    public boolean isParty(AirlineOnboardingApplication application, UUID userId) {
         return userId.equals(application.getApplicantUserId()) || userId.equals(application.getInitialAdminUserId());
     }
 
-    public OnboardingReview record(AirlineOnboardingApplication application, Long actorUserId, ReviewDecision decision,
-                                   String comments, Long targetUserId, OnboardingStage stage) {
+    public OnboardingReview record(AirlineOnboardingApplication application, UUID actorUserId, ReviewDecision decision,
+                                   String comments, UUID targetUserId, OnboardingStage stage) {
         return reviewRepository.save(OnboardingReview.builder()
                 .application(application)
                 .actorUserId(actorUserId)
@@ -99,8 +100,8 @@ public class OnboardingSupport {
                 .build());
     }
 
-    public void recordOwnerChange(AirlineOnboardingApplication application, Long fromUserId, Long toUserId,
-                                  Long actorUserId, CaseOwnerAction action, String reason) {
+    public void recordOwnerChange(AirlineOnboardingApplication application, UUID fromUserId, UUID toUserId,
+                                  UUID actorUserId, CaseOwnerAction action, String reason) {
         caseOwnerHistoryRepository.save(OnboardingCaseOwnerHistory.builder()
                 .application(application)
                 .fromUserId(fromUserId)

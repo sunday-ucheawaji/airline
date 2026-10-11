@@ -1,5 +1,6 @@
 package com.sunday.services.mapper;
 
+import java.util.UUID;
 import com.sunday.common_lib.embeddable.*;
 import com.sunday.common_lib.enums.FareStatus;
 import com.sunday.common_lib.enums.PassengerType;
@@ -9,7 +10,7 @@ import com.sunday.services.model.Fare;
 
 public class FareMapper {
 
-    public static Fare toEntity(FareRequest request, Long airlineId, Long userId) {
+    public static Fare toEntity(FareRequest request, UUID airlineId, UUID userId) {
         if (request == null) return null;
 
         SeatBenefits seatBenefits = SeatBenefits.builder()
@@ -133,7 +134,7 @@ public class FareMapper {
     }
 
     /** flightId and airlineId are not updatable: a fare stays on the flight and airline it was created for. */
-    public static void updateEntity(FareRequest request, Fare existing, Long userId) {
+    public static void updateEntity(FareRequest request, Fare existing, UUID userId) {
         if (request == null || existing == null) return;
         existing.setName(request.getName());
         existing.setRbdCode(request.getRbdCode());

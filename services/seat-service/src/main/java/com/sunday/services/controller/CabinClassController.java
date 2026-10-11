@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.request.CabinClassRequest;
 import com.sunday.common_lib.payload.response.CabinClassBulkCreateResponse;
@@ -22,7 +23,7 @@ public class CabinClassController {
 
     @PostMapping
     public ResponseEntity<CabinClassResponse> createCabinClass(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody CabinClassRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(cabinClassService.createCabinClass(userId, request));
@@ -30,7 +31,7 @@ public class CabinClassController {
 
     @PostMapping("/create/bulk")
     public ResponseEntity<CabinClassBulkCreateResponse> createCabinClasses(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody List<CabinClassRequest> requests) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(cabinClassService.createCabinClasses(userId, requests));
@@ -38,39 +39,39 @@ public class CabinClassController {
 
     @GetMapping("/{id}")
     public ResponseEntity<CabinClassResponse> getCabinClassById(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         return ResponseEntity.ok(cabinClassService.getCabinClassById(userId, id));
     }
 
     @GetMapping("/aircraft/{id}/name/{cabinClass}")
     public ResponseEntity<CabinClassResponse> getCabinClassByAircraftIdAndName(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @PathVariable CabinClassType cabinClass,
-            @PathVariable Long id) {
+            @PathVariable UUID id) {
         return ResponseEntity.ok(
                 cabinClassService.getByAircraftIdAndName(userId, id, cabinClass));
     }
 
     @GetMapping("/aircraft/{aircraftId}")
     public ResponseEntity<List<CabinClassResponse>> getCabinClassesByAircraftId(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long aircraftId) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID aircraftId) {
         return ResponseEntity.ok(cabinClassService.getCabinClassesByAircraftId(userId, aircraftId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<CabinClassResponse> updateCabinClass(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id,
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id,
             @Valid @RequestBody CabinClassRequest request) {
         return ResponseEntity.ok(cabinClassService.updateCabinClass(userId, id, request));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCabinClass(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         cabinClassService.deleteCabinClass(userId, id);
         return ResponseEntity.noContent().build();
     }

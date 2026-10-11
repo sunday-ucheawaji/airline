@@ -1,5 +1,6 @@
 package com.sunday.services.mapper;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.BaggagePolicyRequest;
 import com.sunday.common_lib.payload.response.BaggagePolicyResponse;
 import com.sunday.services.model.BaggagePolicy;
@@ -7,7 +8,7 @@ import com.sunday.services.model.Fare;
 
 public class BaggagePolicyMapper {
 
-    public static BaggagePolicy toEntity(BaggagePolicyRequest request, Fare fare, Long userId) {
+    public static BaggagePolicy toEntity(BaggagePolicyRequest request, Fare fare, UUID userId) {
         if (request == null) return null;
         return BaggagePolicy.builder()
                 .fare(fare)
@@ -52,7 +53,7 @@ public class BaggagePolicyMapper {
                 .build();
     }
 
-    public static void updateEntity(BaggagePolicyRequest request, BaggagePolicy existing, Long userId) {
+    public static void updateEntity(BaggagePolicyRequest request, BaggagePolicy existing, UUID userId) {
         if (request == null || existing == null) return;
         existing.setUpdatedBy(userId);
         if (request.getName() != null) existing.setName(request.getName());

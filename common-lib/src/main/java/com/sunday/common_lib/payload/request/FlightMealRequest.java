@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -13,10 +14,10 @@ import java.math.BigDecimal;
 public class FlightMealRequest {
 
     @NotNull(message = "Flight ID is required")
-    private Long flightId;
+    private UUID flightId;
 
     @NotNull(message = "Meal ID is required")
-    private Long mealId;
+    private UUID mealId;
 
     @NotNull(message = "Availability status is required")
     private Boolean available;

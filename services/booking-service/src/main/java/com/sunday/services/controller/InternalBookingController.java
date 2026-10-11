@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.PayableBookingResponse;
 import com.sunday.services.service.BookingService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ public class InternalBookingController {
     private final BookingService bookingService;
 
     @GetMapping("/{id}/payable")
-    public PayableBookingResponse getPayableBooking(@PathVariable Long id) {
+    public PayableBookingResponse getPayableBooking(@PathVariable UUID id) {
         return bookingService.getPayableBooking(id);
     }
 }

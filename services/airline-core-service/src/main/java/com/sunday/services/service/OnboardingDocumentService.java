@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.DocumentResponse;
 import com.sunday.common_lib.payload.response.DownloadUrlResponse;
 import com.sunday.services.enums.DocumentType;
@@ -14,22 +15,22 @@ public interface OnboardingDocumentService {
      * Accepts an upload: cheap checks, raw file into quarantine, a {@code PROCESSING} record, and an event for the
      * asynchronous inspection. Returns straight away; the applicant sees the outcome when listing.
      */
-    DocumentResponse upload(Long applicationId, Long applicantUserId, DocumentType documentType, MultipartFile file);
+    DocumentResponse upload(UUID applicationId, UUID applicantUserId, DocumentType documentType, MultipartFile file);
 
-    List<DocumentResponse> getMyDocuments(Long applicationId, Long applicantUserId);
+    List<DocumentResponse> getMyDocuments(UUID applicationId, UUID applicantUserId);
 
     /** A short-lived signed link to one of the applicant's own documents, available once it has passed the checks. */
-    DownloadUrlResponse getMyDownloadUrl(Long applicationId, Long documentId, Long applicantUserId);
+    DownloadUrlResponse getMyDownloadUrl(UUID applicationId, UUID documentId, UUID applicantUserId);
 
     /** Removes an upload (record and file). Only while the application is still a draft. */
-    void delete(Long applicationId, Long documentId, Long applicantUserId);
+    void delete(UUID applicationId, UUID documentId, UUID applicantUserId);
 
     // ----- Staff side: only documents that have passed the automatic checks are visible -----
-    List<DocumentResponse> getDocumentsForReview(Long applicationId);
+    List<DocumentResponse> getDocumentsForReview(UUID applicationId);
 
-    DownloadUrlResponse getDownloadUrlForReview(Long applicationId, Long documentId);
+    DownloadUrlResponse getDownloadUrlForReview(UUID applicationId, UUID documentId);
 
-    DocumentResponse verify(Long applicationId, Long documentId, Long actorUserId);
+    DocumentResponse verify(UUID applicationId, UUID documentId, UUID actorUserId);
 
-    DocumentResponse reject(Long applicationId, Long documentId, Long actorUserId, String reason);
+    DocumentResponse reject(UUID applicationId, UUID documentId, UUID actorUserId, String reason);
 }

@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
@@ -26,7 +27,7 @@ public class FareQuoteServiceImpl implements FareQuoteService {
     private final Clock clock;
 
     @Override
-    public FareQuoteResponse quote(Long fareId, Long flightId, CabinClassType cabinClass, LocalDate departureDate) {
+    public FareQuoteResponse quote(UUID fareId, UUID flightId, CabinClassType cabinClass, LocalDate departureDate) {
         Fare fare = fareRepository.findById(fareId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FARE_NOT_FOUND_BY_ID, fareId)));
         if (!fare.getFlightId().equals(flightId)) {

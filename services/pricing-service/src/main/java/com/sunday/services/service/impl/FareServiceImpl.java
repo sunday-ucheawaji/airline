@@ -1,6 +1,7 @@
 package com.sunday.services.service.impl;
 
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.PricingPermissions;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
@@ -49,8 +50,8 @@ public class FareServiceImpl implements FareService {
     private final Validator validator;
 
     @Override
-    public FareResponse createFare(Long userId, FareRequest request) {
-        Long airlineId = pricingIntegrationService
+    public FareResponse createFare(UUID userId, FareRequest request) {
+        UUID airlineId = pricingIntegrationService
                 .resolveAirlineIdsByFlightIds(List.of(request.getFlightId()))
                 .get(request.getFlightId());
         pricingIntegrationService.requirePermission(userId, airlineId, PricingPermissions.FARE_MANAGE);
@@ -72,7 +73,7 @@ public class FareServiceImpl implements FareService {
      * the permission check and the stored-fare lookup each run once for the whole request.
      */
     @Override
-    public FareBulkCreateResponse createFares(Long userId, List<FareRequest> requests) {
+    public FareBulkCreateResponse createFares(UUID userId, List<FareRequest> requests) {
         if (requests.size() > MAX_BULK_ROWS) {
             throw new BadRequestException(String.format(ErrorMessageUtil.BULK_TOO_LARGE, MAX_BULK_ROWS));
         }
@@ -89,14 +90,14 @@ public class FareServiceImpl implements FareService {
             }
         }
 
-        Set<Long> requestedFlightIds = candidates.stream()
+        Set<UUID> requestedFlightIds = candidates.stream()
                 .map(candidate -> candidate.request().getFlightId())
                 .collect(Collectors.toSet());
-        Map<Long, Long> airlineByFlight = pricingIntegrationService.findAirlineIdsByFlightIds(requestedFlightIds);
+        Map<UUID, UUID> airlineByFlight = pricingIntegrationService.findAirlineIdsByFlightIds(requestedFlightIds);
 
         List<IndexedRequest> known = new ArrayList<>();
         for (IndexedRequest candidate : candidates) {
-            Long flightId = candidate.request().getFlightId();
+            UUID flightId = candidate.request().getFlightId();
             if (airlineByFlight.containsKey(flightId)) {
                 known.add(candidate);
             } else {
@@ -107,8 +108,8 @@ public class FareServiceImpl implements FareService {
 
         List<FareResponse> created = List.of();
         if (!known.isEmpty()) {
-            Set<Long> knownFlightIds = known.stream().map(c -> c.request().getFlightId()).collect(Collectors.toSet());
-            Set<Long> knownAirlineIds = knownFlightIds.stream().map(airlineByFlight::get).collect(Collectors.toSet());
+            Set<UUID> knownFlightIds = known.stream().map(c -> c.request().getFlightId()).collect(Collectors.toSet());
+            Set<UUID> knownAirlineIds = knownFlightIds.stream().map(airlineByFlight::get).collect(Collectors.toSet());
             pricingIntegrationService.requirePermission(userId, knownAirlineIds, PricingPermissions.FARE_MANAGE);
 
             Set<String> stored = fareRepository.findByFlightIdIn(knownFlightIds).stream()
@@ -119,7 +120,7 @@ public class FareServiceImpl implements FareService {
             List<Fare> toSave = new ArrayList<>();
             for (IndexedRequest candidate : known) {
                 FareRequest request = candidate.request();
-                Long airlineId = airlineByFlight.get(request.getFlightId());
+                UUID airlineId = airlineByFlight.get(request.getFlightId());
                 String key = Fare.keyOf(airlineId, request.getFlightId(), request.getCabinClass(), request.getRbdCode(),
                         FareMapper.passengerTypeOf(request), request.getName());
                 if (stored.contains(key)) {
@@ -160,7 +161,7 @@ public class FareServiceImpl implements FareService {
 
     @Override
     @Transactional(readOnly = true)
-    public FareResponse getFareById(Long userId, Long id) {
+    public FareResponse getFareById(UUID userId, UUID id) {
         Fare fare = findFareOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fare.getAirlineId(), PricingPermissions.FARE_READ);
         return FareMapper.toResponse(fare);
@@ -168,10 +169,10 @@ public class FareServiceImpl implements FareService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<FareResponse> getFaresByFlightIdAndCabinClassId(Long userId, Long flightId, Long cabinClassId) {
+    public List<FareResponse> getFaresByFlightIdAndCabinClassId(UUID userId, UUID flightId, UUID cabinClassId) {
         List<Fare> fares = fareRepository.findByFlightIdAndCabinClassId(flightId, cabinClassId);
         if (!fares.isEmpty()) {
-            Set<Long> airlineIds = fares.stream().map(Fare::getAirlineId).collect(Collectors.toSet());
+            Set<UUID> airlineIds = fares.stream().map(Fare::getAirlineId).collect(Collectors.toSet());
             pricingIntegrationService.requirePermission(userId, airlineIds, PricingPermissions.FARE_READ);
         }
         return fares.stream().map(FareMapper::toResponse).collect(Collectors.toList());
@@ -179,14 +180,14 @@ public class FareServiceImpl implements FareService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<FareResponse> getFaresByAirline(Long userId, Long airlineId, Pageable pageable) {
+    public Page<FareResponse> getFaresByAirline(UUID userId, UUID airlineId, Pageable pageable) {
         pricingIntegrationService.requirePermission(userId, airlineId, PricingPermissions.FARE_READ);
         return fareRepository.findByAirlineId(airlineId, pageable).map(FareMapper::toResponse);
     }
 
     @Override
     @CacheEvict(cacheNames = RedisConfig.FARES, key = "#id")
-    public FareResponse updateFare(Long userId, Long id, FareRequest request) {
+    public FareResponse updateFare(UUID userId, UUID id, FareRequest request) {
         Fare existing = findFareOrThrow(id);
         pricingIntegrationService.requirePermission(userId, existing.getAirlineId(), PricingPermissions.FARE_MANAGE);
 
@@ -203,7 +204,7 @@ public class FareServiceImpl implements FareService {
 
     @Override
     @CacheEvict(cacheNames = RedisConfig.FARES, key = "#id")
-    public void deleteFare(Long userId, Long id) {
+    public void deleteFare(UUID userId, UUID id) {
         Fare fare = findFareOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fare.getAirlineId(), PricingPermissions.FARE_MANAGE);
         fareRepository.delete(fare);
@@ -212,19 +213,19 @@ public class FareServiceImpl implements FareService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = RedisConfig.FARES, key = "#id")
-    public FareResponse getFareByIdInternal(Long id) {
+    public FareResponse getFareByIdInternal(UUID id) {
         return FareMapper.toResponse(findFareOrThrow(id));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, FareResponse> getFaresByIds(List<Long> ids) {
+    public Map<UUID, FareResponse> getFaresByIds(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) return Map.of();
         return fareRepository.findAllById(ids).stream()
                 .collect(Collectors.toMap(Fare::getId, FareMapper::toResponse));
     }
 
-    private Fare findFareOrThrow(Long id) {
+    private Fare findFareOrThrow(UUID id) {
         return fareRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FARE_NOT_FOUND_BY_ID, id)));
     }

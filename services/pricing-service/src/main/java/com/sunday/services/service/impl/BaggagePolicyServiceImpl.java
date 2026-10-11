@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.PricingPermissions;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
@@ -52,7 +53,7 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
 
     @Override
     @CacheEvict(cacheNames = RedisConfig.FARES, key = "#request.fareId")
-    public BaggagePolicyResponse createBaggagePolicy(Long userId, BaggagePolicyRequest request) {
+    public BaggagePolicyResponse createBaggagePolicy(UUID userId, BaggagePolicyRequest request) {
         Fare fare = fareRepository.findById(request.getFareId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FARE_NOT_FOUND_BY_ID, request.getFareId())));
@@ -71,7 +72,7 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
      * The fare lookup, the permission check and the existing-policy lookup each run once for the whole request.
      */
     @Override
-    public BaggagePolicyBulkCreateResponse createBaggagePolicies(Long userId, List<BaggagePolicyRequest> requests) {
+    public BaggagePolicyBulkCreateResponse createBaggagePolicies(UUID userId, List<BaggagePolicyRequest> requests) {
         if (requests.size() > MAX_BULK_ROWS) {
             throw new BadRequestException(String.format(ErrorMessageUtil.BULK_TOO_LARGE, MAX_BULK_ROWS));
         }
@@ -88,15 +89,15 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
             }
         }
 
-        Set<Long> requestedFareIds = candidates.stream()
+        Set<UUID> requestedFareIds = candidates.stream()
                 .map(candidate -> candidate.request().getFareId())
                 .collect(Collectors.toSet());
-        Map<Long, Fare> fareById = fareRepository.findAllById(requestedFareIds).stream()
+        Map<UUID, Fare> fareById = fareRepository.findAllById(requestedFareIds).stream()
                 .collect(Collectors.toMap(Fare::getId, fare -> fare));
 
         List<IndexedRequest> known = new ArrayList<>();
         for (IndexedRequest candidate : candidates) {
-            Long fareId = candidate.request().getFareId();
+            UUID fareId = candidate.request().getFareId();
             if (fareById.containsKey(fareId)) {
                 known.add(candidate);
             } else {
@@ -107,19 +108,19 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
 
         List<BaggagePolicyResponse> created = List.of();
         if (!known.isEmpty()) {
-            Set<Long> knownAirlineIds = known.stream()
+            Set<UUID> knownAirlineIds = known.stream()
                     .map(candidate -> fareById.get(candidate.request().getFareId()).getAirlineId())
                     .collect(Collectors.toSet());
             pricingIntegrationService.requirePermission(userId, knownAirlineIds, PricingPermissions.FARE_MANAGE);
 
-            Set<Long> knownFareIds = known.stream().map(c -> c.request().getFareId()).collect(Collectors.toSet());
-            Set<Long> alreadyHasPolicy = baggagePolicyRepository.findFareIdsWithExistingPolicy(knownFareIds);
+            Set<UUID> knownFareIds = known.stream().map(c -> c.request().getFareId()).collect(Collectors.toSet());
+            Set<UUID> alreadyHasPolicy = baggagePolicyRepository.findFareIdsWithExistingPolicy(knownFareIds);
 
-            Set<Long> seenFareIds = new HashSet<>();
+            Set<UUID> seenFareIds = new HashSet<>();
             List<BaggagePolicy> toSave = new ArrayList<>();
             for (IndexedRequest candidate : known) {
                 BaggagePolicyRequest request = candidate.request();
-                Long fareId = request.getFareId();
+                UUID fareId = request.getFareId();
                 if (alreadyHasPolicy.contains(fareId)) {
                     skipped.add(skip(candidate.index(), request, String.format(ErrorMessageUtil.BAGGAGE_POLICY_ALREADY_EXISTS, fareId)));
                 } else if (!seenFareIds.add(fareId)) {
@@ -140,7 +141,7 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
 
     @Override
     @Transactional(readOnly = true)
-    public BaggagePolicyResponse getBaggagePolicyById(Long userId, Long id) {
+    public BaggagePolicyResponse getBaggagePolicyById(UUID userId, UUID id) {
         BaggagePolicy policy = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, policy.getAirlineId(), PricingPermissions.FARE_READ);
         return BaggagePolicyMapper.toResponse(policy);
@@ -148,7 +149,7 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
 
     @Override
     @Transactional(readOnly = true)
-    public BaggagePolicyResponse getBaggagePolicyByFareId(Long userId, Long fareId) {
+    public BaggagePolicyResponse getBaggagePolicyByFareId(UUID userId, UUID fareId) {
         BaggagePolicy policy = baggagePolicyRepository.findByFareId(fareId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.BAGGAGE_POLICY_NOT_FOUND_FOR_FARE, fareId)));
@@ -158,13 +159,13 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<BaggagePolicyResponse> getBaggagePoliciesByAirlineId(Long userId, Long airlineId, Pageable pageable) {
+    public Page<BaggagePolicyResponse> getBaggagePoliciesByAirlineId(UUID userId, UUID airlineId, Pageable pageable) {
         pricingIntegrationService.requirePermission(userId, airlineId, PricingPermissions.FARE_READ);
         return baggagePolicyRepository.findByAirlineId(airlineId, pageable).map(BaggagePolicyMapper::toResponse);
     }
 
     @Override
-    public BaggagePolicyResponse updateBaggagePolicy(Long userId, Long id, BaggagePolicyRequest request) {
+    public BaggagePolicyResponse updateBaggagePolicy(UUID userId, UUID id, BaggagePolicyRequest request) {
         BaggagePolicy existing = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, existing.getAirlineId(), PricingPermissions.FARE_MANAGE);
         BaggagePolicyMapper.updateEntity(request, existing, userId);
@@ -174,7 +175,7 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
     }
 
     @Override
-    public void deleteBaggagePolicy(Long userId, Long id) {
+    public void deleteBaggagePolicy(UUID userId, UUID id) {
         BaggagePolicy policy = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, policy.getAirlineId(), PricingPermissions.FARE_MANAGE);
         baggagePolicyRepository.delete(policy);
@@ -192,7 +193,7 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
         return SkippedRequest.builder().index(index).request(request).reason(reason).build();
     }
 
-    private BaggagePolicy findOrThrow(Long id) {
+    private BaggagePolicy findOrThrow(UUID id) {
         return baggagePolicyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.BAGGAGE_POLICY_NOT_FOUND_BY_ID, id)));

@@ -4,14 +4,15 @@ import com.sunday.common_lib.enums.CoverageType;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class InsuranceCoverageResponse {
-    private Long id;
-    private Long ancillaryId;
+    private UUID id;
+    private UUID ancillaryId;
     private String ancillaryName;
     private CoverageType coverageType;
     private String name;

@@ -2,21 +2,22 @@ package com.sunday.common_lib.payload.response;
 
 import lombok.*;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class SeatMapResponse {
-    private Long id;
+    private UUID id;
     private String name;
     private Integer totalRows;
 
-    private Long airlineId;
+    private UUID airlineId;
     private String airlineName;
     private String airlineCode;
 
-    private Long cabinClassId;
+    private UUID cabinClassId;
     private String cabinClassName;
     private String cabinClassCode;
 

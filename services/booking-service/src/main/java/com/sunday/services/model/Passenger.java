@@ -9,6 +9,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "passengers")
@@ -19,8 +23,9 @@ import java.time.LocalDateTime;
 public class Passenger {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @NotBlank
     @Column(nullable = false)
@@ -51,7 +56,8 @@ public class Passenger {
 
     // Cross-service ref: User (user-service)
     @Column(name = "primary_user_id")
-    private Long primaryUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID primaryUserId;
 
     private Boolean requiresWheelchairAssistance = false;
     private String dietaryPreferences;

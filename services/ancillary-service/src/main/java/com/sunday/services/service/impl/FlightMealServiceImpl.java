@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.AncillaryPermissions;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
@@ -41,7 +42,7 @@ public class FlightMealServiceImpl implements FlightMealService {
 
     @Override
     @Transactional
-    public FlightMealResponse create(Long userId, FlightMealRequest request) {
+    public FlightMealResponse create(UUID userId, FlightMealRequest request) {
         log.debug("Creating flight meal for flight ID: {} and meal ID: {}",
                 request.getFlightId(), request.getMealId());
 
@@ -72,22 +73,22 @@ public class FlightMealServiceImpl implements FlightMealService {
 
     @Override
     @Transactional
-    public FlightMealBulkCreateResponse bulkCreate(Long userId, List<FlightMealRequest> requests) {
+    public FlightMealBulkCreateResponse bulkCreate(UUID userId, List<FlightMealRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return FlightMealBulkCreateResponse.builder().created(List.of()).skipped(List.of()).build();
         }
         log.debug("Bulk creating {} flight meals", requests.size());
 
-        List<Long> mealIds = requests.stream().map(FlightMealRequest::getMealId).distinct().toList();
-        Map<Long, Meal> mealById = mealRepository.findAllById(mealIds).stream()
+        List<UUID> mealIds = requests.stream().map(FlightMealRequest::getMealId).distinct().toList();
+        Map<UUID, Meal> mealById = mealRepository.findAllById(mealIds).stream()
                 .collect(Collectors.toMap(Meal::getId, m -> m));
 
         List<FlightMealBulkCreateResponse.SkippedRequest> skipped = new ArrayList<>();
 
-        Set<Long> airlineIds = mealById.values().stream().map(Meal::getAirlineId).collect(Collectors.toSet());
+        Set<UUID> airlineIds = mealById.values().stream().map(Meal::getAirlineId).collect(Collectors.toSet());
         airlineIntegrationService.requirePermission(userId, airlineIds, AncillaryPermissions.MANAGE);
 
-        List<Long> flightIds = requests.stream().map(FlightMealRequest::getFlightId).distinct().toList();
+        List<UUID> flightIds = requests.stream().map(FlightMealRequest::getFlightId).distinct().toList();
         Set<String> existingKeys = flightMealRepository.findByFlightIdInAndMeal_IdIn(flightIds, mealIds).stream()
                 .map(fm -> fm.getFlightId() + ":" + fm.getMeal().getId())
                 .collect(Collectors.toSet());
@@ -134,7 +135,7 @@ public class FlightMealServiceImpl implements FlightMealService {
 
     @Override
     @Transactional(readOnly = true)
-    public FlightMealResponse getById(Long id) {
+    public FlightMealResponse getById(UUID id) {
         FlightMeal flightMeal = flightMealRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_MEAL_NOT_FOUND_BY_ID, id)));
@@ -143,7 +144,7 @@ public class FlightMealServiceImpl implements FlightMealService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<FlightMealResponse> getByFlightId(Long flightId) {
+    public List<FlightMealResponse> getByFlightId(UUID flightId) {
         Specification<FlightMeal> spec = FlightMealSpecification.hasFlightId(flightId);
         return flightMealRepository.findAll(spec).stream()
                 .map(FlightMealMapper::toResponse)
@@ -151,14 +152,14 @@ public class FlightMealServiceImpl implements FlightMealService {
     }
 
     @Override
-    public List<FlightMealResponse> getAllByIds(List<Long> Ids) {
+    public List<FlightMealResponse> getAllByIds(List<UUID> Ids) {
         List<FlightMeal> meals = flightMealRepository.findAllById(Ids);
         return meals.stream().map(FlightMealMapper::toResponse).collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public FlightMealResponse update(Long userId, Long id, FlightMealRequest request) {
+    public FlightMealResponse update(UUID userId, UUID id, FlightMealRequest request) {
         log.debug("Updating flight meal with id: {}", id);
 
         FlightMeal flightMeal = flightMealRepository.findById(id)
@@ -190,7 +191,7 @@ public class FlightMealServiceImpl implements FlightMealService {
 
     @Override
     @Transactional
-    public void delete(Long userId, Long id) {
+    public void delete(UUID userId, UUID id) {
         FlightMeal flightMeal = flightMealRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_MEAL_NOT_FOUND_BY_ID, id)));
@@ -202,7 +203,7 @@ public class FlightMealServiceImpl implements FlightMealService {
 
     @Override
     @Transactional
-    public FlightMealResponse updateAvailability(Long userId, Long id, Boolean available) {
+    public FlightMealResponse updateAvailability(UUID userId, UUID id, Boolean available) {
         FlightMeal flightMeal = flightMealRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_MEAL_NOT_FOUND_BY_ID, id)));
@@ -216,12 +217,12 @@ public class FlightMealServiceImpl implements FlightMealService {
 
     @Override
     @Transactional(readOnly = true)
-    public BigDecimal calculateMealPrice(Long flightId, List<Long> mealIds) {
+    public BigDecimal calculateMealPrice(UUID flightId, List<UUID> mealIds) {
         if (mealIds == null || mealIds.isEmpty()) {
             return BigDecimal.ZERO;
         }
 
-        List<Long> duplicateIds = mealIds.stream()
+        List<UUID> duplicateIds = mealIds.stream()
                 .collect(Collectors.groupingBy(id -> id, Collectors.counting()))
                 .entrySet().stream()
                 .filter(e -> e.getValue() > 1)
@@ -233,10 +234,10 @@ public class FlightMealServiceImpl implements FlightMealService {
 
         List<FlightMeal> meals = flightMealRepository.findAllById(mealIds);
 
-        Set<Long> foundIds = meals.stream()
+        Set<UUID> foundIds = meals.stream()
                 .map(FlightMeal::getId)
                 .collect(Collectors.toSet());
-        List<Long> missingIds = mealIds.stream()
+        List<UUID> missingIds = mealIds.stream()
                 .distinct()
                 .filter(id -> !foundIds.contains(id))
                 .toList();

@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.FlightInstanceRequest;
 import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.common_lib.payload.response.FlightInstanceResponse;
@@ -15,7 +16,7 @@ import java.util.Map;
 public interface FlightInstanceService {
 
     FlightInstanceResponse createFlightInstanceWithCabins(
-            Long userId,
+            UUID userId,
             FlightInstanceRequest request);
 
     /**
@@ -27,25 +28,25 @@ public interface FlightInstanceService {
      */
     List<FlightInstance> createFlightInstancesInBulk(Flight flight, AircraftResponse aircraft, List<FlightInstanceRequest> requests);
 
-    FlightInstanceResponse getFlightInstanceById(Long id);
+    FlightInstanceResponse getFlightInstanceById(UUID id);
 
-    Page<FlightInstanceResponse> getByAirlineId(Long userId,
-                                                Long airlineId,
-                                                Long departureAirportId,
-                                                Long arrivalAirportId,
-                                                Long flightId,
+    Page<FlightInstanceResponse> getByAirlineId(UUID userId,
+                                                UUID airlineId,
+                                                UUID departureAirportId,
+                                                UUID arrivalAirportId,
+                                                UUID flightId,
                                                 LocalDate onDate,
                                                 Pageable pageable);
 
     FlightInstanceResponse updateFlightInstance(
-            Long id,
+            UUID id,
             FlightInstanceRequest request,
-            Long userId);
+            UUID userId);
 
-    void deleteFlightInstance(Long id, Long userId);
+    void deleteFlightInstance(UUID id, UUID userId);
 
-    Map<Long, FlightInstanceResponse> getFlightInstancesByIds(List<Long> ids);
+    Map<UUID, FlightInstanceResponse> getFlightInstancesByIds(List<UUID> ids);
 
     /** Reassign the aircraft on an already-created instance — validated against seat-service's already-sold seats before being committed. */
-    FlightInstanceResponse reassignAircraft(Long id, Long newAircraftId, Long userId);
+    FlightInstanceResponse reassignAircraft(UUID id, UUID newAircraftId, UUID userId);
 }

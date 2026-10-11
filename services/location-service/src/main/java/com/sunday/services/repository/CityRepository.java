@@ -6,10 +6,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.UUID;
 import java.util.List;
 import java.util.Optional;
 
-public interface CityRepository extends JpaRepository<City, Long> {
+public interface CityRepository extends JpaRepository<City, UUID> {
 
     Optional<City> findByName(String name);
 
@@ -17,7 +18,7 @@ public interface CityRepository extends JpaRepository<City, Long> {
 
     boolean existsByCityCode(String cityCode);
 
-    boolean existsByCityCodeAndIdNot(String cityCode, Long id);
+    boolean existsByCityCodeAndIdNot(String cityCode, UUID id);
 
     Page<City> findByCountryCodeIgnoreCase(String countryCode, Pageable pageable);
 

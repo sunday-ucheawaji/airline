@@ -1,25 +1,25 @@
 -- flight-ops-service gets real permission-based gating (Flight/FlightSchedule/FlightInstance),
 -- plus two new AIRLINE-scope roles narrower than ADMIN so day-to-day flight operations don't
 -- require account-level staff: FLIGHT_DISPATCHER (routine flight/schedule/instance management)
--- and FLEET_ASSIGNMENT_OFFICER (only the aircraft-reassignment action). Explicit ids (14/15),
--- same precedent as OWNER/ADMIN/VIEWER = 3/4/5 in V8 — airline-core-service references them by
--- fixed id from config, same as airline.owner-role-id. Airline-scoped, so granted to airline roles only.
+-- and FLEET_ASSIGNMENT_OFFICER (only the aircraft-reassignment action). Roles are resolved by name
+-- everywhere (RoleClient), not by a fixed id from config, so no explicit id is needed here.
+-- Airline-scoped, so granted to airline roles only.
 
 INSERT INTO roles (id, name, description, status, scope, created_at, updated_at) VALUES
-    (14, 'FLIGHT_DISPATCHER', 'Manages an airline''s flights, schedules and flight instances day to day', 'ACTIVE', 'AIRLINE', NOW(), NOW()),
-    (15, 'FLEET_ASSIGNMENT_OFFICER', 'Assigns or reassigns which aircraft operates a given flight instance', 'ACTIVE', 'AIRLINE', NOW(), NOW());
+    (UUID(), 'FLIGHT_DISPATCHER', 'Manages an airline''s flights, schedules and flight instances day to day', 'ACTIVE', 'AIRLINE', NOW(), NOW()),
+    (UUID(), 'FLEET_ASSIGNMENT_OFFICER', 'Assigns or reassigns which aircraft operates a given flight instance', 'ACTIVE', 'AIRLINE', NOW(), NOW());
 
-INSERT INTO permissions (name, created_at, updated_at) VALUES
-    ('FLIGHT_MANAGE', NOW(), NOW()),
-    ('FLIGHT_READ', NOW(), NOW()),
-    ('FLIGHT_SCHEDULE_MANAGE', NOW(), NOW()),
-    ('FLIGHT_SCHEDULE_READ', NOW(), NOW()),
-    ('FLIGHT_INSTANCE_MANAGE', NOW(), NOW()),
-    ('FLIGHT_INSTANCE_READ', NOW(), NOW()),
-    ('FLIGHT_INSTANCE_AIRCRAFT_ASSIGN', NOW(), NOW());
+INSERT INTO permissions (id, name, created_at, updated_at) VALUES
+    (UUID(), 'FLIGHT_MANAGE', NOW(), NOW()),
+    (UUID(), 'FLIGHT_READ', NOW(), NOW()),
+    (UUID(), 'FLIGHT_SCHEDULE_MANAGE', NOW(), NOW()),
+    (UUID(), 'FLIGHT_SCHEDULE_READ', NOW(), NOW()),
+    (UUID(), 'FLIGHT_INSTANCE_MANAGE', NOW(), NOW()),
+    (UUID(), 'FLIGHT_INSTANCE_READ', NOW(), NOW()),
+    (UUID(), 'FLIGHT_INSTANCE_AIRCRAFT_ASSIGN', NOW(), NOW());
 
-INSERT INTO role_permissions (role_id, permission_id, created_at)
-SELECT r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN (
+INSERT INTO role_permissions (id, role_id, permission_id, created_at)
+SELECT UUID(), r.id, p.id, NOW() FROM roles r JOIN permissions p ON (r.name, p.name) IN (
     -- OWNER/ADMIN: fallback superset, same as every other airline-scoped domain
     ('OWNER', 'FLIGHT_MANAGE'), ('OWNER', 'FLIGHT_READ'),
     ('OWNER', 'FLIGHT_SCHEDULE_MANAGE'), ('OWNER', 'FLIGHT_SCHEDULE_READ'),

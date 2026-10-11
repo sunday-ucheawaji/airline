@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.AircraftPermissions;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
@@ -35,8 +36,8 @@ public class AircraftServiceImpl implements AircraftService {
     private final AirlineService airlineService;
 
     @Override
-    public AircraftResponse createAircraft(AircraftRequest request, Long userId) {
-        Long airlineId = request.getAirlineId();
+    public AircraftResponse createAircraft(AircraftRequest request, UUID userId) {
+        UUID airlineId = request.getAirlineId();
         if (airlineId == null) {
             throw new BadRequestException(ErrorMessageUtil.AIRLINE_ID_REQUIRED);
         }
@@ -55,7 +56,7 @@ public class AircraftServiceImpl implements AircraftService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "aircrafts", key = "#id")
-    public AircraftResponse getAircraftById(Long id, Long userId) {
+    public AircraftResponse getAircraftById(UUID id, UUID userId) {
         Aircraft aircraft = getAircraftOrThrow(id);
         airlineService.requirePermission(userId, List.of(aircraft.getAirline().getId()), AircraftPermissions.READ);
         return AircraftMapper.toResponse(aircraft);
@@ -63,13 +64,13 @@ public class AircraftServiceImpl implements AircraftService {
 
     @Override
     @Transactional(readOnly = true)
-    public AircraftResponse getAircraftByIdInternal(Long id) {
+    public AircraftResponse getAircraftByIdInternal(UUID id) {
         return AircraftMapper.toResponse(getAircraftOrThrow(id));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, AircraftResponse> getAircraftsByIdsInternal(List<Long> ids) {
+    public Map<UUID, AircraftResponse> getAircraftsByIdsInternal(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) return Map.of();
         return aircraftRepository.findAllById(ids).stream()
                 .collect(Collectors.toMap(Aircraft::getId, AircraftMapper::toResponse));
@@ -77,7 +78,7 @@ public class AircraftServiceImpl implements AircraftService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AircraftResponse> listAircraftsForAirline(Long airlineId, Long userId) {
+    public List<AircraftResponse> listAircraftsForAirline(UUID airlineId, UUID userId) {
         airlineService.requirePermission(userId, List.of(airlineId), AircraftPermissions.READ);
         Airline airline = getAirlineOrThrow(airlineId);
         return aircraftRepository.findByAirline(airline)
@@ -88,7 +89,7 @@ public class AircraftServiceImpl implements AircraftService {
 
     @Override
     @CacheEvict(cacheNames = "aircrafts", key = "#id")
-    public AircraftResponse updateAircraft(Long id, AircraftRequest request, Long userId) {
+    public AircraftResponse updateAircraft(UUID id, AircraftRequest request, UUID userId) {
         Aircraft aircraft = getAircraftOrThrow(id);
         airlineService.requirePermission(userId, List.of(aircraft.getAirline().getId()), AircraftPermissions.MANAGE);
 
@@ -104,7 +105,7 @@ public class AircraftServiceImpl implements AircraftService {
 
     @Override
     @CacheEvict(cacheNames = "aircrafts", key = "#id")
-    public void deleteAircraft(Long id, Long userId) {
+    public void deleteAircraft(UUID id, UUID userId) {
         Aircraft aircraft = getAircraftOrThrow(id);
         airlineService.requirePermission(userId, List.of(aircraft.getAirline().getId()), AircraftPermissions.MANAGE);
         aircraftRepository.delete(aircraft);
@@ -112,12 +113,12 @@ public class AircraftServiceImpl implements AircraftService {
 
     // ---------- Helpers ----------
 
-    private Aircraft getAircraftOrThrow(Long id) {
+    private Aircraft getAircraftOrThrow(UUID id) {
         return aircraftRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRCRAFT_NOT_FOUND_BY_ID, id)));
     }
 
-    private Airline getAirlineOrThrow(Long airlineId) {
+    private Airline getAirlineOrThrow(UUID airlineId) {
         return airlineRepository.findById(airlineId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRLINE_NOT_FOUND_BY_ID, airlineId)));
     }

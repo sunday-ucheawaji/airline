@@ -10,6 +10,10 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "fares")
@@ -22,12 +26,14 @@ import java.time.LocalDate;
 public class Fare {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     // Cross-service ref: Airline is in airline-core-service. Set once from flight-ops at creation.
     @Column(name = "airline_id", nullable = false)
-    private Long airlineId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID airlineId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -39,10 +45,12 @@ public class Fare {
     private Long version;
 
     @Column(name = "created_by")
-    private Long createdBy;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID createdBy;
 
     @Column(name = "updated_by")
-    private Long updatedBy;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID updatedBy;
 
     @Column(nullable = false)
     private String name;
@@ -52,11 +60,13 @@ public class Fare {
 
     // Cross-service ref: Flight is in flight-ops-service
     @Column(name = "flight_id", nullable = false)
-    private Long flightId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID flightId;
 
     // Cross-service ref: CabinClass is in seat-service
     @Column(name = "cabin_class_id", nullable = false)
-    private Long cabinClassId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID cabinClassId;
 
     /**
      * Cabin class type the fare belongs to (ECONOMY, BUSINESS...). Matching key for search and the natural key.
@@ -171,7 +181,7 @@ public class Fare {
     }
 
     /** Business identity of a fare. Mirrors the unique key in V1 and is what duplicate checks compare. */
-    public static String keyOf(Long airlineId, Long flightId, CabinClassType cabinClass, Character rbdCode,
+    public static String keyOf(UUID airlineId, UUID flightId, CabinClassType cabinClass, Character rbdCode,
                                PassengerType passengerType, String name) {
         return airlineId + ":" + flightId + ":" + cabinClass + ":" + rbdCode + ":" + passengerType + ":" + name;
     }

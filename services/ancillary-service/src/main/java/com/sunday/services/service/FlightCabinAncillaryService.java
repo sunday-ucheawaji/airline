@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.AncillaryType;
 import com.sunday.common_lib.payload.request.FlightCabinAncillaryRequest;
 import com.sunday.common_lib.payload.response.FlightCabinAncillaryBulkCreateResponse;
@@ -10,26 +11,26 @@ import java.util.List;
 
 public interface FlightCabinAncillaryService {
 
-    FlightCabinAncillaryResponse create(Long userId, FlightCabinAncillaryRequest request);
+    FlightCabinAncillaryResponse create(UUID userId, FlightCabinAncillaryRequest request);
 
-    FlightCabinAncillaryBulkCreateResponse bulkCreate(Long userId, List<FlightCabinAncillaryRequest> requests);
+    FlightCabinAncillaryBulkCreateResponse bulkCreate(UUID userId, List<FlightCabinAncillaryRequest> requests);
 
-    FlightCabinAncillaryResponse getById(Long id);
+    FlightCabinAncillaryResponse getById(UUID id);
 
     List<FlightCabinAncillaryResponse> getAllByFlightAndCabinClass(
-            Long flightId, Long cabinClassId);
+            UUID flightId, UUID cabinClassId);
 
-    List<FlightCabinAncillaryResponse> getAllByIds(List<Long> ids);
+    List<FlightCabinAncillaryResponse> getAllByIds(List<UUID> ids);
 
     FlightCabinAncillaryResponse getByFlightIdAndCabinClassAndType(
-            Long flightId, Long cabinClassId, AncillaryType type);
+            UUID flightId, UUID cabinClassId, AncillaryType type);
 
     List<FlightCabinAncillaryResponse> getAllByFlightIdAndCabinClassAndType(
-            Long flightId, Long cabinClassId, AncillaryType type);
+            UUID flightId, UUID cabinClassId, AncillaryType type);
 
-    FlightCabinAncillaryResponse update(Long userId, Long id, FlightCabinAncillaryRequest request);
+    FlightCabinAncillaryResponse update(UUID userId, UUID id, FlightCabinAncillaryRequest request);
 
-    void delete(Long userId, Long id);
+    void delete(UUID userId, UUID id);
 
-    BigDecimal calculateAncillaryPrice(Long flightId, List<Long> ancillaryIds);
+    BigDecimal calculateAncillaryPrice(UUID flightId, List<UUID> ancillaryIds);
 }

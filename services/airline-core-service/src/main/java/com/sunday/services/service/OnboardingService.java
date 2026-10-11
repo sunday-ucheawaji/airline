@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.OnboardingApplicationRequest;
 import com.sunday.common_lib.payload.request.OwnerAssignmentRequest;
 import com.sunday.common_lib.payload.response.OnboardingApplicationResponse;
@@ -13,20 +14,20 @@ import java.util.List;
 public interface OnboardingService {
 
     // ----- Applicant side -----
-    OnboardingApplicationResponse createDraft(OnboardingApplicationRequest request, Long applicantUserId);
-    OnboardingApplicationResponse updateDraft(Long applicationId, OnboardingApplicationRequest request, Long applicantUserId);
-    OnboardingApplicationResponse getMyApplicationById(Long applicationId, Long applicantUserId);
-    List<OnboardingApplicationResponse> getMyApplications(Long applicantUserId);
-    OnboardingApplicationResponse submitApplication(Long applicationId, Long applicantUserId);
+    OnboardingApplicationResponse createDraft(OnboardingApplicationRequest request, UUID applicantUserId);
+    OnboardingApplicationResponse updateDraft(UUID applicationId, OnboardingApplicationRequest request, UUID applicantUserId);
+    OnboardingApplicationResponse getMyApplicationById(UUID applicationId, UUID applicantUserId);
+    List<OnboardingApplicationResponse> getMyApplications(UUID applicantUserId);
+    OnboardingApplicationResponse submitApplication(UUID applicationId, UUID applicantUserId);
 
     // ----- Staff side (drafts are never visible here) -----
-    Page<OnboardingApplicationResponse> getApplicationsForReview(OnboardingStatus status, Long caseOwnerUserId, Pageable pageable);
-    OnboardingApplicationResponse getApplicationForReview(Long applicationId);
-    List<OnboardingReviewResponse> getReviewHistory(Long applicationId);
+    Page<OnboardingApplicationResponse> getApplicationsForReview(OnboardingStatus status, UUID caseOwnerUserId, Pageable pageable);
+    OnboardingApplicationResponse getApplicationForReview(UUID applicationId);
+    List<OnboardingReviewResponse> getReviewHistory(UUID applicationId);
 
-    OnboardingApplicationResponse returnApplication(Long applicationId, String comments, Long actorUserId);
-    OnboardingApplicationResponse approveApplication(Long applicationId, String comments, Long actorUserId);
-    OnboardingApplicationResponse rejectApplication(Long applicationId, String comments, Long actorUserId);
-    OnboardingApplicationResponse assignOwner(Long applicationId, OwnerAssignmentRequest request, Long actorUserId);
-    OnboardingApplicationResponse provisionApplication(Long applicationId, String comments, Long actorUserId);
+    OnboardingApplicationResponse returnApplication(UUID applicationId, String comments, UUID actorUserId);
+    OnboardingApplicationResponse approveApplication(UUID applicationId, String comments, UUID actorUserId);
+    OnboardingApplicationResponse rejectApplication(UUID applicationId, String comments, UUID actorUserId);
+    OnboardingApplicationResponse assignOwner(UUID applicationId, OwnerAssignmentRequest request, UUID actorUserId);
+    OnboardingApplicationResponse provisionApplication(UUID applicationId, String comments, UUID actorUserId);
 }

@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.BookingStatus;
 import com.sunday.common_lib.payload.request.BookingRequest;
 import com.sunday.common_lib.payload.response.BookingResponse;
@@ -24,25 +25,25 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<PaymentInitiateResponse> createBooking(
             @Valid @RequestBody BookingRequest request,
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         PaymentInitiateResponse response = bookingService.createBooking(request, userId, idempotencyKey);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping("/{id:\\d+}")
+    @PutMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<BookingResponse> updateBooking(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody BookingRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         BookingResponse response = bookingService.updateBooking(id, request, userId);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id:\\d+}")
+    @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<BookingResponse> getBookingById(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         BookingResponse response = bookingService.getBookingById(id, userId);
         return ResponseEntity.ok(response);
     }
@@ -55,12 +56,12 @@ public class BookingController {
 
     @GetMapping("/airline")
     public ResponseEntity<List<BookingResponse>> getBookingsByAirline(
-            @RequestParam Long airlineId,
+            @RequestParam UUID airlineId,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) BookingStatus status,
-            @RequestParam(required = false) Long flightInstanceId,
+            @RequestParam(required = false) UUID flightInstanceId,
             @RequestParam(defaultValue = "DESC") String sortDirection,
-            @RequestHeader("X-User-Id") Long userId
+            @RequestHeader("X-User-Id") UUID userId
     ) {
         List<BookingResponse> responses = bookingService.getBookingsByAirline(
                 userId,
@@ -75,40 +76,40 @@ public class BookingController {
 
     @GetMapping("/user/history")
     public ResponseEntity<List<BookingResponse>> getBookingsByUser(
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         List<BookingResponse> responses = bookingService.getBookingsByUser(userId);
         return ResponseEntity.ok(responses);
     }
 
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<BookingResponse> cancelBooking(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         BookingResponse response = bookingService.cancelBooking(id, userId);
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{id:\\d+}")
+    @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<Void> deleteBooking(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         bookingService.deleteBooking(id, userId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/count/flight/{flightInstanceId}")
     public ResponseEntity<Long> getBookingCountByFlight(
-            @PathVariable Long flightInstanceId,
-            @RequestParam Long airlineId,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID flightInstanceId,
+            @RequestParam UUID airlineId,
+            @RequestHeader("X-User-Id") UUID userId) {
         long count = bookingService.countByFlightId(userId, airlineId, flightInstanceId);
         return ResponseEntity.ok(count);
     }
 
     @GetMapping("/statistics/airline")
     public ResponseEntity<BookingStatisticsResponse> getBookingStatisticsForAirline(
-            @RequestParam Long airlineId,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestParam UUID airlineId,
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(bookingService.getBookingStatisticsForAirline(userId, airlineId));
     }
 }

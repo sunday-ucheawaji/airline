@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.InsuranceCoverageRequest;
 import com.sunday.common_lib.payload.response.InsuranceCoverageBulkCreateResponse;
 import com.sunday.common_lib.payload.response.InsuranceCoverageResponse;
@@ -8,19 +9,19 @@ import java.util.List;
 
 public interface InsuranceCoverageService {
 
-    InsuranceCoverageResponse createCoverage(Long userId, InsuranceCoverageRequest request);
+    InsuranceCoverageResponse createCoverage(UUID userId, InsuranceCoverageRequest request);
 
-    InsuranceCoverageBulkCreateResponse createCoveragesBulk(Long userId, List<InsuranceCoverageRequest> requests);
+    InsuranceCoverageBulkCreateResponse createCoveragesBulk(UUID userId, List<InsuranceCoverageRequest> requests);
 
-    InsuranceCoverageResponse updateCoverage(Long userId, Long id, InsuranceCoverageRequest request);
+    InsuranceCoverageResponse updateCoverage(UUID userId, UUID id, InsuranceCoverageRequest request);
 
-    void deleteCoverage(Long userId, Long id);
+    void deleteCoverage(UUID userId, UUID id);
 
-    InsuranceCoverageResponse getCoverageById(Long id);
+    InsuranceCoverageResponse getCoverageById(UUID id);
 
-    List<InsuranceCoverageResponse> getCoveragesByAncillaryId(Long ancillaryId);
+    List<InsuranceCoverageResponse> getCoveragesByAncillaryId(UUID ancillaryId);
 
-    List<InsuranceCoverageResponse> getActiveCoveragesByAncillaryId(Long ancillaryId);
+    List<InsuranceCoverageResponse> getActiveCoveragesByAncillaryId(UUID ancillaryId);
 
     List<InsuranceCoverageResponse> getAllCoverages();
 }

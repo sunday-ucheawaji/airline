@@ -1,6 +1,7 @@
 package com.sunday.common_lib.payload.response;
 
 import lombok.*;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -9,7 +10,7 @@ import lombok.*;
 @Builder
 public class CityResponse {
 
-    private Long id;
+    private UUID id;
     private String name;
     private String cityCode;
     private String countryCode;

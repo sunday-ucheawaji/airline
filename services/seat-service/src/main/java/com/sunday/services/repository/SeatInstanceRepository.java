@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.services.model.SeatInstance;
 import jakarta.persistence.LockModeType;
@@ -12,22 +13,22 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-public interface SeatInstanceRepository extends JpaRepository<SeatInstance, Long> {
+public interface SeatInstanceRepository extends JpaRepository<SeatInstance, UUID> {
 
-    List<SeatInstance> findByFlightId(Long flightId);
-    List<SeatInstance> findByFlightInstanceId(Long flightInstanceId);
-    List<SeatInstance> findByFlightInstanceCabinId(Long id);
-    boolean existsBySeatIdAndFlightInstanceId(Long seatId, Long flightInstanceId);
+    List<SeatInstance> findByFlightId(UUID flightId);
+    List<SeatInstance> findByFlightInstanceId(UUID flightInstanceId);
+    List<SeatInstance> findByFlightInstanceCabinId(UUID id);
+    boolean existsBySeatIdAndFlightInstanceId(UUID seatId, UUID flightInstanceId);
 
     @Query("SELECT si FROM SeatInstance si WHERE si.flightId = :flightId AND si.status = 'AVAILABLE'")
-    List<SeatInstance> findAvailableByFlightId(@Param("flightId") Long flightId);
+    List<SeatInstance> findAvailableByFlightId(@Param("flightId") UUID flightId);
 
     @Query("SELECT COUNT(si) FROM SeatInstance si WHERE si.flightId = :flightId AND si.status = 'AVAILABLE'")
-    Long countAvailableByFlightId(@Param("flightId") Long flightId);
+    Long countAvailableByFlightId(@Param("flightId") UUID flightId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT si FROM SeatInstance si JOIN FETCH si.seat s JOIN FETCH si.flightInstanceCabin fc WHERE si.id = :seatInstanceId")
-    Optional<SeatInstance> findByIdForUpdate(@Param("seatInstanceId") Long seatInstanceId);
+    Optional<SeatInstance> findByIdForUpdate(@Param("seatInstanceId") UUID seatInstanceId);
 
     /**
      * Locks every requested row in one query, for an atomic check-then-set across a whole booking's seats.
@@ -41,7 +42,7 @@ public interface SeatInstanceRepository extends JpaRepository<SeatInstance, Long
             "LEFT JOIN FETCH fc.cabinClass cc " +
             "WHERE si.id IN :ids " +
             "ORDER BY si.id ASC")
-    List<SeatInstance> findAllByIdForUpdate(@Param("ids") List<Long> ids);
+    List<SeatInstance> findAllByIdForUpdate(@Param("ids") List<UUID> ids);
 
     List<SeatInstance> findByStatusAndHeldUntilBefore(SeatAvailabilityStatus status, Instant time);
 }

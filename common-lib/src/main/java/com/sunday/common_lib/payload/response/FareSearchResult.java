@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -13,7 +14,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class FareSearchResult {
 
-    private Long flightId;
+    private UUID flightId;
     private LocalDate departureDate;
     private FareResponse fare;
 }

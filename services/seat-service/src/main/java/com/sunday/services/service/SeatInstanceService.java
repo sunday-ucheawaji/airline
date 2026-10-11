@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.payload.request.SeatHoldRequest;
 import com.sunday.common_lib.payload.request.SeatInstanceRequest;
@@ -12,28 +13,28 @@ import java.util.List;
 
 public interface SeatInstanceService {
 
-    SeatInstanceResponse createSeatInstance(Long userId, SeatInstanceRequest request);
-    SeatInstanceResponse getSeatInstanceById(Long userId, Long id);
-    List<SeatInstanceResponse> getSeatInstancesByFlightId(Long userId, Long flightId);
-    List<SeatInstanceResponse> getAvailableSeatsByFlightId(Long userId, Long flightId);
-    List<SeatInstanceResponse> getAllByIds(Long userId, List<Long> ids);
-    List<SeatInstanceResponse> getAllByIdsInternal(List<Long> ids);
-    BigDecimal calculateSeatPriceInternal(List<Long> seatInstanceIds);
-    Long countAvailableByFlightId(Long userId, Long flightId);
-    BigDecimal calculateSeatPrice(Long userId, List<Long> seatInstanceIds);
+    SeatInstanceResponse createSeatInstance(UUID userId, SeatInstanceRequest request);
+    SeatInstanceResponse getSeatInstanceById(UUID userId, UUID id);
+    List<SeatInstanceResponse> getSeatInstancesByFlightId(UUID userId, UUID flightId);
+    List<SeatInstanceResponse> getAvailableSeatsByFlightId(UUID userId, UUID flightId);
+    List<SeatInstanceResponse> getAllByIds(UUID userId, List<UUID> ids);
+    List<SeatInstanceResponse> getAllByIdsInternal(List<UUID> ids);
+    BigDecimal calculateSeatPriceInternal(List<UUID> seatInstanceIds);
+    Long countAvailableByFlightId(UUID userId, UUID flightId);
+    BigDecimal calculateSeatPrice(UUID userId, List<UUID> seatInstanceIds);
 
-    SeatInstanceResponse updateSeatInstanceStatus(Long userId, Long id, SeatAvailabilityStatus status);
+    SeatInstanceResponse updateSeatInstanceStatus(UUID userId, UUID id, SeatAvailabilityStatus status);
 
-    SeatInstanceResponse releaseSeatInstance(Long userId, Long id);
+    SeatInstanceResponse releaseSeatInstance(UUID userId, UUID id);
 
-    List<CabinSeatStatusResponse> getSeatStatusSummary(Long flightInstanceId);
+    List<CabinSeatStatusResponse> getSeatStatusSummary(UUID flightInstanceId);
 
     /** Atomically holds every requested seat (exists, belongs to the flight instance, right cabin class, AVAILABLE) or none of them. */
     SeatHoldResponse holdSeats(SeatHoldRequest request);
 
     /** Confirms a booking's seats: HELD or still-AVAILABLE -> BOOKED. Logs loudly if a seat was taken by someone else. */
-    void markSeatsBookedBatch(String bookingReference, List<Long> seatInstanceIds);
+    void markSeatsBookedBatch(String bookingReference, List<UUID> seatInstanceIds);
 
     /** Releases an abandoned booking's seats (HELD or BOOKED) back to AVAILABLE. Idempotent. */
-    void releaseSeatsBatch(List<Long> seatInstanceIds);
+    void releaseSeatsBatch(List<UUID> seatInstanceIds);
 }

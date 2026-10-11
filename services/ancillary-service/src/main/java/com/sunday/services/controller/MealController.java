@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.MealRequest;
 import com.sunday.common_lib.payload.response.MealBulkCreateResponse;
 import com.sunday.common_lib.payload.response.MealResponse;
@@ -21,7 +22,7 @@ public class MealController {
 
     @PostMapping
     public ResponseEntity<MealResponse> createMeal(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody MealRequest request) {
         MealResponse response = mealService.create(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -30,42 +31,42 @@ public class MealController {
     @PostMapping("/bulk")
     public ResponseEntity<MealBulkCreateResponse> bulkCreateMeals(
             @Valid @RequestBody List<MealRequest> requests,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.status(HttpStatus.CREATED).body(mealService.bulkCreate(userId, requests));
     }
 
-    @GetMapping("/{id:\\d+}")
-    public ResponseEntity<MealResponse> getMealById(@PathVariable Long id) {
+    @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    public ResponseEntity<MealResponse> getMealById(@PathVariable UUID id) {
         return ResponseEntity.ok(mealService.getById(id));
     }
 
     @GetMapping("/airline")
     public ResponseEntity<List<MealResponse>> getMealsByAirlineId(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestParam Long airlineId) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestParam UUID airlineId) {
         return ResponseEntity.ok(mealService.getByAirlineId(userId, airlineId));
     }
 
-    @PutMapping("/{id:\\d+}")
+    @PutMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<MealResponse> updateMeal(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody MealRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(mealService.update(userId, id, request));
     }
 
-    @PatchMapping("/{id:\\d+}/availability")
+    @PatchMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/availability")
     public ResponseEntity<MealResponse> updateMealAvailability(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestParam Boolean available,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(mealService.updateAvailability(userId, id, available));
     }
 
-    @DeleteMapping("/{id:\\d+}")
+    @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<Void> deleteMeal(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         mealService.delete(userId, id);
         return ResponseEntity.noContent().build();
     }

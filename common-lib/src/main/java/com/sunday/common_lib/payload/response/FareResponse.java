@@ -8,6 +8,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -15,13 +16,13 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class FareResponse {
 
-    private Long id;
+    private UUID id;
     private String name;
     private Character rbdCode;
-    private Long airlineId;
+    private UUID airlineId;
     private FareStatus status;
-    private Long flightId;
-    private Long cabinClassId;
+    private UUID flightId;
+    private UUID cabinClassId;
     private CabinClassType cabinClass;
     private PassengerType passengerType;
     private String fareBasisCode;
@@ -69,7 +70,7 @@ public class FareResponse {
     private Boolean airportTransfer;
 
     // Relationships
-    private Long fareRulesId;
+    private UUID fareRulesId;
     private FareRulesResponse fareRules;
     private BaggagePolicyResponse baggagePolicy;
 

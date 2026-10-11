@@ -6,6 +6,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -14,7 +15,7 @@ import java.math.BigDecimal;
 public class InsuranceCoverageRequest {
 
     @NotNull(message = "Ancillary ID is required")
-    private Long ancillaryId;
+    private UUID ancillaryId;
 
     @NotNull(message = "Coverage type is required")
     private CoverageType coverageType;

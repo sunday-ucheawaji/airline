@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.FlightCabinAncillaryResponse;
 import com.sunday.common_lib.payload.response.FlightMealResponse;
 import feign.FeignException;
@@ -32,22 +33,22 @@ public class AncillaryClientFallbackFactory implements FallbackFactory<Ancillary
         return new AncillaryClient() {
 
             @Override
-            public BigDecimal calculateAncillariesPrice(Long flightId, List<Long> flightCabinAncillaryIds) {
+            public BigDecimal calculateAncillariesPrice(UUID flightId, List<UUID> flightCabinAncillaryIds) {
                 throw priceFailure("ancillaries", cause);
             }
 
             @Override
-            public List<FlightCabinAncillaryResponse> getAllByIds(List<Long> Ids) {
+            public List<FlightCabinAncillaryResponse> getAllByIds(List<UUID> Ids) {
                 return Collections.emptyList();
             }
 
             @Override
-            public List<FlightMealResponse> getMealsByIds(List<Long> Ids) {
+            public List<FlightMealResponse> getMealsByIds(List<UUID> Ids) {
                 return Collections.emptyList();
             }
 
             @Override
-            public BigDecimal calculateMealPrice(Long flightId, List<Long> requests) {
+            public BigDecimal calculateMealPrice(UUID flightId, List<UUID> requests) {
                 throw priceFailure("meals", cause);
             }
         };

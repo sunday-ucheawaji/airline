@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.FlightMealRequest;
 import com.sunday.common_lib.payload.response.FlightMealBulkCreateResponse;
 import com.sunday.common_lib.payload.response.FlightMealResponse;
@@ -9,21 +10,21 @@ import java.util.List;
 
 public interface FlightMealService {
 
-    FlightMealResponse create(Long userId, FlightMealRequest request);
+    FlightMealResponse create(UUID userId, FlightMealRequest request);
 
-    FlightMealBulkCreateResponse bulkCreate(Long userId, List<FlightMealRequest> requests);
+    FlightMealBulkCreateResponse bulkCreate(UUID userId, List<FlightMealRequest> requests);
 
-    FlightMealResponse getById(Long id);
+    FlightMealResponse getById(UUID id);
 
-    List<FlightMealResponse> getByFlightId(Long flightId);
+    List<FlightMealResponse> getByFlightId(UUID flightId);
 
-    List<FlightMealResponse> getAllByIds(List<Long> Ids);
+    List<FlightMealResponse> getAllByIds(List<UUID> Ids);
 
-    FlightMealResponse update(Long userId, Long id, FlightMealRequest request);
+    FlightMealResponse update(UUID userId, UUID id, FlightMealRequest request);
 
-    void delete(Long userId, Long id);
+    void delete(UUID userId, UUID id);
 
-    FlightMealResponse updateAvailability(Long userId, Long id, Boolean available);
+    FlightMealResponse updateAvailability(UUID userId, UUID id, Boolean available);
 
-    BigDecimal calculateMealPrice(Long flightId, List<Long> mealIds);
+    BigDecimal calculateMealPrice(UUID flightId, List<UUID> mealIds);
 }

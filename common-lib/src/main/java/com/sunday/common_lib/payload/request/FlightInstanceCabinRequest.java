@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -13,13 +14,13 @@ import java.math.BigDecimal;
 public class FlightInstanceCabinRequest {
 
     @NotNull
-    private Long flightId;
+    private UUID flightId;
 
     @NotNull(message = ErrorMessageUtil.FLIGHT_INSTANCE_ID_MANDATORY)
-    private Long flightInstanceId;
+    private UUID flightInstanceId;
 
     @NotNull
-    private Long cabinClassId;
+    private UUID cabinClassId;
 
     @NotNull
     @Positive

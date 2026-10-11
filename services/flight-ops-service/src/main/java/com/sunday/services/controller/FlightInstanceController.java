@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.FlightInstanceRequest;
 import com.sunday.common_lib.payload.response.FlightInstanceResponse;
 import com.sunday.services.service.FlightInstanceService;
@@ -25,7 +26,7 @@ public class FlightInstanceController {
 
     @PostMapping
     public ResponseEntity<FlightInstanceResponse> createFlightInstance(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody FlightInstanceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(flightInstanceService
@@ -33,22 +34,22 @@ public class FlightInstanceController {
     }
 
     @PostMapping("/batch")
-    public ResponseEntity<Map<Long, FlightInstanceResponse>> getFlightInstancesByIds(@RequestBody List<Long> ids) {
+    public ResponseEntity<Map<UUID, FlightInstanceResponse>> getFlightInstancesByIds(@RequestBody List<UUID> ids) {
         return ResponseEntity.ok(flightInstanceService.getFlightInstancesByIds(ids));
     }
 
-    @GetMapping("/{id:\\d+}")
-    public ResponseEntity<FlightInstanceResponse> getFlightInstanceById(@PathVariable Long id) {
+    @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    public ResponseEntity<FlightInstanceResponse> getFlightInstanceById(@PathVariable UUID id) {
         return ResponseEntity.ok(flightInstanceService.getFlightInstanceById(id));
     }
 
     @GetMapping()
     public ResponseEntity<Page<FlightInstanceResponse>> getByAirlineId(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestParam Long airlineId,
-            @RequestParam(required = false) Long departureAirportId,
-            @RequestParam(required = false) Long arrivalAirportId,
-            @RequestParam(required = false) Long flightId,
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestParam UUID airlineId,
+            @RequestParam(required = false) UUID departureAirportId,
+            @RequestParam(required = false) UUID arrivalAirportId,
+            @RequestParam(required = false) UUID flightId,
             @RequestParam(required = false) LocalDate onDate,
             Pageable pageable) {
         return ResponseEntity.ok(flightInstanceService.getByAirlineId(
@@ -61,30 +62,30 @@ public class FlightInstanceController {
                 pageable));
     }
 
-    @PutMapping("/{id:\\d+}")
+    @PutMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<FlightInstanceResponse> updateFlightInstance(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody FlightInstanceRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(flightInstanceService.updateFlightInstance(id, request, userId));
     }
 
-    @DeleteMapping("/{id:\\d+}")
+    @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<Void> deleteFlightInstance(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         flightInstanceService.deleteFlightInstance(id, userId);
         return ResponseEntity.noContent().build();
     }
 
     /** Reassign the aircraft on an already-created instance (aircraft swaps, maintenance substitutions) — a narrower, dedicated permission from general instance management. */
-    @PatchMapping("/{id:\\d+}/aircraft")
+    @PatchMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/aircraft")
     public ResponseEntity<FlightInstanceResponse> reassignAircraft(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestBody @Valid ReassignAircraftRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(flightInstanceService.reassignAircraft(id, request.aircraftId(), userId));
     }
 
-    public record ReassignAircraftRequest(@NotNull Long aircraftId) {}
+    public record ReassignAircraftRequest(@NotNull UUID aircraftId) {}
 }

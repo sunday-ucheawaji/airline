@@ -3,13 +3,13 @@
 -- since dev databases are recreated rather than altered.
 
 CREATE TABLE IF NOT EXISTS fares (
-    id                          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                          CHAR(36) PRIMARY KEY,
     -- Cross-service ref: Airline is in airline-core-service, no FK. Set from flight-ops at creation.
-    airline_id                  BIGINT NOT NULL,
+    airline_id                  CHAR(36) NOT NULL,
     -- Cross-service ref: Flight is in flight-ops-service, no FK. The route template, not a departure.
-    flight_id                   BIGINT NOT NULL,
+    flight_id                   CHAR(36) NOT NULL,
     -- Cross-service ref: CabinClass is in seat-service, no FK. Informational only (changes with the aircraft).
-    cabin_class_id              BIGINT NOT NULL,
+    cabin_class_id              CHAR(36) NOT NULL,
     cabin_class                 ENUM('ECONOMY','PREMIUM_ECONOMY','BUSINESS','FIRST') NOT NULL,
     passenger_type              ENUM('ADT','CHD','INF') NOT NULL,
     rbd_code                    VARCHAR(1) NOT NULL,
@@ -45,8 +45,8 @@ CREATE TABLE IF NOT EXISTS fares (
     lounge_access               BIT(1) NOT NULL,
     airport_transfer            BIT(1) NOT NULL,
     version                     BIGINT NOT NULL DEFAULT 0,
-    created_by                  BIGINT,
-    updated_by                  BIGINT,
+    created_by                  CHAR(36),
+    updated_by                  CHAR(36),
     created_at                  DATETIME(6) NOT NULL,
     updated_at                  DATETIME(6) NOT NULL,
     CONSTRAINT uk_fares_natural_key UNIQUE (airline_id, flight_id, cabin_class, rbd_code, passenger_type, name),
@@ -58,11 +58,11 @@ CREATE TABLE IF NOT EXISTS fares (
 );
 
 CREATE TABLE IF NOT EXISTS fare_rules (
-    id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
-    fare_id                 BIGINT NOT NULL UNIQUE,
+    id                      CHAR(36) PRIMARY KEY,
+    fare_id                 CHAR(36) NOT NULL UNIQUE,
     rule_name               VARCHAR(255),
     -- Cross-service ref: Airline is in airline-core-service, no FK. Copied from the fare.
-    airline_id              BIGINT NOT NULL,
+    airline_id              CHAR(36) NOT NULL,
     is_refundable           BIT(1),
     change_fee              DECIMAL(12,2),
     cancellation_fee        DECIMAL(12,2),
@@ -70,8 +70,8 @@ CREATE TABLE IF NOT EXISTS fare_rules (
     change_deadline_hours   INT,
     is_changeable           BIT(1),
     version                 BIGINT NOT NULL DEFAULT 0,
-    created_by              BIGINT,
-    updated_by              BIGINT,
+    created_by              CHAR(36),
+    updated_by              CHAR(36),
     created_at              DATETIME(6),
     updated_at              DATETIME(6),
     INDEX idx_fare_rules_airline_id (airline_id),
@@ -79,15 +79,15 @@ CREATE TABLE IF NOT EXISTS fare_rules (
 );
 
 CREATE TABLE IF NOT EXISTS baggage_policies (
-    id                                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    fare_id                             BIGINT NOT NULL UNIQUE,
+    id                                  CHAR(36) PRIMARY KEY,
+    fare_id                             CHAR(36) NOT NULL UNIQUE,
     name                                VARCHAR(255) NOT NULL,
     description                         VARCHAR(255),
     -- Cross-service ref: Airline is in airline-core-service, no FK. Copied from the fare.
-    airline_id                          BIGINT NOT NULL,
+    airline_id                          CHAR(36) NOT NULL,
     version                             BIGINT NOT NULL DEFAULT 0,
-    created_by                          BIGINT,
-    updated_by                          BIGINT,
+    created_by                          CHAR(36),
+    updated_by                          CHAR(36),
     cabin_baggage_max_weight            DOUBLE,
     cabin_baggage_pieces                INT,
     cabin_baggage_weight_per_piece      DOUBLE,

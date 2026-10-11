@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.services.model.Flight;
 import org.springframework.data.domain.Page;
@@ -12,11 +13,11 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 
-public interface FlightRepository extends JpaRepository<Flight, Long> {
+public interface FlightRepository extends JpaRepository<Flight, UUID> {
 
     Optional<Flight> findByFlightNumber(String flightNumber);
     boolean existsByFlightNumber(String flightNumber);
-    boolean existsByFlightNumberAndIdNot(String flightNumber, Long id);
+    boolean existsByFlightNumberAndIdNot(String flightNumber, UUID id);
 
     @Query("SELECT f.flightNumber FROM Flight f WHERE f.flightNumber IN :numbers")
     Set<String> findExistingFlightNumbers(@Param("numbers") Collection<String> numbers);
@@ -28,9 +29,9 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
               AND (:arrId IS NULL OR f.arrivalAirportId = :arrId)
             """)
     Page<Flight> findByAirlineIdAndOptionalRoute(
-            @Param("airlineId") Long airlineId,
-            @Param("depId") Long departureAirportId,
-            @Param("arrId") Long arrivalAirportId,
+            @Param("airlineId") UUID airlineId,
+            @Param("depId") UUID departureAirportId,
+            @Param("arrId") UUID arrivalAirportId,
             Pageable pageable);
 
     Page<Flight> findByStatus(FlightStatus status, Pageable pageable);

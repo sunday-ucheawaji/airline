@@ -8,6 +8,10 @@ import org.springframework.data.annotation.LastModifiedDate;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "seat_instances")
@@ -19,18 +23,21 @@ import java.time.Instant;
 public class SeatInstance {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Column(name = "flight_id", nullable = false)
-    private Long flightId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID flightId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "flight_instance_cabin_id")
     private FlightInstanceCabin flightInstanceCabin;
 
     @Column(name = "flight_instance_id")
-    private Long flightInstanceId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID flightInstanceId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seat_id", nullable = false)
@@ -52,7 +59,8 @@ public class SeatInstance {
     private Long version;
 
     @Column(name = "flight_schedule_id")
-    private Long flightScheduleId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID flightScheduleId;
 
     @CreatedDate
     @Column(updatable = false)

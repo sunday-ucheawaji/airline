@@ -211,7 +211,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public PaymentDTO getPaymentForBooking(Long bookingId, Long userId) {
+    public PaymentDTO getPaymentForBooking(UUID bookingId, UUID userId) {
         Payment payment = paymentRepository.findFirstByBookingIdOrderByIdDesc(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_FOR_BOOKING, bookingId)));
         paymentAccessService.requireOwnerOrPermission(payment, userId, PaymentPermissions.PAYMENT_READ);
@@ -220,14 +220,14 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PaymentDTO> getPaymentsForAirline(Long airlineId, Long userId, Pageable pageable) {
+    public Page<PaymentDTO> getPaymentsForAirline(UUID airlineId, UUID userId, Pageable pageable) {
         paymentAccessService.requireAirlinePermission(airlineId, userId, PaymentPermissions.PAYMENT_READ);
         return paymentRepository.findByAirlineId(airlineId, pageable).map(PaymentMapper::toDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PaymentDTO getPaymentForSupport(Long bookingId) {
+    public PaymentDTO getPaymentForSupport(UUID bookingId) {
         // Permission (PAYMENT_SUPPORT_READ) is checked at the gateway, same as booking-service's
         // getBookingForSupport — no sensitive field exists on Payment today, so nothing to mask.
         return paymentRepository.findFirstByBookingIdOrderByIdDesc(bookingId)
@@ -237,7 +237,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public PaymentDTO refundPayment(Long paymentId, Long userId, BigDecimal amount) {
+    public PaymentDTO refundPayment(UUID paymentId, UUID userId, BigDecimal amount) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_BY_ID, paymentId)));
 
@@ -266,7 +266,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public PaymentDTO getPaymentByBookingId(Long bookingId) {
+    public PaymentDTO getPaymentByBookingId(UUID bookingId) {
         return paymentRepository.findFirstByBookingIdOrderByIdDesc(bookingId)
                 .map(PaymentMapper::toDTO)
                 .orElse(null);
@@ -274,18 +274,18 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, PaymentDTO> getPaymentsByBookingIds(List<Long> bookingIds) {
+    public Map<UUID, PaymentDTO> getPaymentsByBookingIds(List<UUID> bookingIds) {
         if (bookingIds == null || bookingIds.isEmpty()) return Map.of();
         return paymentRepository.findByBookingIdIn(bookingIds).stream()
                 .collect(Collectors.toMap(Payment::getBookingId, PaymentMapper::toDTO,
-                        (earlier, later) -> earlier.getId() > later.getId() ? earlier : later));
+                        (earlier, later) -> earlier.getId().compareTo(later.getId()) > 0 ? earlier : later));
     }
 
     private boolean amountsDiffer(BigDecimal a, BigDecimal b) {
         return a.setScale(2, RoundingMode.HALF_EVEN).compareTo(b.setScale(2, RoundingMode.HALF_EVEN)) != 0;
     }
 
-    private PayableBookingResponse fetchPayableBooking(Long bookingId) {
+    private PayableBookingResponse fetchPayableBooking(UUID bookingId) {
         try {
             return bookingClient.getPayableBooking(bookingId);
         } catch (FeignException.NotFound e) {

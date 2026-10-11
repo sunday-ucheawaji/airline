@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -240,7 +241,7 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
     }
 
-    private void revokeAllActiveTokensForUser(Long userId) {
+    private void revokeAllActiveTokensForUser(UUID userId) {
         List<RefreshToken> activeTokens = refreshTokenRepository.findByUserIdAndRevokedAtIsNull(userId);
         LocalDateTime now = LocalDateTime.now();
         for (RefreshToken activeToken : activeTokens) {

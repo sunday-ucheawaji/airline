@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.AncillaryPermissions;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
@@ -34,8 +35,8 @@ public class AncillaryServiceImpl implements AncillaryService {
     private final AirlineIntegrationService airlineIntegrationService;
 
     @Override
-    public AncillaryResponse create(Long userId, AncillaryRequest request) {
-        Long airlineId = request.getAirlineId();
+    public AncillaryResponse create(UUID userId, AncillaryRequest request) {
+        UUID airlineId = request.getAirlineId();
         if (airlineId == null) {
             throw new BadRequestException(ErrorMessageUtil.AIRLINE_ID_REQUIRED);
         }
@@ -58,7 +59,7 @@ public class AncillaryServiceImpl implements AncillaryService {
 
     @Override
     @Transactional
-    public AncillaryBulkCreateResponse bulkCreate(Long userId, List<AncillaryRequest> requests) {
+    public AncillaryBulkCreateResponse bulkCreate(UUID userId, List<AncillaryRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return AncillaryBulkCreateResponse.builder()
                     .created(List.of())
@@ -79,7 +80,7 @@ public class AncillaryServiceImpl implements AncillaryService {
             }
         }
 
-        Set<Long> airlineIds = candidates.stream().map(AncillaryRequest::getAirlineId).collect(Collectors.toSet());
+        Set<UUID> airlineIds = candidates.stream().map(AncillaryRequest::getAirlineId).collect(Collectors.toSet());
         airlineIntegrationService.requirePermission(userId, airlineIds, AncillaryPermissions.MANAGE);
 
         List<Ancillary> toInsert = candidates.stream()
@@ -106,7 +107,7 @@ public class AncillaryServiceImpl implements AncillaryService {
     }
 
     @Override
-    public AncillaryResponse getById(Long id) {
+    public AncillaryResponse getById(UUID id) {
         Ancillary ancillary = ancillaryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.ANCILLARY_NOT_FOUND_BY_ID, id)));
@@ -120,7 +121,7 @@ public class AncillaryServiceImpl implements AncillaryService {
     }
 
     @Override
-    public List<AncillaryResponse> getAllByAirlineId(Long userId, Long airlineId) {
+    public List<AncillaryResponse> getAllByAirlineId(UUID userId, UUID airlineId) {
         airlineIntegrationService.requireMembership(userId, airlineId);
         return ancillaryRepository.findByAirlineId(airlineId)
                 .stream()
@@ -136,7 +137,7 @@ public class AncillaryServiceImpl implements AncillaryService {
     }
 
     @Override
-    public AncillaryResponse update(Long userId, Long id, AncillaryRequest request) {
+    public AncillaryResponse update(UUID userId, UUID id, AncillaryRequest request) {
         Ancillary ancillary = ancillaryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.ANCILLARY_NOT_FOUND_BY_ID, id)));
@@ -161,7 +162,7 @@ public class AncillaryServiceImpl implements AncillaryService {
     }
 
     @Override
-    public void delete(Long userId, Long id) {
+    public void delete(UUID userId, UUID id) {
         Ancillary ancillary = ancillaryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.ANCILLARY_NOT_FOUND_BY_ID, id)));

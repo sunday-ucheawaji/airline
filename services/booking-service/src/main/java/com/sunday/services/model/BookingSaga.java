@@ -7,6 +7,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 /**
  * Durable record of one createBooking saga attempt, keyed by the caller's Idempotency-Key (or a
@@ -24,8 +28,9 @@ import java.util.List;
 public class BookingSaga {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Column(name = "idempotency_key", nullable = false)
     private String idempotencyKey;
@@ -34,11 +39,13 @@ public class BookingSaga {
     private String requestHash;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID userId;
 
     private String bookingReference;
 
-    private Long bookingId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID bookingId;
 
     @Enumerated(EnumType.STRING)
     private SagaStatus status;
@@ -54,7 +61,8 @@ public class BookingSaga {
     @ElementCollection
     @CollectionTable(name = "booking_saga_seat_instances", joinColumns = @JoinColumn(name = "booking_saga_id"))
     @Column(name = "seat_instance_id")
-    private List<Long> seatInstanceIds;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private List<UUID> seatInstanceIds;
 
     @Version
     private Long version;

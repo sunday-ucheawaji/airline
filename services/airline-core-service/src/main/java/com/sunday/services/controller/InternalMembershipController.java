@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.services.enums.MembershipStatus;
 import com.sunday.services.repository.AirlineMembershipRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class InternalMembershipController {
 
     /** True when the user has any membership that is invited, active or suspended. */
     @GetMapping("/users/{userId}/exists")
-    public boolean hasMembership(@PathVariable Long userId) {
+    public boolean hasMembership(@PathVariable UUID userId) {
         return membershipRepository.existsByUserIdAndStatusIn(userId, COUNTS_AS_MEMBER);
     }
 }

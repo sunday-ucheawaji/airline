@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.SeatHoldRequest;
 import com.sunday.common_lib.payload.response.SeatHoldResponse;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
@@ -19,12 +20,12 @@ public class InternalSeatInstanceController {
     private final SeatInstanceService seatInstanceService;
 
     @GetMapping("/all")
-    public List<SeatInstanceResponse> getAllByIds(@RequestParam List<Long> Ids) {
+    public List<SeatInstanceResponse> getAllByIds(@RequestParam List<UUID> Ids) {
         return seatInstanceService.getAllByIdsInternal(Ids);
     }
 
     @PostMapping("/price/total")
-    public BigDecimal calculateSeatPrice(@RequestBody List<Long> seatInstanceIds) {
+    public BigDecimal calculateSeatPrice(@RequestBody List<UUID> seatInstanceIds) {
         return seatInstanceService.calculateSeatPriceInternal(seatInstanceIds);
     }
 

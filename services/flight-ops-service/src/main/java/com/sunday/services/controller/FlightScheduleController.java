@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.FlightScheduleRequest;
 import com.sunday.common_lib.payload.response.FlightScheduleResponse;
 import com.sunday.services.service.FlightScheduleService;
@@ -20,7 +21,7 @@ public class FlightScheduleController {
 
     @PostMapping
     public ResponseEntity<FlightScheduleResponse> createFlightSchedule(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody FlightScheduleRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(
@@ -31,8 +32,8 @@ public class FlightScheduleController {
 
     @GetMapping("/{id}")
     public ResponseEntity<FlightScheduleResponse> getFlightScheduleById(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(
                 flightScheduleService.getFlightScheduleById(id, userId)
         );
@@ -40,8 +41,8 @@ public class FlightScheduleController {
 
     @GetMapping
     public ResponseEntity<List<FlightScheduleResponse>> getFlightSchedules(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestParam Long airlineId
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestParam UUID airlineId
     ) {
         return ResponseEntity.ok(
                 flightScheduleService.getFlightScheduleByAirline(userId, airlineId)
@@ -50,16 +51,16 @@ public class FlightScheduleController {
 
     @PutMapping("/{id}")
     public ResponseEntity<FlightScheduleResponse> updateFlightSchedule(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody FlightScheduleRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(flightScheduleService.updateFlightSchedule(id, request, userId));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFlightSchedule(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         flightScheduleService.deleteFlightSchedule(id, userId);
         return ResponseEntity.noContent().build();
     }

@@ -6,12 +6,16 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -29,9 +33,10 @@ import java.time.LocalDate;
 public class Aircraft {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
     @Column(updatable = false, nullable = false)
-    private Long id;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @NotBlank(message = "Aircraft code is required")
     @Column(nullable = false, unique = true, name = "aircraft_code", length = 20)
@@ -96,7 +101,8 @@ public class Aircraft {
 
     // Cross-service reference: stored as ID (Airport lives in another service)
     @Column(name = "current_airport_id")
-    private Long currentAirportId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID currentAirportId;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)

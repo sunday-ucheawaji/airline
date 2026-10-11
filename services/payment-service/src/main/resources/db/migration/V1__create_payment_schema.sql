@@ -2,14 +2,14 @@
 -- pass. Amount is DECIMAL, not DOUBLE, since a payment amount is money. Dev databases are recreated, not migrated.
 
 CREATE TABLE IF NOT EXISTS payments (
-    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id                  CHAR(36) PRIMARY KEY,
     -- Cross-service ref: User is in user-service, no FK.
-    user_id             BIGINT,
+    user_id             CHAR(36),
     -- Cross-service ref: Booking is in booking-service, no FK.
-    booking_id          BIGINT,
+    booking_id          CHAR(36),
     -- Cross-service ref: Airline is in airline-core-service, no FK. Denormalized from the booking's own
     -- airlineId at initiatePayment time, so permission checks never need a Feign round trip per check.
-    airline_id          BIGINT,
+    airline_id          CHAR(36),
     amount              DECIMAL(12,2),
     provider            ENUM('RAZORPAY','STRIPE','PAYSTACK'),
     provider_payment_id VARCHAR(255),
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS payments (
 -- Inbox-pattern dedup for the Razorpay webhook: a redelivered event can never double-transition a
 -- payment or double-publish payment.completed/payment.failed, even if it races a concurrent delivery.
 CREATE TABLE IF NOT EXISTS processed_webhook_events (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id              CHAR(36) PRIMARY KEY,
     provider        VARCHAR(50) NOT NULL,
     event_reference VARCHAR(255) NOT NULL,
     processed_at    DATETIME(6),

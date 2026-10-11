@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import java.util.UUID;
 
 /** Invites an existing platform user, by email, to join an airline as ADMIN or VIEWER (never OWNER). */
 @Getter
@@ -19,5 +20,5 @@ public class AirlineInvitationRequest {
     private String email;
 
     @NotNull(message = ErrorMessageUtil.MEMBER_INVITE_ROLE_MANDATORY)
-    private Long roleId;
+    private UUID roleId;
 }

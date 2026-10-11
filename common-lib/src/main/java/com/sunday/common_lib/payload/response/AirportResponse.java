@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.ZoneId;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -16,7 +17,7 @@ import java.time.ZoneId;
 @AllArgsConstructor
 public class AirportResponse {
 
-    private Long id;
+    private UUID id;
     private String iataCode;
     private String name;
     private String detailedName;

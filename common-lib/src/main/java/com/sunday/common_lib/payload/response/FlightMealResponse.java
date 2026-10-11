@@ -3,14 +3,15 @@ package com.sunday.common_lib.payload.response;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class FlightMealResponse {
-    private Long id;
-    private Long flightId;
+    private UUID id;
+    private UUID flightId;
     private MealResponse meal;
     private Boolean available;
     private BigDecimal price;

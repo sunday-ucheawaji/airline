@@ -1,5 +1,6 @@
 package com.sunday.services.integration.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
@@ -24,7 +25,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     private final AirlineClient airlineClient;
 
     @Override
-    public void requirePermission(Long userId, Long airlineId, String permission) {
+    public void requirePermission(UUID userId, UUID airlineId, String permission) {
         List<String> permissions;
         try {
             permissions = airlineClient.getMyPermissions(airlineId, userId);
@@ -44,7 +45,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     }
 
     @Override
-    public void requirePermission(Long userId, Collection<Long> airlineIds, String permission) {
+    public void requirePermission(UUID userId, Collection<UUID> airlineIds, String permission) {
         if (airlineIds.isEmpty()) {
             return;
         }
@@ -59,16 +60,16 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     }
 
     @Override
-    public Long resolveAirlineIdForAircraft(Long aircraftId) {
+    public UUID resolveAirlineIdForAircraft(UUID aircraftId) {
         return getAircraftByIdInternal(aircraftId).getAirlineId();
     }
 
     @Override
-    public Map<Long, Long> resolveAirlineIdsForAircrafts(Collection<Long> aircraftIds) {
+    public Map<UUID, UUID> resolveAirlineIdsForAircrafts(Collection<UUID> aircraftIds) {
         if (aircraftIds.isEmpty()) {
             return Map.of();
         }
-        Map<Long, AircraftResponse> aircrafts;
+        Map<UUID, AircraftResponse> aircrafts;
         try {
             aircrafts = airlineClient.getAircraftsByIdsInternal(new ArrayList<>(aircraftIds));
         } catch (FeignException e) {
@@ -77,7 +78,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
         if (aircrafts == null) {
             throw new ServiceUnavailableException(ErrorMessageUtil.AIRLINE_SERVICE_UNAVAILABLE);
         }
-        Map<Long, Long> airlineIdByAircraft = new HashMap<>();
+        Map<UUID, UUID> airlineIdByAircraft = new HashMap<>();
         aircrafts.forEach((aircraftId, aircraft) -> {
             if (aircraft != null && aircraft.getAirlineId() != null) {
                 airlineIdByAircraft.put(aircraftId, aircraft.getAirlineId());
@@ -87,7 +88,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     }
 
     @Override
-    public AircraftResponse getAircraftByIdInternal(Long aircraftId) {
+    public AircraftResponse getAircraftByIdInternal(UUID aircraftId) {
         AircraftResponse response;
         try {
             response = airlineClient.getAircraftByIdInternal(aircraftId);

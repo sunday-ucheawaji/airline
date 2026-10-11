@@ -21,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -85,7 +86,7 @@ public class CityServiceImpl implements CityService {
 
     @Override
     @Cacheable(cacheNames = "cities", key = "#id")
-    public CityResponse getCityById(Long id) {
+    public CityResponse getCityById(UUID id) {
         City city = cityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + id));
         return CityMapper.toResponse(city);
@@ -102,7 +103,7 @@ public class CityServiceImpl implements CityService {
             @CacheEvict(cacheNames = "airportsByIata", allEntries = true),
             @CacheEvict(cacheNames = "airportsByCity", allEntries = true)
     })
-    public CityResponse updateCity(Long id, CityRequest request) {
+    public CityResponse updateCity(UUID id, CityRequest request) {
         City city = cityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + id));
 
@@ -123,7 +124,7 @@ public class CityServiceImpl implements CityService {
             @CacheEvict(cacheNames = "cities", key = "#id"),
             @CacheEvict(cacheNames = "citiesByCode", allEntries = true)
     })
-    public void deleteCity(Long id) {
+    public void deleteCity(UUID id) {
         City city = cityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + id));
 

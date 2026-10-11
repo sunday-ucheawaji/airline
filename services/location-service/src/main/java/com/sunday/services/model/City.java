@@ -7,6 +7,10 @@ import lombok.*;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "cities", indexes = {
@@ -22,8 +26,9 @@ import java.time.ZoneId;
 public class City {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @NotBlank(message = "City name is required")
     @Size(max = 100)

@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -15,7 +16,7 @@ public class BaggagePolicyRequest {
     private String name;
 
     @NotNull(message = "Fare ID is required")
-    private Long fareId;
+    private UUID fareId;
 
     private String description;
 

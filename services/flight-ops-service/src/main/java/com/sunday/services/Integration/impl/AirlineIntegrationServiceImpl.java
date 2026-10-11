@@ -1,5 +1,6 @@
 package com.sunday.services.Integration.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.response.AircraftResponse;
@@ -22,7 +23,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     private final AirlineClient airlineClient;
 
     @Override
-    public void requirePermission(Long userId, Long airlineId, String permission) {
+    public void requirePermission(UUID userId, UUID airlineId, String permission) {
         List<String> permissions;
         try {
             permissions = airlineClient.getMyPermissions(airlineId, userId);
@@ -40,7 +41,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     }
 
     @Override
-    public void requirePermission(Long userId, Collection<Long> airlineIds, String permission) {
+    public void requirePermission(UUID userId, Collection<UUID> airlineIds, String permission) {
         if (airlineIds.isEmpty()) {
             return;
         }
@@ -55,7 +56,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     }
 
     @Override
-    public AircraftResponse getAircraftById(Long aircraftId, Long userId) {
+    public AircraftResponse getAircraftById(UUID aircraftId, UUID userId) {
         try {
             return airlineClient.getAircraftById(aircraftId, userId);
         } catch (FeignException.NotFound e) {
@@ -66,7 +67,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     }
 
     @Override
-    public AircraftResponse getAircraftByIdInternal(Long aircraftId) {
+    public AircraftResponse getAircraftByIdInternal(UUID aircraftId) {
         try {
             return airlineClient.getAircraftByIdInternal(aircraftId);
         } catch (FeignException.NotFound e) {
@@ -77,7 +78,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
     }
 
     @Override
-    public Map<Long, AircraftResponse> getAircraftsByIdsInternal(Collection<Long> aircraftIds) {
+    public Map<UUID, AircraftResponse> getAircraftsByIdsInternal(Collection<UUID> aircraftIds) {
         if (aircraftIds.isEmpty()) {
             return Map.of();
         }

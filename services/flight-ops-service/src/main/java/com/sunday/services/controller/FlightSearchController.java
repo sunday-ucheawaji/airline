@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.request.FlightSearchRequest;
 import com.sunday.common_lib.payload.response.FlightInstanceResponse;
@@ -27,12 +28,12 @@ public class FlightSearchController {
 
     @GetMapping("/api/flights/search")
     public ResponseEntity<Page<FlightInstanceResponse>> searchFlights(
-            @RequestParam Long departureAirportId,
-            @RequestParam Long arrivalAirportId,
+            @RequestParam UUID departureAirportId,
+            @RequestParam UUID arrivalAirportId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate,
             @RequestParam Integer passengers,
             @RequestParam CabinClassType cabinClass,
-            @RequestParam(required = false) List<Long> airlines,
+            @RequestParam(required = false) List<UUID> airlines,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) String departureTimeRange,

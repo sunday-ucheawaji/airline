@@ -8,18 +8,19 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentDTO {
 
-    private Long id;
-    private Long userId;
+    private UUID id;
+    private UUID userId;
     private String userName;
     private String userEmail;
-    private Long bookingId;
-    private Long airlineId;
+    private UUID bookingId;
+    private UUID airlineId;
     private String refundId;
     private PaymentStatus status;
     private PaymentGateway gateway;

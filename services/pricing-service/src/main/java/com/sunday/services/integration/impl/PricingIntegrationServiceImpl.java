@@ -1,5 +1,6 @@
 package com.sunday.services.integration.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
@@ -26,7 +27,7 @@ public class PricingIntegrationServiceImpl implements PricingIntegrationService 
     private final FlightClient flightClient;
 
     @Override
-    public void requirePermission(Long userId, Long airlineId, String permission) {
+    public void requirePermission(UUID userId, UUID airlineId, String permission) {
         List<String> permissions;
         try {
             permissions = airlineClient.getMyPermissions(airlineId, userId);
@@ -43,11 +44,11 @@ public class PricingIntegrationServiceImpl implements PricingIntegrationService 
     }
 
     @Override
-    public void requirePermission(Long userId, Collection<Long> airlineIds, String permission) {
+    public void requirePermission(UUID userId, Collection<UUID> airlineIds, String permission) {
         if (airlineIds.isEmpty()) {
             return;
         }
-        List<Long> ids = new ArrayList<>(airlineIds);
+        List<UUID> ids = new ArrayList<>(airlineIds);
         try {
             airlineClient.requirePermission(ids, permission, userId);
         } catch (FeignException.Forbidden e) {
@@ -59,12 +60,12 @@ public class PricingIntegrationServiceImpl implements PricingIntegrationService 
     }
 
     @Override
-    public Map<Long, Long> findAirlineIdsByFlightIds(Collection<Long> flightIds) {
+    public Map<UUID, UUID> findAirlineIdsByFlightIds(Collection<UUID> flightIds) {
         if (flightIds.isEmpty()) {
             return Map.of();
         }
-        List<Long> ids = new ArrayList<>(flightIds);
-        Map<Long, FlightResponse> flights;
+        List<UUID> ids = new ArrayList<>(flightIds);
+        Map<UUID, FlightResponse> flights;
         try {
             flights = flightClient.getFlightsByIds(ids);
         } catch (FeignException e) {
@@ -73,8 +74,8 @@ public class PricingIntegrationServiceImpl implements PricingIntegrationService 
         if (flights == null) {
             throw new ServiceUnavailableException(ErrorMessageUtil.FLIGHT_SERVICE_UNAVAILABLE);
         }
-        Map<Long, Long> airlineByFlight = new HashMap<>();
-        for (Long flightId : ids) {
+        Map<UUID, UUID> airlineByFlight = new HashMap<>();
+        for (UUID flightId : ids) {
             FlightResponse flight = flights.get(flightId);
             if (flight == null) {
                 continue;
@@ -88,9 +89,9 @@ public class PricingIntegrationServiceImpl implements PricingIntegrationService 
     }
 
     @Override
-    public Map<Long, Long> resolveAirlineIdsByFlightIds(Collection<Long> flightIds) {
-        Map<Long, Long> airlineByFlight = findAirlineIdsByFlightIds(flightIds);
-        for (Long flightId : flightIds) {
+    public Map<UUID, UUID> resolveAirlineIdsByFlightIds(Collection<UUID> flightIds) {
+        Map<UUID, UUID> airlineByFlight = findAirlineIdsByFlightIds(flightIds);
+        for (UUID flightId : flightIds) {
             if (!airlineByFlight.containsKey(flightId)) {
                 throw new ResourceNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, flightId));
             }

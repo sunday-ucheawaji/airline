@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.BookingStatus;
 import com.sunday.services.model.Booking;
 import org.springframework.data.domain.Sort;
@@ -14,35 +15,35 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface BookingRepository extends JpaRepository<Booking, Long>, BookingPerformanceRepository {
+public interface BookingRepository extends JpaRepository<Booking, UUID>, BookingPerformanceRepository {
 
     Optional<Booking> findByBookingReference(String bookingReference);
 
-    List<Booking> findByUserId(Long userId);
+    List<Booking> findByUserId(UUID userId);
 
-    long countByFlightInstanceIdAndAirlineId(Long flightInstanceId, Long airlineId);
+    long countByFlightInstanceIdAndAirlineId(UUID flightInstanceId, UUID airlineId);
 
-    long countByAirlineId(Long airlineId);
+    long countByAirlineId(UUID airlineId);
 
-    long countByAirlineIdAndBookingDateBetween(Long airlineId, LocalDateTime from, LocalDateTime to);
+    long countByAirlineIdAndBookingDateBetween(UUID airlineId, LocalDateTime from, LocalDateTime to);
 
     @Query("SELECT COALESCE(SUM(b.totalAmount), 0) FROM Booking b " +
             "WHERE b.airlineId = :airlineId AND b.bookingDate BETWEEN :from AND :to " +
             "AND b.status = BookingStatus.CONFIRMED")
     BigDecimal sumTotalAmountByAirlineIdAndBookingDateBetween(
-            @Param("airlineId") Long airlineId,
+            @Param("airlineId") UUID airlineId,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
 
     @Query("SELECT COALESCE(SUM(b.totalAmount), 0) FROM Booking b " +
             "WHERE b.airlineId = :airlineId AND b.status = BookingStatus.CONFIRMED")
-    BigDecimal sumTotalAmountByAirlineId(@Param("airlineId") Long airlineId);
+    BigDecimal sumTotalAmountByAirlineId(@Param("airlineId") UUID airlineId);
 
     @Query("SELECT b FROM Booking b " +
             "LEFT JOIN FETCH b.passengers " +
             "LEFT JOIN FETCH b.tickets " +
             "WHERE b.id = :id")
-    Optional<Booking> findByIdWithDetails(@Param("id") Long id);
+    Optional<Booking> findByIdWithDetails(@Param("id") UUID id);
 
     @Query("SELECT DISTINCT b FROM Booking b " +
             "LEFT JOIN FETCH b.passengers p " +
@@ -57,9 +58,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, Booking
             "AND (:status IS NULL OR b.status = :status) " +
             "AND (:flightInstanceId IS NULL OR b.flightInstanceId = :flightInstanceId)")
     List<Booking> findByAirlineWithFilters(
-            @Param("airlineId") Long airlineId,
+            @Param("airlineId") UUID airlineId,
             @Param("search") String search,
             @Param("status") BookingStatus status,
-            @Param("flightInstanceId") Long flightInstanceId,
+            @Param("flightInstanceId") UUID flightInstanceId,
             Sort sort);
 }

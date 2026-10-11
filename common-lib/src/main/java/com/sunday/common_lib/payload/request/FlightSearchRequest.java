@@ -1,7 +1,5 @@
 package com.sunday.common_lib.payload.request;
 
-
-
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.Min;
@@ -11,6 +9,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -19,9 +18,8 @@ import java.util.List;
 @Builder
 public class FlightSearchRequest {
 
-
-    private Long departureAirportId;
-    private Long arrivalAirportId;
+    private UUID departureAirportId;
+    private UUID arrivalAirportId;
 
     @NotNull(message = ErrorMessageUtil.SEARCH_DEPARTURE_DATE_MANDATORY)
     private LocalDate departureDate;
@@ -33,16 +31,14 @@ public class FlightSearchRequest {
     @NotNull(message = ErrorMessageUtil.SEARCH_CABIN_CLASS_MANDATORY)
     private CabinClassType cabinClass;
 
-    // Filter Parameters
-    private List<Long> airlines; // Filter by airline ids
-    private BigDecimal minPrice; // Minimum price filter
-    private BigDecimal maxPrice; // Maximum price filter
-    private String departureTimeRange; // "any", "morning", "afternoon", "evening", "night"
-    private String arrivalTimeRange; // "any", "morning", "afternoon", "evening", "night"
-    private Integer maxDuration; // Maximum duration in minutes
-    private String alliance; // "any", "star", "oneworld", "skyteam"
+    private List<UUID> airlines;
+    private BigDecimal minPrice;
+    private BigDecimal maxPrice;
+    private String departureTimeRange;
+    private String arrivalTimeRange;
+    private Integer maxDuration;
+    private String alliance;
 
-    // Sorting Parameters
-    private String sortBy; // "price", "duration", "departure", "arrival"
-    private String sortOrder; // "asc", "desc"
+    private String sortBy;
+    private String sortOrder;
 }

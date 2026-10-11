@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.PassengerRequest;
 import com.sunday.common_lib.payload.response.PassengerResponse;
 import com.sunday.services.mapper.PassengerMapper;
@@ -20,20 +21,20 @@ public class PassengerServiceImpl implements PassengerService {
 
     @Override
     @Transactional
-    public PassengerResponse createPassenger(PassengerRequest request, Long userId) {
+    public PassengerResponse createPassenger(PassengerRequest request, UUID userId) {
         Passenger saved = passengerRepository.save(createPassengerEntity(request, userId));
         return PassengerMapper.toResponse(saved);
     }
 
     @Override
-    public Passenger createPassengerEntity(PassengerRequest request, Long userId) {
+    public Passenger createPassengerEntity(PassengerRequest request, UUID userId) {
         Passenger passenger = PassengerMapper.toEntity(request);
         passenger.setPrimaryUserId(userId);
         return passenger;
     }
 
     @Override
-    public boolean existsById(Long id) {
+    public boolean existsById(UUID id) {
         return passengerRepository.existsById(id);
     }
 

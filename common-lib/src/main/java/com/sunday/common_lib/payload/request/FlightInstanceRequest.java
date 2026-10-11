@@ -8,6 +8,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -16,16 +17,16 @@ import java.time.LocalDateTime;
 public class FlightInstanceRequest {
 
     @NotNull(message = ErrorMessageUtil.FLIGHT_ID_MANDATORY)
-    private Long flightId;
+    private UUID flightId;
 
     @NotNull(message = ErrorMessageUtil.AIRCRAFT_ID_MANDATORY)
-    private Long aircraftId;
+    private UUID aircraftId;
 
-    private Long scheduleId;
+    private UUID scheduleId;
 
-    private Long departureAirportId;
+    private UUID departureAirportId;
 
-    private Long arrivalAirportId;
+    private UUID arrivalAirportId;
 
     @NotNull(message = ErrorMessageUtil.DEPARTURE_DATETIME_MANDATORY)
     private LocalDateTime departureDateTime;

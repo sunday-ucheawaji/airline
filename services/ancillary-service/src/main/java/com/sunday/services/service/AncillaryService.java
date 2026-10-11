@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.AncillaryRequest;
 import com.sunday.common_lib.payload.response.AncillaryBulkCreateResponse;
 import com.sunday.common_lib.payload.response.AncillaryResponse;
@@ -8,15 +9,15 @@ import java.util.List;
 
 public interface AncillaryService {
 
-    AncillaryResponse create(Long userId, AncillaryRequest request);
+    AncillaryResponse create(UUID userId, AncillaryRequest request);
 
-    AncillaryBulkCreateResponse bulkCreate(Long userId, List<AncillaryRequest> requests);
+    AncillaryBulkCreateResponse bulkCreate(UUID userId, List<AncillaryRequest> requests);
 
-    AncillaryResponse getById(Long id);
+    AncillaryResponse getById(UUID id);
 
-    List<AncillaryResponse> getAllByAirlineId(Long userId, Long airlineId);
+    List<AncillaryResponse> getAllByAirlineId(UUID userId, UUID airlineId);
 
-    AncillaryResponse update(Long userId, Long id, AncillaryRequest request);
+    AncillaryResponse update(UUID userId, UUID id, AncillaryRequest request);
 
-    void delete(Long userId, Long id);
+    void delete(UUID userId, UUID id);
 }

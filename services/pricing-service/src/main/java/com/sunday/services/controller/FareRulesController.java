@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.FareRulesRequest;
 import com.sunday.common_lib.payload.response.FareRulesResponse;
 import com.sunday.services.service.FareRulesService;
@@ -22,7 +23,7 @@ public class FareRulesController {
 
     @PostMapping
     public ResponseEntity<FareRulesResponse> createFareRules(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody FareRulesRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(fareRulesService.createFareRules(userId, request));
@@ -30,38 +31,38 @@ public class FareRulesController {
 
     @GetMapping("/{id}")
     public ResponseEntity<FareRulesResponse> getFareRulesById(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         return ResponseEntity.ok(fareRulesService.getFareRulesById(userId, id));
     }
 
     @GetMapping("/fare/{fareId}")
     public ResponseEntity<FareRulesResponse> getFareRulesByFareId(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long fareId) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID fareId) {
         return ResponseEntity.ok(fareRulesService.getFareRulesByFareId(userId, fareId));
     }
 
     @GetMapping("/airline/{airlineId}")
     public ResponseEntity<Page<FareRulesResponse>> getFareRulesByAirlineId(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long airlineId,
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID airlineId,
             Pageable pageable) {
         return ResponseEntity.ok(fareRulesService.getFareRulesByAirlineId(userId, airlineId, pageable));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<FareRulesResponse> updateFareRules(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id,
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id,
             @Valid @RequestBody FareRulesRequest request) {
         return ResponseEntity.ok(fareRulesService.updateFareRules(userId, id, request));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteFareRules(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
         fareRulesService.deleteFareRules(userId, id);
         return ResponseEntity.noContent().build();
     }

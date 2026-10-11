@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.PaymentInitiateRequest;
 import com.sunday.common_lib.payload.response.PaymentDTO;
 import com.sunday.common_lib.payload.response.PaymentInitiateResponse;
@@ -17,7 +18,7 @@ import java.util.Map;
 public class PaymentClientFallback implements PaymentClient {
 
     @Override
-    public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request, Long userId) {
+    public PaymentInitiateResponse initiatePayment(PaymentInitiateRequest request, UUID userId) {
         log.error(
                 "Payment service fallback triggered. bookingId={}, userId={}",
                 request.getBookingId(),
@@ -32,12 +33,12 @@ public class PaymentClientFallback implements PaymentClient {
     }
 
     @Override
-    public PaymentDTO getPaymentByBookingId(Long bookingId) {
+    public PaymentDTO getPaymentByBookingId(UUID bookingId) {
         return null;
     }
 
     @Override
-    public Map<Long, PaymentDTO> getPaymentsByBookingIds(List<Long> bookingIds) {
+    public Map<UUID, PaymentDTO> getPaymentsByBookingIds(List<UUID> bookingIds) {
         return Collections.emptyMap();
     }
 }

@@ -3,6 +3,7 @@ package com.sunday.common_lib.payload.response;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -10,7 +11,7 @@ import java.time.Instant;
 @AllArgsConstructor
 public class BaggagePolicyResponse {
 
-    private Long id;
+    private UUID id;
     private String name;
     private String description;
 
@@ -31,8 +32,8 @@ public class BaggagePolicyResponse {
     private Boolean extraBaggageAllowance;
 
     // Relationships
-    private Long airlineId;
-    private Long fareId;
+    private UUID airlineId;
+    private UUID fareId;
 
     // Audit
     private Instant createdAt;

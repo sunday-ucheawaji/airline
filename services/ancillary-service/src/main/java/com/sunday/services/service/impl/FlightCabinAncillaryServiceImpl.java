@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.AncillaryPermissions;
 import com.sunday.common_lib.enums.AncillaryType;
 import com.sunday.common_lib.exception.BadRequestException;
@@ -50,7 +51,7 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
     }
 
     @Override
-    public FlightCabinAncillaryResponse create(Long userId, FlightCabinAncillaryRequest req) {
+    public FlightCabinAncillaryResponse create(UUID userId, FlightCabinAncillaryRequest req) {
         Ancillary ancillary = ancillaryRepository.findById(req.getAncillaryId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.ANCILLARY_NOT_FOUND_BY_ID, req.getAncillaryId())));
@@ -72,7 +73,7 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
 
     @Override
     @Transactional
-    public FlightCabinAncillaryBulkCreateResponse bulkCreate(Long userId, List<FlightCabinAncillaryRequest> requests) {
+    public FlightCabinAncillaryBulkCreateResponse bulkCreate(UUID userId, List<FlightCabinAncillaryRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return FlightCabinAncillaryBulkCreateResponse.builder()
                     .created(List.of())
@@ -80,14 +81,14 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
                     .build();
         }
 
-        List<Long> ancillaryIds = requests.stream()
+        List<UUID> ancillaryIds = requests.stream()
                 .map(FlightCabinAncillaryRequest::getAncillaryId)
                 .distinct()
                 .toList();
-        Map<Long, Ancillary> ancillaryById = ancillaryRepository.findAllById(ancillaryIds).stream()
+        Map<UUID, Ancillary> ancillaryById = ancillaryRepository.findAllById(ancillaryIds).stream()
                 .collect(Collectors.toMap(Ancillary::getId, a -> a));
 
-        Set<Long> airlineIds = ancillaryById.values().stream()
+        Set<UUID> airlineIds = ancillaryById.values().stream()
                 .map(Ancillary::getAirlineId)
                 .collect(Collectors.toSet());
         airlineIntegrationService.requirePermission(userId, airlineIds, AncillaryPermissions.MANAGE);
@@ -127,7 +128,7 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
     }
 
     @Override
-    public FlightCabinAncillaryResponse getById(Long id) {
+    public FlightCabinAncillaryResponse getById(UUID id) {
         FlightCabinAncillary entity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_CABIN_ANCILLARY_NOT_FOUND_BY_ID, id)));
@@ -135,21 +136,21 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
     }
 
     @Override
-    public List<FlightCabinAncillaryResponse> getAllByFlightAndCabinClass(Long flightId, Long cabinClassId) {
+    public List<FlightCabinAncillaryResponse> getAllByFlightAndCabinClass(UUID flightId, UUID cabinClassId) {
         return repository.findByFlightIdAndCabinClassId(flightId, cabinClassId).stream()
                 .map(this::mapWithCoverages)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<FlightCabinAncillaryResponse> getAllByIds(List<Long> ids) {
+    public List<FlightCabinAncillaryResponse> getAllByIds(List<UUID> ids) {
         List<FlightCabinAncillary> ancillaries = repository.findAllById(ids);
         return ancillaries.stream().map(this::mapWithCoverages).collect(Collectors.toList());
     }
 
     @Override
     public FlightCabinAncillaryResponse getByFlightIdAndCabinClassAndType(
-            Long flightId, Long cabinClassId, AncillaryType type) {
+            UUID flightId, UUID cabinClassId, AncillaryType type) {
         FlightCabinAncillary entity = repository
                 .findByFlightIdAndCabinClassIdAndAncillary_Type(flightId, cabinClassId, type)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -159,14 +160,14 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
 
     @Override
     public List<FlightCabinAncillaryResponse> getAllByFlightIdAndCabinClassAndType(
-            Long flightId, Long cabinClassId, AncillaryType type) {
+            UUID flightId, UUID cabinClassId, AncillaryType type) {
         List<FlightCabinAncillary> ancillaries = repository.findAllByFlightIdAndCabinClassIdAndAncillary_Type(
                 flightId, cabinClassId, type);
         return ancillaries.stream().map(this::mapWithCoverages).collect(Collectors.toList());
     }
 
     @Override
-    public FlightCabinAncillaryResponse update(Long userId, Long id, FlightCabinAncillaryRequest req) {
+    public FlightCabinAncillaryResponse update(UUID userId, UUID id, FlightCabinAncillaryRequest req) {
         FlightCabinAncillary entity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_CABIN_ANCILLARY_NOT_FOUND_BY_ID, id)));
@@ -183,7 +184,7 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
     }
 
     @Override
-    public void delete(Long userId, Long id) {
+    public void delete(UUID userId, UUID id) {
         FlightCabinAncillary entity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_CABIN_ANCILLARY_NOT_FOUND_BY_ID, id)));
@@ -194,7 +195,7 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
 
     @Override
     @Transactional(readOnly = true)
-    public BigDecimal calculateAncillaryPrice(Long flightId, List<Long> ancillaryIds) {
+    public BigDecimal calculateAncillaryPrice(UUID flightId, List<UUID> ancillaryIds) {
         if (ancillaryIds == null || ancillaryIds.isEmpty()) {
             return BigDecimal.ZERO;
         }
@@ -202,10 +203,10 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
         List<FlightCabinAncillary> ancillaries = repository.findAllById(ancillaryIds);
 
         // findAllById silently skips unknown IDs — reject them instead of undercharging
-        Set<Long> foundIds = ancillaries.stream()
+        Set<UUID> foundIds = ancillaries.stream()
                 .map(FlightCabinAncillary::getId)
                 .collect(Collectors.toSet());
-        List<Long> missingIds = ancillaryIds.stream()
+        List<UUID> missingIds = ancillaryIds.stream()
                 .distinct()
                 .filter(id -> !foundIds.contains(id))
                 .toList();
@@ -222,7 +223,7 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
             throw new ConflictException(String.join("; ", wrongFlight));
         }
 
-        Map<Long, Long> quantities = ancillaryIds.stream()
+        Map<UUID, Long> quantities = ancillaryIds.stream()
                 .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
 
         BigDecimal totalPrice = BigDecimal.ZERO;

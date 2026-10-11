@@ -5,11 +5,15 @@ import com.sunday.common_lib.enums.AirlineStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -22,9 +26,10 @@ import java.time.Instant;
 public class Airline {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
     @Column(updatable = false, nullable = false)
-    private Long id;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @Column(name = "legal_name", nullable = false)
     private String legalName;
@@ -63,7 +68,8 @@ public class Airline {
 
     // Cross-service reference: stored as ID (City lives in another service)
     @Column(name = "headquarters_city_id")
-    private Long headquartersCityId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID headquartersCityId;
 
     @CreatedDate
     @Column(updatable = false, nullable = false)

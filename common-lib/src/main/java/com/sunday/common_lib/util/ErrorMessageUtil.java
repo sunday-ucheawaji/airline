@@ -35,6 +35,7 @@ public class ErrorMessageUtil {
 
     // ---------- Roles & Permissions ----------
     public static final String ROLE_NOT_FOUND_BY_ID = "Role not found with id: %s";
+    public static final String ROLE_NOT_FOUND_BY_NAME = "Role not found with name: %s";
     public static final String ROLE_ALREADY_EXISTS = "Role with name %s already exists";
     public static final String PERMISSION_NOT_FOUND_BY_ID = "Permission not found with id: %s";
     public static final String PERMISSION_ALREADY_EXISTS = "Permission with name %s already exists";
@@ -86,6 +87,7 @@ public class ErrorMessageUtil {
     public static final String SCHEDULE_END_DATE_MANDATORY = "End date is required";
     public static final String SCHEDULE_END_DATE_BEFORE_START_DATE = "End date must be after start date";
     public static final String FLIGHT_SCHEDULE_NOT_FOUND_BY_ID = "Flight schedule not found with id: %s";
+    public static final String SCHEDULE_OPERATING_DAYS_MANDATORY = "Operating days are required unless recurrenceType is DAILY";
 
     // ---------- Flight ops: search ----------
     public static final String SEARCH_DEPARTURE_DATE_MANDATORY = "Departure date is required";
@@ -135,7 +137,7 @@ public class ErrorMessageUtil {
     public static final String MEMBER_INVITE_EMAIL_MANDATORY = "A valid email is required";
     public static final String MEMBER_INVITE_ROLE_MANDATORY = "roleId is required";
     public static final String MEMBER_STATUS_MANDATORY = "status is required";
-    public static final String MEMBER_INVITE_TARGET_ROLE_INVALID = "Role %s cannot be invited to an airline; only ADMIN or VIEWER can";
+    public static final String MEMBER_INVITE_TARGET_ROLE_INVALID = "Role %s cannot be invited to an airline; OWNER is never invitable";
     public static final String MEMBER_INVITE_USER_NOT_FOUND = "No user found with email %s";
     public static final String MEMBER_INVITE_TARGET_IS_PLATFORM_STAFF = "User %s holds a platform role and cannot join an airline";
     public static final String MEMBER_ALREADY_ACTIVE = "User %s is already a member of airline %s";
@@ -145,10 +147,11 @@ public class ErrorMessageUtil {
     public static final String MEMBERSHIP_INVITATION_EXPIRED = "This invitation has expired";
     public static final String MEMBERSHIP_ACCEPT_NOT_INVITEE = "Only the invited user can accept this invitation";
     public static final String MEMBERSHIP_NOT_ACTIVE_OR_SUSPENDED = "Membership %s is not an active or suspended member";
-    public static final String MEMBER_ROLE_UPDATE_TARGET_INVALID = "Role %s cannot be assigned to an existing member; only ADMIN or VIEWER can";
+    public static final String MEMBER_ROLE_UPDATE_TARGET_INVALID = "Role %s cannot be assigned to an existing member; OWNER is never invitable";
     public static final String MEMBER_STATUS_UPDATE_INVALID = "status must be ACTIVE or SUSPENDED";
     public static final String MEMBER_CANNOT_REMOVE_LAST_OWNER = "Cannot remove the last OWNER of airline %s";
     public static final String MEMBER_ROLE_UPDATE_OWNER_LOCKED = "The OWNER's role cannot be changed here";
+    public static final String ROLE_LOOKUP_UNAVAILABLE = "Role %s cannot be verified right now; please try again later";
 
     // ---------- Ancillary ----------
     public static final String AIRLINE_ID_REQUIRED = "airlineId is required";

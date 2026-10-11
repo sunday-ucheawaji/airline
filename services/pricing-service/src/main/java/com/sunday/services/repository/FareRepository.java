@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.enums.FareStatus;
 import com.sunday.common_lib.enums.PassengerType;
@@ -17,22 +18,22 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface FareRepository extends JpaRepository<Fare, Long> {
+public interface FareRepository extends JpaRepository<Fare, UUID> {
 
-    List<Fare> findByFlightId(Long flightId);
-    Page<Fare> findByFlightId(Long flightId, Pageable pageable);
+    List<Fare> findByFlightId(UUID flightId);
+    Page<Fare> findByFlightId(UUID flightId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"fareRules", "baggagePolicy"})
-    Page<Fare> findByAirlineId(Long airlineId, Pageable pageable);
+    Page<Fare> findByAirlineId(UUID airlineId, Pageable pageable);
 
-    List<Fare> findByFlightIdAndCabinClassId(Long flightId, Long cabinClassId);
+    List<Fare> findByFlightIdAndCabinClassId(UUID flightId, UUID cabinClassId);
 
     boolean existsByAirlineIdAndFlightIdAndCabinClassAndRbdCodeAndPassengerTypeAndName(
-            Long airlineId, Long flightId, CabinClassType cabinClass, Character rbdCode, PassengerType passengerType, String name);
+            UUID airlineId, UUID flightId, CabinClassType cabinClass, Character rbdCode, PassengerType passengerType, String name);
 
     boolean existsByAirlineIdAndFlightIdAndCabinClassAndRbdCodeAndPassengerTypeAndNameAndIdNot(
-            Long airlineId, Long flightId, CabinClassType cabinClass, Character rbdCode, PassengerType passengerType,
-            String name, Long id);
+            UUID airlineId, UUID flightId, CabinClassType cabinClass, Character rbdCode, PassengerType passengerType,
+            String name, UUID id);
 
     /**
      * Search candidates for a page of flight departures, in one query. Keeps published fares of the cabin whose
@@ -52,7 +53,7 @@ public interface FareRepository extends JpaRepository<Fare, Long> {
           AND f.travelFrom <= :lastDate
           AND f.travelTo >= :firstDate
     """)
-    List<Fare> findSearchCandidates(@Param("flightIds") Collection<Long> flightIds,
+    List<Fare> findSearchCandidates(@Param("flightIds") Collection<UUID> flightIds,
                                     @Param("cabinClass") CabinClassType cabinClass,
                                     @Param("status") FareStatus status,
                                     @Param("now") Instant now,
@@ -63,5 +64,5 @@ public interface FareRepository extends JpaRepository<Fare, Long> {
      * All fares on the given flights, in one query. Bulk create compares natural keys in memory against this,
      * so duplicate detection costs one database round trip per batch, not one per row.
      */
-    List<Fare> findByFlightIdIn(Collection<Long> flightIds);
+    List<Fare> findByFlightIdIn(Collection<UUID> flightIds);
 }

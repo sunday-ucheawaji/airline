@@ -1,5 +1,6 @@
 package com.sunday.services.specification;
 
+import java.util.UUID;
 import com.sunday.services.model.Meal;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
@@ -18,7 +19,7 @@ public class MealSpecification {
         };
     }
 
-    public static Specification<Meal> hasAirlineId(Long airlineId) {
+    public static Specification<Meal> hasAirlineId(UUID airlineId) {
         return (root, query, criteriaBuilder) -> {
             if (airlineId == null) {
                 return criteriaBuilder.conjunction();
@@ -67,7 +68,7 @@ public class MealSpecification {
         };
     }
 
-    public static Specification<Meal> hasCodeAndAirlineId(String code, Long airlineId) {
+    public static Specification<Meal> hasCodeAndAirlineId(String code, UUID airlineId) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (code != null && !code.trim().isEmpty()) {
@@ -93,7 +94,7 @@ public class MealSpecification {
     }
 
     public static Specification<Meal> buildSpecification(
-            Long airlineId, String mealType, Boolean available,
+            UUID airlineId, String mealType, Boolean available,
             String dietaryRestriction, String keyword) {
         return Specification
                 .where(hasAirlineId(airlineId))

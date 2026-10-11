@@ -1,6 +1,5 @@
 package com.sunday.services.model;
 
-
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.enums.UserStatus;
 import jakarta.persistence.*;
@@ -12,6 +11,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users")
@@ -23,8 +26,9 @@ import java.time.LocalDateTime;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @NotBlank(message = ErrorMessageUtil.FIRST_NAME_MANDATORY)
     private String firstName;
@@ -66,12 +70,5 @@ public class User {
     private LocalDateTime lockedUntil;
 
     private LocalDateTime lastLogin;
-
-
-//    @JsonIgnore
-//    private List<Long> passengers = new ArrayList<>();
-
-
 }
-
 

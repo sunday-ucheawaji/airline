@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.event.BookingCancelledEvent;
 import com.sunday.common_lib.event.BookingConfirmedEvent;
 import com.sunday.services.model.ProcessedBookingEvent;
@@ -52,7 +53,7 @@ public class SeatBookingServiceImpl implements SeatBookingService {
      * see BookingSagaServiceImpl.claimPaymentEvent in booking-service for the full rationale behind
      * this exact same shape.
      */
-    private boolean claimEvent(Long bookingId, String eventType) {
+    private boolean claimEvent(UUID bookingId, String eventType) {
         try {
             processedBookingEventRepository.saveAndFlush(
                     ProcessedBookingEvent.builder().bookingId(bookingId).eventType(eventType).build());

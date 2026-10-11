@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -22,7 +23,7 @@ public class AirlinePerformanceResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class AirlineStatistics {
-        private Long airlineId;
+        private UUID airlineId;
         private String airlineName;
         private String airlineCode;
         private String country;

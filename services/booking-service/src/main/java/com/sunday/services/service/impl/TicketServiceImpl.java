@@ -53,7 +53,7 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional(readOnly = true)
-    public Ticket getTicketByNumber(String ticketNumber, Long userId) {
+    public Ticket getTicketByNumber(String ticketNumber, UUID userId) {
         Ticket ticket = ticketRepository.findByTicketNumber(ticketNumber)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.TICKET_NOT_FOUND_BY_NUMBER, ticketNumber)));
@@ -63,7 +63,7 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Ticket> getTicketsByBooking(Long bookingId, Long userId) {
+    public List<Ticket> getTicketsByBooking(UUID bookingId, UUID userId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.BOOKING_NOT_FOUND_BY_ID, bookingId)));
@@ -73,7 +73,7 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Ticket> getTicketsByPassenger(Long passengerId, Long userId) {
+    public List<Ticket> getTicketsByPassenger(UUID passengerId, UUID userId) {
         List<Ticket> tickets = ticketRepository.findByPassengerId(passengerId);
         for (Ticket ticket : tickets) {
             bookingAccess.requireOwnerOrPermission(ticket.getBooking(), userId, BookingPermissions.TICKET_READ);
@@ -83,7 +83,7 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional
-    public Ticket cancelTicket(Long ticketId, Long userId) {
+    public Ticket cancelTicket(UUID ticketId, UUID userId) {
         Ticket ticket = findTicketOrThrow(ticketId);
         bookingAccess.requireOwnerOrPermission(ticket.getBooking(), userId, BookingPermissions.TICKET_VOID);
 
@@ -103,7 +103,7 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional
-    public Ticket markTicketAsUsed(Long ticketId, Long userId) {
+    public Ticket markTicketAsUsed(UUID ticketId, UUID userId) {
         Ticket ticket = findTicketOrThrow(ticketId);
         bookingAccess.requireAirlinePermission(
                 ticket.getBooking().getAirlineId(), userId, BookingPermissions.TICKET_ISSUE);
@@ -125,7 +125,7 @@ public class TicketServiceImpl implements TicketService {
     /** Refunds are an airline decision only: the customer never holds TICKET_REFUND_APPROVE and is not the owner check here. */
     @Override
     @Transactional
-    public Ticket refundTicket(Long ticketId, Long userId) {
+    public Ticket refundTicket(UUID ticketId, UUID userId) {
         Ticket ticket = findTicketOrThrow(ticketId);
         bookingAccess.requireAirlinePermission(
                 ticket.getBooking().getAirlineId(), userId, BookingPermissions.TICKET_REFUND_APPROVE);
@@ -141,7 +141,7 @@ public class TicketServiceImpl implements TicketService {
         return updatedTicket;
     }
 
-    private Ticket findTicketOrThrow(Long ticketId) {
+    private Ticket findTicketOrThrow(UUID ticketId) {
         return ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.TICKET_NOT_FOUND_BY_ID, ticketId)));

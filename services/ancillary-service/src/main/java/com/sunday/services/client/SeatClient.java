@@ -1,5 +1,6 @@
 package com.sunday.services.client;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.CabinClassResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,5 +13,5 @@ public interface SeatClient {
 
     @GetMapping("/aircraft/{aircraftId}")
     List<CabinClassResponse> getCabinClassesByAircraftId(
-            @PathVariable Long aircraftId);
+            @PathVariable UUID aircraftId);
 }

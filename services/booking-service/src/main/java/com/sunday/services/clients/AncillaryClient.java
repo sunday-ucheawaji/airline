@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.FlightCabinAncillaryResponse;
 import com.sunday.common_lib.payload.response.FlightMealResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -13,20 +14,20 @@ public interface AncillaryClient {
 
     @PostMapping("/api/flight-cabin-ancillaries/price/total")
     BigDecimal calculateAncillariesPrice(
-            @RequestParam("flightId") Long flightId,
-            @RequestBody List<Long> flightCabinAncillaryIds);
+            @RequestParam("flightId") UUID flightId,
+            @RequestBody List<UUID> flightCabinAncillaryIds);
 
     @GetMapping("/api/flight-cabin-ancillaries/all")
     List<FlightCabinAncillaryResponse> getAllByIds(
-            @RequestParam List<Long> Ids);
+            @RequestParam List<UUID> Ids);
 
     @GetMapping("/api/flight-meals/all")
     List<FlightMealResponse> getMealsByIds(
-            @RequestParam List<Long> Ids);
+            @RequestParam List<UUID> Ids);
 
     @PostMapping("/api/flight-meals/price/total")
     BigDecimal calculateMealPrice(
-            @RequestParam("flightId") Long flightId,
-            @RequestBody List<Long> requests);
+            @RequestParam("flightId") UUID flightId,
+            @RequestBody List<UUID> requests);
 
 }

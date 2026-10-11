@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.AircraftStatus;
 import com.sunday.services.model.Aircraft;
 import com.sunday.services.model.Airline;
@@ -9,7 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface AircraftRepository extends JpaRepository<Aircraft, Long> {
+public interface AircraftRepository extends JpaRepository<Aircraft, UUID> {
 
     Optional<Aircraft> findByCode(String code);
 

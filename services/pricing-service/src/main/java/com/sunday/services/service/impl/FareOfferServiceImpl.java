@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.enums.FareStatus;
 import com.sunday.common_lib.payload.response.FareOfferResponse;
@@ -26,7 +27,7 @@ public class FareOfferServiceImpl implements FareOfferService {
     private final Clock clock;
 
     @Override
-    public List<FareOfferResponse> offers(Long flightId, LocalDate departureDate, CabinClassType cabinClass) {
+    public List<FareOfferResponse> offers(UUID flightId, LocalDate departureDate, CabinClassType cabinClass) {
         Instant now = Instant.now(clock);
         return fareRepository
                 .findSearchCandidates(List.of(flightId), cabinClass, FareStatus.PUBLISHED, now, departureDate, departureDate)

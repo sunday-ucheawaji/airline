@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -15,7 +16,7 @@ public class AncillaryRequest {
 
     // Required on create (the airline the caller is acting for); ignored on update,
     // since an ancillary can't be moved between airlines.
-    private Long airlineId;
+    private UUID airlineId;
 
     @NotNull(message = "Ancillary type is required")
     private AncillaryType type;

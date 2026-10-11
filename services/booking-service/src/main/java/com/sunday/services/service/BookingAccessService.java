@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.util.ErrorMessageUtil;
@@ -21,25 +22,25 @@ public class BookingAccessService {
 
     private final AirlineClient airlineClient;
 
-    public void requireOwnerOrPermission(Booking booking, Long userId, String permission) {
+    public void requireOwnerOrPermission(Booking booking, UUID userId, String permission) {
         if (isOwner(booking, userId)) {
             return;
         }
         requireAirlinePermission(booking.getAirlineId(), userId, permission);
     }
 
-    public boolean isOwner(Booking booking, Long userId) {
+    public boolean isOwner(Booking booking, UUID userId) {
         return userId != null && userId.equals(booking.getUserId());
     }
 
-    public void requireAirlinePermission(Long airlineId, Long userId, String permission) {
+    public void requireAirlinePermission(UUID airlineId, UUID userId, String permission) {
         if (!hasAirlinePermission(airlineId, userId, permission)) {
             throw new OperationNotPermittedException(String.format(ErrorMessageUtil.NO_PERMISSION_FOR_AIRLINE, permission, airlineId));
         }
     }
 
     /** A caller with no membership on the airline holds no permissions there, so airline-core's 403 means "none". */
-    public boolean hasAirlinePermission(Long airlineId, Long userId, String permission) {
+    public boolean hasAirlinePermission(UUID airlineId, UUID userId, String permission) {
         List<String> granted;
         try {
             granted = airlineClient.getMyPermissions(airlineId, userId);

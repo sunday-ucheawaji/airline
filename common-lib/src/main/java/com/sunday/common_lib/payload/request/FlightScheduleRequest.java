@@ -9,6 +9,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -17,14 +18,14 @@ import java.util.List;
 public class FlightScheduleRequest {
 
     @NotNull(message = ErrorMessageUtil.FLIGHT_ID_MANDATORY)
-    private Long flightId;
+    private UUID flightId;
 
     @NotNull(message = ErrorMessageUtil.AIRCRAFT_ID_MANDATORY)
-    private Long aircraftId;
+    private UUID aircraftId;
 
-    private Long departureAirportId;
+    private UUID departureAirportId;
 
-    private Long arrivalAirportId;
+    private UUID arrivalAirportId;
 
     @NotNull(message = ErrorMessageUtil.DEPARTURE_TIME_MANDATORY)
     private LocalTime departureTime;

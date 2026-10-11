@@ -8,6 +8,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 /**
  * One specialist review stage of an application. Three rows exist per application (one per
@@ -26,8 +30,9 @@ import java.time.Instant;
 public class OnboardingStageReview {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "application_id", nullable = false)
@@ -44,7 +49,8 @@ public class OnboardingStageReview {
 
     // Logical cross-service references to user-service's User — not physical FKs.
     @Column(name = "assignee_user_id")
-    private Long assigneeUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID assigneeUserId;
 
     @Column(columnDefinition = "TEXT")
     private String comments;

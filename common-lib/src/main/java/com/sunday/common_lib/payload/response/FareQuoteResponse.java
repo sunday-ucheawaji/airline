@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -14,7 +15,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class FareQuoteResponse {
 
-    private Long fareId;
+    private UUID fareId;
     private Long version;
     private LocalDate departureDate;
     private String currency;
@@ -22,6 +23,6 @@ public class FareQuoteResponse {
     private BigDecimal taxesAndFees;
     private BigDecimal airlineFees;
     private BigDecimal totalPrice;
-    private Long fareRulesId;
-    private Long baggagePolicyId;
+    private UUID fareRulesId;
+    private UUID baggagePolicyId;
 }

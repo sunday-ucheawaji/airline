@@ -9,6 +9,10 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 /**
  * An application submitted by a user to register an airline on the GDS.
@@ -27,17 +31,20 @@ import java.time.Instant;
 public class AirlineOnboardingApplication {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     // Logical cross-service reference to user-service's User — not a physical FK.
     @Column(name = "applicant_user_id", nullable = false, updatable = false)
     @NotNull
-    private Long applicantUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID applicantUserId;
 
     // Explicitly selected/confirmed during review, not necessarily the applicant.
     @Column(name = "initial_admin_user_id")
-    private Long initialAdminUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID initialAdminUserId;
 
     @Column(name = "legal_name", nullable = false)
     private String legalName;
@@ -69,7 +76,8 @@ public class AirlineOnboardingApplication {
     private String supportHours;
 
     @Column(name = "headquarters_city_id")
-    private Long headquartersCityId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID headquartersCityId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -80,15 +88,18 @@ public class AirlineOnboardingApplication {
 
     // The onboarding officer accountable for the review; null until claimed and again after a return or release.
     @Column(name = "case_owner_user_id")
-    private Long caseOwnerUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID caseOwnerUserId;
 
     // Who gave the final approval — the provisioner must be someone else (separation of duties).
     @Column(name = "approved_by_user_id")
-    private Long approvedByUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID approvedByUserId;
 
     // Set once the application is provisioned into a real Airline.
     @Column(name = "airline_id")
-    private Long airlineId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID airlineId;
 
     private Instant submittedAt;
     private Instant reviewedAt;

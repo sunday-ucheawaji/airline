@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.PaymentGateway;
 import com.sunday.common_lib.payload.request.PaymentInitiateRequest;
 import com.sunday.common_lib.payload.request.PaymentRefundRequest;
@@ -30,7 +31,7 @@ public class PaymentController {
     @PostMapping("/initiate")
     public ResponseEntity<PaymentInitiateResponse> initiatePayment(
             @Valid @RequestBody PaymentInitiateRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         request.setUserId(userId);
         return ResponseEntity.ok(paymentService.initiatePayment(request));
     }
@@ -49,16 +50,16 @@ public class PaymentController {
     /** Owner of the payment (customer receipt lookup), or PAYMENT_READ on its airline. */
     @GetMapping("/booking/{bookingId}")
     public ResponseEntity<PaymentDTO> getPaymentForBooking(
-            @PathVariable Long bookingId,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID bookingId,
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(paymentService.getPaymentForBooking(bookingId, userId));
     }
 
     /** Airline-scoped list, gated on PAYMENT_READ for that airline. Replaces the old unscoped GET /. */
     @GetMapping("/airline/{airlineId}")
     public ResponseEntity<Page<PaymentDTO>> getPaymentsForAirline(
-            @PathVariable Long airlineId,
-            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable UUID airlineId,
+            @RequestHeader("X-User-Id") UUID userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -71,15 +72,15 @@ public class PaymentController {
 
     /** Platform support read across airlines — PAYMENT_SUPPORT_READ is enforced at the gateway. */
     @GetMapping("/support/booking/{bookingId}")
-    public ResponseEntity<PaymentDTO> getPaymentForSupport(@PathVariable Long bookingId) {
+    public ResponseEntity<PaymentDTO> getPaymentForSupport(@PathVariable UUID bookingId) {
         return ResponseEntity.ok(paymentService.getPaymentForSupport(bookingId));
     }
 
     /** Never owner-eligible: a customer must never execute their own refund. */
     @PostMapping("/{paymentId}/refund")
     public ResponseEntity<PaymentDTO> refundPayment(
-            @PathVariable Long paymentId,
-            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable UUID paymentId,
+            @RequestHeader("X-User-Id") UUID userId,
             @RequestBody(required = false) PaymentRefundRequest request) {
         BigDecimal amount = request != null ? request.getAmount() : null;
         return ResponseEntity.ok(paymentService.refundPayment(paymentId, userId, amount));

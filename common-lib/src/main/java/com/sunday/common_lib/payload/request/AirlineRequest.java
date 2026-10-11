@@ -3,6 +3,7 @@ package com.sunday.common_lib.payload.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -36,7 +37,7 @@ public class AirlineRequest {
 
     private String alliance;
 
-    private Long headquartersCityId;
+    private UUID headquartersCityId;
 
     private String supportEmail;
     private String supportPhone;

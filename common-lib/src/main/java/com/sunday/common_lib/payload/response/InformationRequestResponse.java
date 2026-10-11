@@ -3,6 +3,7 @@ package com.sunday.common_lib.payload.response;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -11,11 +12,11 @@ import java.time.Instant;
 @Builder
 public class InformationRequestResponse {
 
-    private Long id;
-    private Long applicationId;
+    private UUID id;
+    private UUID applicationId;
     /** The stage that asked (COMPLIANCE, COMMERCIAL, TECHNICAL); null when the case owner asked for the whole review. */
     private String stage;
-    private Long requestedByUserId;
+    private UUID requestedByUserId;
     private String message;
     /** OPEN, ANSWERED or CANCELLED. */
     private String status;

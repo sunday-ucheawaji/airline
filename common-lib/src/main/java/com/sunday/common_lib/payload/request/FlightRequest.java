@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -18,13 +19,13 @@ public class FlightRequest {
     private String flightNumber;
 
     @NotNull(message = ErrorMessageUtil.AIRLINE_ID_REQUIRED)
-    private Long airlineId;
+    private UUID airlineId;
 
     @NotNull(message = ErrorMessageUtil.DEPARTURE_AIRPORT_ID_MANDATORY)
-    private Long departureAirportId;
+    private UUID departureAirportId;
 
     @NotNull(message = ErrorMessageUtil.ARRIVAL_AIRPORT_ID_MANDATORY)
-    private Long arrivalAirportId;
+    private UUID arrivalAirportId;
 
     private FlightStatus status;
 }

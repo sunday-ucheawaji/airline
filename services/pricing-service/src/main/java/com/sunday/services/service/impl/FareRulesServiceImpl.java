@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.constants.PricingPermissions;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
@@ -36,7 +37,7 @@ public class FareRulesServiceImpl implements FareRulesService {
 
     @Override
     @CacheEvict(cacheNames = RedisConfig.FARES, key = "#request.fareId")
-    public FareRulesResponse createFareRules(Long userId, FareRulesRequest request) {
+    public FareRulesResponse createFareRules(UUID userId, FareRulesRequest request) {
         Fare fare = fareRepository.findById(request.getFareId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FARE_NOT_FOUND_BY_ID, request.getFareId())));
@@ -50,7 +51,7 @@ public class FareRulesServiceImpl implements FareRulesService {
 
     @Override
     @Transactional(readOnly = true)
-    public FareRulesResponse getFareRulesById(Long userId, Long id) {
+    public FareRulesResponse getFareRulesById(UUID userId, UUID id) {
         FareRules fareRules = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fareRules.getAirlineId(), PricingPermissions.FARE_READ);
         return FareRulesMapper.toResponse(fareRules);
@@ -58,7 +59,7 @@ public class FareRulesServiceImpl implements FareRulesService {
 
     @Override
     @Transactional(readOnly = true)
-    public FareRulesResponse getFareRulesByFareId(Long userId, Long fareId) {
+    public FareRulesResponse getFareRulesByFareId(UUID userId, UUID fareId) {
         FareRules fareRules = fareRulesRepository.findByFareId(fareId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FARE_RULES_NOT_FOUND_FOR_FARE, fareId)));
@@ -68,13 +69,13 @@ public class FareRulesServiceImpl implements FareRulesService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<FareRulesResponse> getFareRulesByAirlineId(Long userId, Long airlineId, Pageable pageable) {
+    public Page<FareRulesResponse> getFareRulesByAirlineId(UUID userId, UUID airlineId, Pageable pageable) {
         pricingIntegrationService.requirePermission(userId, airlineId, PricingPermissions.FARE_READ);
         return fareRulesRepository.findByAirlineId(airlineId, pageable).map(FareRulesMapper::toResponse);
     }
 
     @Override
-    public FareRulesResponse updateFareRules(Long userId, Long id, FareRulesRequest request) {
+    public FareRulesResponse updateFareRules(UUID userId, UUID id, FareRulesRequest request) {
         FareRules existing = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, existing.getAirlineId(), PricingPermissions.FARE_RULES_MANAGE);
         FareRulesMapper.updateEntity(request, existing, userId);
@@ -84,14 +85,14 @@ public class FareRulesServiceImpl implements FareRulesService {
     }
 
     @Override
-    public void deleteFareRules(Long userId, Long id) {
+    public void deleteFareRules(UUID userId, UUID id) {
         FareRules fareRules = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fareRules.getAirlineId(), PricingPermissions.FARE_RULES_MANAGE);
         fareRulesRepository.delete(fareRules);
         fareCacheEvictor.evict(fareRules.getFare().getId());
     }
 
-    private FareRules findOrThrow(Long id) {
+    private FareRules findOrThrow(UUID id) {
         return fareRulesRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FARE_RULES_NOT_FOUND_BY_ID, id)));

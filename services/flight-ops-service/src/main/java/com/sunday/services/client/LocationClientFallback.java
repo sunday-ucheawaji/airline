@@ -1,5 +1,6 @@
 package com.sunday.services.client;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.AirportResponse;
 import org.springframework.stereotype.Component;
 
@@ -11,12 +12,12 @@ import java.util.Map;
 public class LocationClientFallback implements LocationClient {
 
     @Override
-    public AirportResponse getAirportById(Long id) {
+    public AirportResponse getAirportById(UUID id) {
         return null;
     }
 
     @Override
-    public Map<Long, AirportResponse> getAirportsByIds(List<Long> ids) {
+    public Map<UUID, AirportResponse> getAirportsByIds(List<UUID> ids) {
         return Collections.emptyMap();
     }
 }

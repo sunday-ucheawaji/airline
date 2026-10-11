@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.PaymentGateway;
 import com.sunday.common_lib.payload.request.PaymentInitiateRequest;
 import com.sunday.common_lib.payload.response.PaymentDTO;
@@ -20,18 +21,18 @@ public interface PaymentService {
     PaymentDTO handleWebhook(PaymentGateway gateway, byte[] rawBody, String signatureHeaderValue);
 
     /** Owner of the payment, or PAYMENT_READ on its airline (e.g. a receipt lookup). */
-    PaymentDTO getPaymentForBooking(Long bookingId, Long userId);
+    PaymentDTO getPaymentForBooking(UUID bookingId, UUID userId);
 
     /** Airline-scoped list, gated on PAYMENT_READ for that airline. */
-    Page<PaymentDTO> getPaymentsForAirline(Long airlineId, Long userId, Pageable pageable);
+    Page<PaymentDTO> getPaymentsForAirline(UUID airlineId, UUID userId, Pageable pageable);
 
     /** Platform support read across airlines — permission is checked at the gateway, not here. */
-    PaymentDTO getPaymentForSupport(Long bookingId);
+    PaymentDTO getPaymentForSupport(UUID bookingId);
 
     /** Gated on PAYMENT_REFUND_EXECUTE for the payment's airline. amount null means a full refund. */
-    PaymentDTO refundPayment(Long paymentId, Long userId, BigDecimal amount);
+    PaymentDTO refundPayment(UUID paymentId, UUID userId, BigDecimal amount);
 
-    PaymentDTO getPaymentByBookingId(Long bookingId);
+    PaymentDTO getPaymentByBookingId(UUID bookingId);
 
-    Map<Long, PaymentDTO> getPaymentsByBookingIds(List<Long> bookingIds);
+    Map<UUID, PaymentDTO> getPaymentsByBookingIds(List<UUID> bookingIds);
 }

@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.AncillaryType;
 import com.sunday.common_lib.payload.request.FlightCabinAncillaryRequest;
 import com.sunday.common_lib.payload.response.FlightCabinAncillaryBulkCreateResponse;
@@ -22,39 +23,39 @@ public class FlightCabinAncillaryController {
     @PostMapping
     public ResponseEntity<FlightCabinAncillaryResponse> create(
             @Valid @RequestBody FlightCabinAncillaryRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(service.create(userId, request));
     }
 
     @PostMapping("/bulk")
     public ResponseEntity<FlightCabinAncillaryBulkCreateResponse> bulkCreate(
             @Valid @RequestBody List<FlightCabinAncillaryRequest> requests,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(service.bulkCreate(userId, requests));
     }
 
-    @GetMapping("/{id:\\d+}")
-    public ResponseEntity<FlightCabinAncillaryResponse> getById(@PathVariable Long id) {
+    @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    public ResponseEntity<FlightCabinAncillaryResponse> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @GetMapping("/all")
     public ResponseEntity<List<FlightCabinAncillaryResponse>> getAllByIds(
-            @RequestParam List<Long> Ids) {
+            @RequestParam List<UUID> Ids) {
         return ResponseEntity.ok(service.getAllByIds(Ids));
     }
 
-    @GetMapping("/flight/{flightId:\\d+}/cabin/{cabinClassId}")
+    @GetMapping("/flight/{flightId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/cabin/{cabinClassId}")
     public ResponseEntity<List<FlightCabinAncillaryResponse>> getAllByFlightAndCabinClass(
-            @PathVariable Long flightId,
-            @PathVariable Long cabinClassId) {
+            @PathVariable UUID flightId,
+            @PathVariable UUID cabinClassId) {
         return ResponseEntity.ok(service.getAllByFlightAndCabinClass(flightId, cabinClassId));
     }
 
     @GetMapping("/flight/{flightId}/cabin/{cabinClassId}/type/{type}")
     public ResponseEntity<FlightCabinAncillaryResponse> getByFlightAndCabinClassAndType(
-            @PathVariable Long flightId,
-            @PathVariable Long cabinClassId,
+            @PathVariable UUID flightId,
+            @PathVariable UUID cabinClassId,
             @PathVariable AncillaryType type) {
         return ResponseEntity.ok(
                 service.getByFlightIdAndCabinClassAndType(flightId, cabinClassId, type));
@@ -62,33 +63,33 @@ public class FlightCabinAncillaryController {
 
     @GetMapping("/flight/{flightId}/cabin/{cabinClassId}/type/{type}/all")
     public ResponseEntity<?> getAllByFlightAndCabinClassAndType(
-            @PathVariable Long flightId,
-            @PathVariable Long cabinClassId,
+            @PathVariable UUID flightId,
+            @PathVariable UUID cabinClassId,
             @PathVariable AncillaryType type) {
         return ResponseEntity.ok(
                 service.getAllByFlightIdAndCabinClassAndType(flightId, cabinClassId, type));
     }
 
-    @PutMapping("/{id:\\d+}")
+    @PutMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<FlightCabinAncillaryResponse> update(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody FlightCabinAncillaryRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(service.update(userId, id, request));
     }
 
-    @DeleteMapping("/{id:\\d+}")
+    @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<Void> delete(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") UUID userId) {
         service.delete(userId, id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/price/total")
     public ResponseEntity<?> calculateAncillariesPrice(
-            @RequestParam Long flightId,
-            @RequestBody List<Long> flightCabinAncillaryIds) {
+            @RequestParam UUID flightId,
+            @RequestBody List<UUID> flightCabinAncillaryIds) {
         return ResponseEntity.ok(service.calculateAncillaryPrice(flightId, flightCabinAncillaryIds));
     }
 }

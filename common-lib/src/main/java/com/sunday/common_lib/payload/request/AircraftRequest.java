@@ -7,13 +7,14 @@ import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 public class AircraftRequest {
 
     // Required on create (the airline the caller is acting for); ignored on update,
     // since an aircraft can't be moved between airlines.
-    private Long airlineId;
+    private UUID airlineId;
 
     @NotBlank(message = "Aircraft code is required")
     private String code;
@@ -61,5 +62,5 @@ public class AircraftRequest {
     @NotNull(message = "Availability status is required")
     private Boolean isAvailable;
 
-    private Long currentAirportId;
+    private UUID currentAirportId;
 }

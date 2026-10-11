@@ -1,5 +1,6 @@
 package com.sunday.services.client;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.FlightResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,5 +14,5 @@ import java.util.Map;
 public interface FlightClient {
 
     @PostMapping("/internal/flights/batch")
-    Map<Long, FlightResponse> getFlightsByIds(@RequestBody List<Long> ids);
+    Map<UUID, FlightResponse> getFlightsByIds(@RequestBody List<UUID> ids);
 }

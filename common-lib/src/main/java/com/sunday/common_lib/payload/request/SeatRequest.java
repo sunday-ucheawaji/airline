@@ -6,6 +6,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -27,9 +28,9 @@ public class SeatRequest {
     private SeatType seatType;
 
     @NotNull(message = ErrorMessageUtil.SEAT_MAP_ID_MANDATORY)
-    private Long seatMapId;
+    private UUID seatMapId;
 
-    private Long cabinClassId;
+    private UUID cabinClassId;
 
     private Boolean isAvailable;
     private Boolean isBlocked;

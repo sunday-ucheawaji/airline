@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.SeatHoldRequest;
 import com.sunday.common_lib.payload.response.SeatHoldResponse;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
@@ -19,5 +20,5 @@ public interface SeatClient {
     SeatHoldResponse holdSeats(@RequestBody SeatHoldRequest request);
 
     @GetMapping("/internal/seat-instances/all")
-    List<SeatInstanceResponse> getAllByIds(@RequestParam List<Long> Ids);
+    List<SeatInstanceResponse> getAllByIds(@RequestParam List<UUID> Ids);
 }

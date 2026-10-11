@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.request.MealRequest;
 import com.sunday.common_lib.payload.response.MealBulkCreateResponse;
 import com.sunday.common_lib.payload.response.MealResponse;
@@ -8,17 +9,17 @@ import java.util.List;
 
 public interface MealService {
 
-    MealResponse create(Long userId, MealRequest request);
+    MealResponse create(UUID userId, MealRequest request);
 
-    MealBulkCreateResponse bulkCreate(Long userId, List<MealRequest> requests);
+    MealBulkCreateResponse bulkCreate(UUID userId, List<MealRequest> requests);
 
-    MealResponse getById(Long id);
+    MealResponse getById(UUID id);
 
-    List<MealResponse> getByAirlineId(Long userId, Long airlineId);
+    List<MealResponse> getByAirlineId(UUID userId, UUID airlineId);
 
-    MealResponse update(Long userId, Long id, MealRequest request);
+    MealResponse update(UUID userId, UUID id, MealRequest request);
 
-    void delete(Long userId, Long id);
+    void delete(UUID userId, UUID id);
 
-    MealResponse updateAvailability(Long userId, Long id, Boolean available);
+    MealResponse updateAvailability(UUID userId, UUID id, Boolean available);
 }

@@ -13,6 +13,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -27,10 +28,10 @@ public class FareRequest {
     private Character rbdCode;
 
     @NotNull(message = "Flight ID is required")
-    private Long flightId;
+    private UUID flightId;
 
     @NotNull(message = "Cabin class ID is required")
-    private Long cabinClassId;
+    private UUID cabinClassId;
 
     @NotNull(message = "Cabin class is required")
     private CabinClassType cabinClass;

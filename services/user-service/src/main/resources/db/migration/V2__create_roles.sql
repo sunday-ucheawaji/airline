@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS roles (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id          CHAR(36) PRIMARY KEY,
     name        VARCHAR(100)  NOT NULL,
     description VARCHAR(500),
     status      VARCHAR(20)   NOT NULL DEFAULT 'ACTIVE',

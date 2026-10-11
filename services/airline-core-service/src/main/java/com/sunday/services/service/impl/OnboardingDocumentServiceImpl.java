@@ -53,7 +53,7 @@ public class OnboardingDocumentServiceImpl implements OnboardingDocumentService 
 
     @Override
     @Transactional
-    public DocumentResponse upload(Long applicationId, Long applicantUserId, DocumentType documentType, MultipartFile file) {
+    public DocumentResponse upload(UUID applicationId, UUID applicantUserId, DocumentType documentType, MultipartFile file) {
         AirlineOnboardingApplication application = support.getOrThrow(applicationId);
         support.requireOwnedByApplicant(application, applicantUserId);
         requireUploadsAccepted(application);
@@ -99,21 +99,21 @@ public class OnboardingDocumentServiceImpl implements OnboardingDocumentService 
 
     @Override
     @Transactional(readOnly = true)
-    public List<DocumentResponse> getMyDocuments(Long applicationId, Long applicantUserId) {
+    public List<DocumentResponse> getMyDocuments(UUID applicationId, UUID applicantUserId) {
         support.requireOwnedByApplicant(support.getOrThrow(applicationId), applicantUserId);
         return DocumentMapper.toResponseList(documentRepository.findByApplicationIdOrderByCreatedAtAsc(applicationId));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public DownloadUrlResponse getMyDownloadUrl(Long applicationId, Long documentId, Long applicantUserId) {
+    public DownloadUrlResponse getMyDownloadUrl(UUID applicationId, UUID documentId, UUID applicantUserId) {
         support.requireOwnedByApplicant(support.getOrThrow(applicationId), applicantUserId);
         return downloadUrl(requireDocument(applicationId, documentId));
     }
 
     @Override
     @Transactional
-    public void delete(Long applicationId, Long documentId, Long applicantUserId) {
+    public void delete(UUID applicationId, UUID documentId, UUID applicantUserId) {
         AirlineOnboardingApplication application = support.getOrThrow(applicationId);
         support.requireOwnedByApplicant(application, applicantUserId);
         OnboardingDocument document = requireDocument(applicationId, documentId);
@@ -126,7 +126,7 @@ public class OnboardingDocumentServiceImpl implements OnboardingDocumentService 
 
     @Override
     @Transactional(readOnly = true)
-    public List<DocumentResponse> getDocumentsForReview(Long applicationId) {
+    public List<DocumentResponse> getDocumentsForReview(UUID applicationId) {
         support.getVisibleOrThrow(applicationId);
         return DocumentMapper.toResponseList(documentRepository.findByApplicationIdOrderByCreatedAtAsc(applicationId).stream()
                 .filter(document -> VIEWABLE.contains(document.getStatus()))
@@ -135,14 +135,14 @@ public class OnboardingDocumentServiceImpl implements OnboardingDocumentService 
 
     @Override
     @Transactional(readOnly = true)
-    public DownloadUrlResponse getDownloadUrlForReview(Long applicationId, Long documentId) {
+    public DownloadUrlResponse getDownloadUrlForReview(UUID applicationId, UUID documentId) {
         support.getVisibleOrThrow(applicationId);
         return downloadUrl(requireDocument(applicationId, documentId));
     }
 
     @Override
     @Transactional
-    public DocumentResponse verify(Long applicationId, Long documentId, Long actorUserId) {
+    public DocumentResponse verify(UUID applicationId, UUID documentId, UUID actorUserId) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, Set.of(OnboardingStatus.UNDER_REVIEW), ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_UNDER_REVIEW);
         support.requireNotApplicantOrNominee(application, actorUserId);
@@ -163,7 +163,7 @@ public class OnboardingDocumentServiceImpl implements OnboardingDocumentService 
 
     @Override
     @Transactional
-    public DocumentResponse reject(Long applicationId, Long documentId, Long actorUserId, String reason) {
+    public DocumentResponse reject(UUID applicationId, UUID documentId, UUID actorUserId, String reason) {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, Set.of(OnboardingStatus.UNDER_REVIEW), ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_UNDER_REVIEW);
         support.requireNotApplicantOrNominee(application, actorUserId);
@@ -185,7 +185,7 @@ public class OnboardingDocumentServiceImpl implements OnboardingDocumentService 
         return DocumentMapper.toResponse(saved);
     }
 
-    private OnboardingDocument requireDocument(Long applicationId, Long documentId) {
+    private OnboardingDocument requireDocument(UUID applicationId, UUID documentId) {
         return documentRepository.findByIdAndApplicationId(documentId, applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.DOCUMENT_NOT_FOUND_BY_ID, documentId)));
     }

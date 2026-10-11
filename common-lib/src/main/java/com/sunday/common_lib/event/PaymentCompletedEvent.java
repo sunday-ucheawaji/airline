@@ -7,15 +7,16 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentCompletedEvent {
-    private Long paymentId;
-    private Long bookingId;
-    private Long userId;
+    private UUID paymentId;
+    private UUID bookingId;
+    private UUID userId;
     private BigDecimal amount;
     private String transactionId;
     private String providerPaymentId;

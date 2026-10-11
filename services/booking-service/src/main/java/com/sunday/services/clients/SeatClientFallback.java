@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import java.util.UUID;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.payload.request.SeatHoldRequest;
 import com.sunday.common_lib.payload.response.SeatHoldResponse;
@@ -19,7 +20,7 @@ public class SeatClientFallback implements SeatClient {
     }
 
     @Override
-    public List<SeatInstanceResponse> getAllByIds(List<Long> ids) {
+    public List<SeatInstanceResponse> getAllByIds(List<UUID> ids) {
         throw new ServiceUnavailableException(ErrorMessageUtil.SEAT_SERVICE_UNAVAILABLE);
     }
 }

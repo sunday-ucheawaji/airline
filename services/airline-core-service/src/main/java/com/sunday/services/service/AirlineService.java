@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.AirlineStatus;
 import com.sunday.common_lib.payload.request.AirlineRequest;
 import com.sunday.common_lib.payload.response.AirlineDropdownItem;
@@ -13,27 +14,27 @@ import java.util.Map;
 public interface AirlineService {
 
     // ----- CRUD -----
-    List<AirlineResponse> getMyAirlines(Long userId);
+    List<AirlineResponse> getMyAirlines(UUID userId);
     /** Permission names the caller's active membership in this specific airline grants — resolved per (userId, airlineId), never "the user's role" in the abstract. */
-    List<String> getMyPermissions(Long airlineId, Long userId);
+    List<String> getMyPermissions(UUID airlineId, UUID userId);
     /**
      * Batch variant: one call instead of one per airline. Throws OperationNotPermittedException
      * naming every airline the caller lacks the permission on (missing membership counts as lacking it).
      */
-    void requirePermission(Long userId, List<Long> airlineIds, String permission);
-    AirlineResponse getAirlineById(Long id, Long userId);
+    void requirePermission(UUID userId, List<UUID> airlineIds, String permission);
+    AirlineResponse getAirlineById(UUID id, UUID userId);
 
     /** No permission check — service-to-service only, for display-enrichment callers with no real caller identity (e.g. flight-ops-service building a FlightResponse). */
-    AirlineResponse getAirlineByIdInternal(Long id);
+    AirlineResponse getAirlineByIdInternal(UUID id);
 
     /** Batch variant of {@link #getAirlineByIdInternal}: one round trip instead of one per airline. */
-    Map<Long, AirlineResponse> getAirlinesByIdsInternal(List<Long> ids);
+    Map<UUID, AirlineResponse> getAirlinesByIdsInternal(List<UUID> ids);
 
     Page<AirlineResponse> getAllAirlines(Pageable pageable);
-    AirlineResponse updateAirline(Long airlineId, AirlineRequest request, Long userId);
-    void deleteAirline(Long id, Long userId);
+    AirlineResponse updateAirline(UUID airlineId, AirlineRequest request, UUID userId);
+    void deleteAirline(UUID id, UUID userId);
 
-    AirlineResponse changeStatusByAdmin(Long airlineId, AirlineStatus status);
+    AirlineResponse changeStatusByAdmin(UUID airlineId, AirlineStatus status);
 
     // ----- Dropdown -----
     List<AirlineDropdownItem> getAirlinesForDropdown();

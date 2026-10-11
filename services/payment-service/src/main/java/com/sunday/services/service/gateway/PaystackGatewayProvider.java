@@ -123,8 +123,8 @@ public class PaystackGatewayProvider implements PaymentGatewayProvider {
             long amountInKobo = data.optLong("amount");
             JSONObject metadata = data.optJSONObject("metadata");
             String internalPaymentIdStr = metadata != null ? metadata.optString("payment_id", null) : null;
-            Long internalPaymentId = internalPaymentIdStr == null || internalPaymentIdStr.isBlank()
-                    ? null : Long.parseLong(internalPaymentIdStr);
+            UUID internalPaymentId = internalPaymentIdStr == null || internalPaymentIdStr.isBlank()
+                    ? null : UUID.fromString(internalPaymentIdStr);
             return new ProviderWebhookEvent(eventType, reference, mapStatus(status),
                     MoneyUtil.fromSmallestUnit(amountInKobo), internalPaymentId);
         } catch (Exception e) {

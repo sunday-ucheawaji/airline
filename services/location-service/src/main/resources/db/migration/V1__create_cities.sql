@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS cities (
-    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id           CHAR(36) PRIMARY KEY,
     name         VARCHAR(100) NOT NULL,
     city_code    VARCHAR(10)  NOT NULL,
     country_code VARCHAR(5)   NOT NULL,

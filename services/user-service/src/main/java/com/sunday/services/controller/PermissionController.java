@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/permissions")
@@ -44,7 +45,7 @@ public class PermissionController {
 
     @GetMapping("/{permissionId}/roles")
     public ResponseEntity<List<RoleDTO>> getRolesForPermission(
-            @PathVariable Long permissionId) {
+            @PathVariable UUID permissionId) {
         List<Role> roles = permissionService.getRolesForPermission(permissionId);
         return ResponseEntity.ok(RoleMapper.toDTOList(roles));
     }

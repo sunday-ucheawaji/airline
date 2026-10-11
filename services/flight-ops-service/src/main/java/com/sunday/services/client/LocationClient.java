@@ -1,5 +1,6 @@
 package com.sunday.services.client;
 
+import java.util.UUID;
 import com.sunday.common_lib.payload.response.AirportResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,9 +15,9 @@ import java.util.Map;
 public interface LocationClient {
 
     @GetMapping("/api/airports/{id}")
-    AirportResponse getAirportById(@PathVariable Long id);
+    AirportResponse getAirportById(@PathVariable UUID id);
 
     /** Batch variant of {@link #getAirportById}: one round trip instead of one per airport. */
     @PostMapping("/api/airports/batch")
-    Map<Long, AirportResponse> getAirportsByIds(@RequestBody List<Long> ids);
+    Map<UUID, AirportResponse> getAirportsByIds(@RequestBody List<UUID> ids);
 }

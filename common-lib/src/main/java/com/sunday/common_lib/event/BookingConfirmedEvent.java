@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -15,7 +16,7 @@ import java.util.List;
 public class BookingConfirmedEvent {
 
     // ── Booking ──────────────────────────────────────────────────────────────
-    private Long bookingId;
+    private UUID bookingId;
     private String bookingReference;
     private LocalDateTime confirmedAt;
     private LocalDateTime bookingDate;
@@ -24,7 +25,7 @@ public class BookingConfirmedEvent {
     private boolean flexibleTicket;
 
     // ── Contact (booking.contactInfo or first passenger fallback) ────────────
-    private Long userId;
+    private UUID userId;
     private String userName;
     private String contactEmail;
     private String contactPhone;
@@ -33,7 +34,7 @@ public class BookingConfirmedEvent {
     private List<PassengerNotificationData> passengers;
 
     // ── Flight ───────────────────────────────────────────────────────────────
-    private Long flightInstanceId;
+    private UUID flightInstanceId;
     private String flightNumber;
     private String airlineName;
     private String airlineLogo;
@@ -87,5 +88,5 @@ public class BookingConfirmedEvent {
     private Boolean complimentaryMeals;
 
     // ── Legacy seat IDs (kept for seat-service to mark seats as BOOKED) ──────
-    private List<Long> seatInstanceIds;
+    private List<UUID> seatInstanceIds;
 }

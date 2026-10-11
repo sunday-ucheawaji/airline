@@ -2,17 +2,18 @@ package com.sunday.common_lib.payload.response;
 
 import lombok.*;
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CabinClassResponse {
-    private Long id;
+    private UUID id;
     private String name;
     private String code;
     private String description;
-    private Long aircraftId;
+    private UUID aircraftId;
     private Integer displayOrder;
     private Boolean isActive;
     private Boolean isBookable;

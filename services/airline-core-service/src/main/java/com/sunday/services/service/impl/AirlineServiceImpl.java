@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import java.util.UUID;
 import com.sunday.common_lib.enums.AirlineStatus;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
@@ -42,7 +43,7 @@ public class AirlineServiceImpl implements AirlineService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = "airlinesByUser", key = "#userId")
-    public List<AirlineResponse> getMyAirlines(Long userId) {
+    public List<AirlineResponse> getMyAirlines(UUID userId) {
         return airlineMembershipRepository.findByUserIdAndStatus(userId, MembershipStatus.ACTIVE).stream()
                 .map(membership -> AirlineMapper.toResponse(membership.getAirline()))
                 .toList();
@@ -50,7 +51,7 @@ public class AirlineServiceImpl implements AirlineService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<String> getMyPermissions(Long airlineId, Long userId) {
+    public List<String> getMyPermissions(UUID airlineId, UUID userId) {
         AirlineMembership membership = airlineMembershipRepository.findByUserIdAndAirlineId(userId, airlineId)
                 .filter(m -> m.getStatus() == MembershipStatus.ACTIVE)
                 .orElseThrow(() -> new OperationNotPermittedException(
@@ -60,8 +61,8 @@ public class AirlineServiceImpl implements AirlineService {
 
     @Override
     @Transactional(readOnly = true)
-    public void requirePermission(Long userId, List<Long> airlineIds, String permission) {
-        List<Long> denied = airlineIds.stream()
+    public void requirePermission(UUID userId, List<UUID> airlineIds, String permission) {
+        List<UUID> denied = airlineIds.stream()
                 .filter(airlineId -> !resolvePermissions(userId, airlineId).contains(permission))
                 .toList();
         if (!denied.isEmpty()) {
@@ -71,7 +72,7 @@ public class AirlineServiceImpl implements AirlineService {
     }
 
     /** Empty list (not a throw) when there's no active membership, so callers checking several airlines can collect every denial instead of stopping at the first. */
-    private List<String> resolvePermissions(Long userId, Long airlineId) {
+    private List<String> resolvePermissions(UUID userId, UUID airlineId) {
         return airlineMembershipRepository.findByUserIdAndAirlineId(userId, airlineId)
                 .filter(m -> m.getStatus() == MembershipStatus.ACTIVE)
                 .map(m -> rolePermissionCacheService.getPermissionNamesForRole(m.getRoleId()))
@@ -83,7 +84,7 @@ public class AirlineServiceImpl implements AirlineService {
     // requireActiveMembership entirely and leaking the airline's data to non-members.
     @Override
     @Transactional(readOnly = true)
-    public AirlineResponse getAirlineById(Long id, Long userId) {
+    public AirlineResponse getAirlineById(UUID id, UUID userId) {
         Airline airline = getAirlineOrThrow(id);
         requireActiveMembership(id, userId);
         return AirlineMapper.toResponse(airline);
@@ -91,13 +92,13 @@ public class AirlineServiceImpl implements AirlineService {
 
     @Override
     @Transactional(readOnly = true)
-    public AirlineResponse getAirlineByIdInternal(Long id) {
+    public AirlineResponse getAirlineByIdInternal(UUID id) {
         return AirlineMapper.toResponse(getAirlineOrThrow(id));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Map<Long, AirlineResponse> getAirlinesByIdsInternal(List<Long> ids) {
+    public Map<UUID, AirlineResponse> getAirlinesByIdsInternal(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) return Map.of();
         return airlineRepository.findAllById(ids).stream()
                 .collect(Collectors.toMap(Airline::getId, AirlineMapper::toResponse));
@@ -115,7 +116,7 @@ public class AirlineServiceImpl implements AirlineService {
             @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
             @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
     })
-    public AirlineResponse updateAirline(Long airlineId, AirlineRequest request, Long userId) {
+    public AirlineResponse updateAirline(UUID airlineId, AirlineRequest request, UUID userId) {
         Airline airline = getAirlineOrThrow(airlineId);
         requireActiveMembership(airlineId, userId);
         requireActiveAirline(airline);
@@ -135,7 +136,7 @@ public class AirlineServiceImpl implements AirlineService {
             @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
             @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
     })
-    public void deleteAirline(Long id, Long userId) {
+    public void deleteAirline(UUID id, UUID userId) {
         Airline airline = getAirlineOrThrow(id);
         requireActiveMembership(id, userId);
         requireActiveAirline(airline);
@@ -151,7 +152,7 @@ public class AirlineServiceImpl implements AirlineService {
             @CacheEvict(cacheNames = "airlinesByUser", allEntries = true),
             @CacheEvict(cacheNames = "airlinesDropdown", allEntries = true)
     })
-    public AirlineResponse changeStatusByAdmin(Long airlineId, AirlineStatus status) {
+    public AirlineResponse changeStatusByAdmin(UUID airlineId, AirlineStatus status) {
         Airline airline = getAirlineOrThrow(airlineId);
         if (airline.getStatus() == AirlineStatus.INACTIVE) {
             throw new ConflictException(String.format(ErrorMessageUtil.AIRLINE_CLOSED_STATUS_LOCKED, airlineId));
@@ -183,7 +184,7 @@ public class AirlineServiceImpl implements AirlineService {
 
     // ---------- Helpers ----------
 
-    private Airline getAirlineOrThrow(Long id) {
+    private Airline getAirlineOrThrow(UUID id) {
         return airlineRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRLINE_NOT_FOUND_BY_ID, id)));
     }
@@ -196,7 +197,7 @@ public class AirlineServiceImpl implements AirlineService {
     }
 
     /** Pre-check for the DB unique constraints so a clash is a 409 instead of a 500. */
-    private void requireUniqueCodes(Long airlineId, AirlineRequest request) {
+    private void requireUniqueCodes(UUID airlineId, AirlineRequest request) {
         if (request.getIataCode() != null) {
             airlineRepository.findByIataCode(request.getIataCode())
                     .filter(other -> !other.getId().equals(airlineId))
@@ -215,7 +216,7 @@ public class AirlineServiceImpl implements AirlineService {
         }
     }
 
-    private void requireActiveMembership(Long airlineId, Long userId) {
+    private void requireActiveMembership(UUID airlineId, UUID userId) {
         if (!airlineMembershipRepository.existsByUserIdAndAirlineIdAndStatus(userId, airlineId, MembershipStatus.ACTIVE)) {
             throw new OperationNotPermittedException(String.format(ErrorMessageUtil.NO_ACTIVE_MEMBERSHIP_FOR_AIRLINE, airlineId));
         }

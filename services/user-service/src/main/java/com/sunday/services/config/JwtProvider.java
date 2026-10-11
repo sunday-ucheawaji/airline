@@ -46,7 +46,7 @@ public class JwtProvider {
      * The user's authorities are split by the {@code ROLE_} prefix: prefixed ones are roles (prefix removed), the
      * rest are permissions. That is unambiguous because no permission name starts with {@code ROLE_}.
      */
-    public String generateToken(UserDetails user, Long userId) {
+    public String generateToken(UserDetails user, UUID userId) {
         List<String> roles = new ArrayList<>();
         List<String> permissions = new ArrayList<>();
         for (GrantedAuthority authority : user.getAuthorities()) {
@@ -69,7 +69,7 @@ public class JwtProvider {
                 .claim("email", user.getUsername())
                 .claim("roles", roles)
                 .claim("permissions", permissions)
-                .claim("userId", userId)
+                .claim("userId", userId.toString())
                 .signWith(key, Jwts.SIG.HS256)
                 .compact();
     }

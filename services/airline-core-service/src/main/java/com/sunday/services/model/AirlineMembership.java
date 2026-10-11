@@ -9,6 +9,10 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.UuidGenerator;
+import java.util.UUID;
 
 /**
  * A user's membership in a specific airline organization — the central entity
@@ -32,8 +36,9 @@ public class AirlineMembership {
 
     @Id
     @EqualsAndHashCode.Include
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "airline_id", nullable = false)
@@ -42,11 +47,13 @@ public class AirlineMembership {
 
     @Column(name = "user_id", nullable = false)
     @NotNull
-    private Long userId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID userId;
 
     @Column(name = "role_id", nullable = false)
     @NotNull
-    private Long roleId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID roleId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -54,7 +61,8 @@ public class AirlineMembership {
 
     /** Who sent the invitation; null for the OWNER row created directly at provisioning. */
     @Column(name = "invited_by_user_id")
-    private Long invitedByUserId;
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID invitedByUserId;
 
     /** Only meaningful while {@code status = INVITED}; null once accepted or for a non-invitation row. */
     @Column(name = "expires_at")
