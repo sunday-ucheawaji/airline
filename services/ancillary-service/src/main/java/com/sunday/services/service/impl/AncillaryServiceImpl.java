@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,9 +31,25 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AncillaryServiceImpl implements AncillaryService {
 
+    public static final int MAX_BULK_ROWS = 500;
+
     private final AncillaryRepository ancillaryRepository;
     private final InsuranceCoverageRepository insuranceCoverageRepository;
     private final AirlineIntegrationService airlineIntegrationService;
+
+    private List<AncillaryResponse> mapWithCoverages(List<Ancillary> ancillaries) {
+        if (ancillaries.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, List<InsuranceCoverageResponse>> coveragesByAncillaryId = insuranceCoverageRepository
+                .findByAncillaryIn(ancillaries).stream()
+                .collect(Collectors.groupingBy(
+                        c -> c.getAncillary().getId(),
+                        Collectors.mapping(InsuranceCoverageMapper::toResponse, Collectors.toList())));
+        return ancillaries.stream()
+                .map(a -> AncillaryMapper.toResponse(a, coveragesByAncillaryId.getOrDefault(a.getId(), List.of())))
+                .collect(Collectors.toList());
+    }
 
     @Override
     public AncillaryResponse create(UUID userId, AncillaryRequest request) {
@@ -65,6 +82,9 @@ public class AncillaryServiceImpl implements AncillaryService {
                     .created(List.of())
                     .skipped(List.of())
                     .build();
+        }
+        if (requests.size() > MAX_BULK_ROWS) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.BULK_TOO_LARGE, MAX_BULK_ROWS));
         }
 
         List<AncillaryBulkCreateResponse.SkippedRequest> skipped = new ArrayList<>();
@@ -123,17 +143,15 @@ public class AncillaryServiceImpl implements AncillaryService {
     @Override
     public List<AncillaryResponse> getAllByAirlineId(UUID userId, UUID airlineId) {
         airlineIntegrationService.requireMembership(userId, airlineId);
-        return ancillaryRepository.findByAirlineId(airlineId)
-                .stream()
-                .map(ancillary -> {
-                    List<InsuranceCoverage> insuranceCoverages = insuranceCoverageRepository
-                            .findByAncillary(ancillary);
-                    List<InsuranceCoverageResponse> coverageResponseList = insuranceCoverages.stream()
-                            .map(InsuranceCoverageMapper::toResponse)
-                            .toList();
-                    return AncillaryMapper.toResponse(ancillary, coverageResponseList);
-                })
-                .collect(Collectors.toList());
+        return mapWithCoverages(ancillaryRepository.findByAirlineId(airlineId));
+    }
+
+    @Override
+    public List<AncillaryResponse> getAllByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return mapWithCoverages(ancillaryRepository.findAllById(ids));
     }
 
     @Override

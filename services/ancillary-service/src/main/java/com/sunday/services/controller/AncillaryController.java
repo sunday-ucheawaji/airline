@@ -38,6 +38,12 @@ public class AncillaryController {
         return ResponseEntity.ok(ancillaryService.getById(id));
     }
 
+    /** Batch variant of {@code GET /{id}}: one round trip instead of one per ancillary. */
+    @GetMapping("/all")
+    public ResponseEntity<List<AncillaryResponse>> getAllByIds(@RequestParam List<UUID> ids) {
+        return ResponseEntity.ok(ancillaryService.getAllByIds(ids));
+    }
+
     @GetMapping
     public ResponseEntity<List<AncillaryResponse>> getAllByAirlineId(
             @RequestHeader("X-User-Id") UUID userId,

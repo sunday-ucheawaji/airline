@@ -171,8 +171,13 @@ public class ErrorMessageUtil {
     public static final String FLIGHT_CABIN_ANCILLARY_WRONG_FLIGHT = "FlightCabinAncillary %s does not belong to flight %s";
     public static final String FLIGHT_MEAL_WRONG_FLIGHT = "FlightMeal %s does not belong to flight %s";
     public static final String FLIGHT_MEAL_ALREADY_ASSIGNED_TO_FLIGHT = "Meal %s is already assigned to flight %s";
-    public static final String FLIGHT_MEAL_DUPLICATE_IN_REQUEST = "Each meal can only be selected once per booking; duplicate meal id(s): %s";
+    public static final String FLIGHT_MEAL_DUPLICATE_IN_REQUEST = "Meal %s for flight %s is duplicated in this request";
     public static final String INSURANCE_COVERAGE_NOT_FOUND_BY_ID = "Insurance coverage not found with id: %s";
+    public static final String MEAL_CODE_DUPLICATE_IN_REQUEST = "Meal code %s for airline %s is duplicated in this request";
+    public static final String FLIGHT_CABIN_ANCILLARY_ALREADY_ASSIGNED = "Ancillary %s is already assigned to flight %s cabin %s";
+    public static final String FLIGHT_CABIN_ANCILLARY_DUPLICATE_IN_REQUEST = "Ancillary %s for flight %s cabin %s is duplicated in this request";
+    public static final String MAX_QUANTITY_NEGATIVE = "Max quantity must be zero or positive";
+    public static final String DISPLAY_ORDER_NEGATIVE = "Display order cannot be negative";
 
     // ---------- Onboarding ----------
     public static final String ONBOARDING_APPLICATION_NOT_FOUND_BY_ID = "Onboarding application not found with id: %s";
@@ -430,4 +435,5 @@ public class ErrorMessageUtil {
     public static final String FLIGHT_MEAL_PRICE_NEGATIVE = "Price cannot be negative";
     public static final String COVERAGE_AMOUNT_MANDATORY = "Coverage amount is required";
     public static final String COVERAGE_AMOUNT_MUST_BE_ZERO_OR_POSITIVE = "Coverage amount must be zero or positive";
+    public static final String COVERAGE_AMOUNT_TOO_LARGE = "Coverage amount must have at most 10 integer digits and 2 decimal places";
 }

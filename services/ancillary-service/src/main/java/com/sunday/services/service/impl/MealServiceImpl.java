@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MealServiceImpl implements MealService {
 
+    public static final int MAX_BULK_ROWS = 500;
+
     private final MealRepository mealRepository;
     private final AirlineIntegrationService airlineIntegrationService;
 
@@ -77,6 +79,9 @@ public class MealServiceImpl implements MealService {
         if (requests == null || requests.isEmpty()) {
             return MealBulkCreateResponse.builder().created(List.of()).skipped(List.of()).build();
         }
+        if (requests.size() > MAX_BULK_ROWS) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.BULK_TOO_LARGE, MAX_BULK_ROWS));
+        }
         log.debug("Bulk creating {} meals", requests.size());
 
         List<MealBulkCreateResponse.SkippedRequest> skipped = new ArrayList<>();
@@ -108,8 +113,8 @@ public class MealServiceImpl implements MealService {
                 continue;
             }
             if (!seenInBatch.add(key)) {
-                skipped.add(skip(req, "Duplicate code " + req.getCode() + " for airline "
-                        + req.getAirlineId() + " within this request"));
+                skipped.add(skip(req, String.format(
+                        ErrorMessageUtil.MEAL_CODE_DUPLICATE_IN_REQUEST, req.getCode(), req.getAirlineId())));
                 continue;
             }
             toInsert.add(Meal.builder()
@@ -147,6 +152,17 @@ public class MealServiceImpl implements MealService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.MEAL_NOT_FOUND_BY_ID, id)));
         return MealMapper.toResponse(meal);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MealResponse> getAllByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return mealRepository.findAllById(ids).stream()
+                .map(MealMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override

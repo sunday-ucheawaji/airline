@@ -21,4 +21,15 @@ public interface FlightCabinAncillaryRepository extends JpaRepository<FlightCabi
 
     List<FlightCabinAncillary> findAllByFlightIdAndCabinClassIdAndAncillary_Type(
             UUID flightId, UUID cabinClassId, AncillaryType type);
+
+    boolean existsByFlightIdAndCabinClassIdAndAncillary_Id(UUID flightId, UUID cabinClassId, UUID ancillaryId);
+
+    /**
+     * Over-fetches: a safe superset of rows whose flightId/cabinClassId/ancillaryId each appear
+     * somewhere in the batch, not necessarily the same combination. Callers must re-check the exact
+     * (flightId, cabinClassId, ancillaryId) triple in memory — same pattern as
+     * {@code MealRepository.findByAirlineIdInAndCodeIn}.
+     */
+    List<FlightCabinAncillary> findByFlightIdInAndCabinClassIdInAndAncillary_IdIn(
+            List<UUID> flightIds, List<UUID> cabinClassIds, List<UUID> ancillaryIds);
 }

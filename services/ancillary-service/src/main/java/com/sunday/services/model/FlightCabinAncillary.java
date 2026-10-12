@@ -10,7 +10,9 @@ import org.hibernate.annotations.UuidGenerator;
 import java.util.UUID;
 
 @Entity
-@Table(name = "flight_cabin_ancillaries")
+@Table(name = "flight_cabin_ancillaries", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_flight_cabin_ancillary", columnNames = {"flight_id", "cabin_class_id", "ancillary_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor

@@ -57,6 +57,12 @@ public class InsuranceCoverageController {
         return ResponseEntity.ok(coverageService.getCoverageById(id));
     }
 
+    /** Batch variant of {@code GET /{id}}: one round trip instead of one per coverage. */
+    @GetMapping("/all")
+    public ResponseEntity<List<InsuranceCoverageResponse>> getAllByIds(@RequestParam List<UUID> ids) {
+        return ResponseEntity.ok(coverageService.getAllByIds(ids));
+    }
+
     @GetMapping
     public ResponseEntity<List<InsuranceCoverageResponse>> getAllCoverages() {
         return ResponseEntity.ok(coverageService.getAllCoverages());

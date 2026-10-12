@@ -16,6 +16,8 @@ import java.util.UUID;
 @Table(name = "meals", indexes = {
         @Index(name = "idx_meal_airline", columnList = "airline_id"),
         @Index(name = "idx_meal_code", columnList = "code")
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "uk_meals_airline_code", columnNames = {"airline_id", "code"})
 })
 @Getter
 @Setter
@@ -30,7 +32,7 @@ public class Meal {
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 10)
+    @Column(nullable = false, length = 10)
     private String code;
 
     @Column(nullable = false, length = 200)

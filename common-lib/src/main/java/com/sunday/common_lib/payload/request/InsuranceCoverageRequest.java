@@ -29,6 +29,7 @@ public class InsuranceCoverageRequest {
 
     @NotNull(message = ErrorMessageUtil.COVERAGE_AMOUNT_MANDATORY)
     @PositiveOrZero(message = ErrorMessageUtil.COVERAGE_AMOUNT_MUST_BE_ZERO_OR_POSITIVE)
+    @Digits(integer = 10, fraction = 2, message = ErrorMessageUtil.COVERAGE_AMOUNT_TOO_LARGE)
     private BigDecimal coverageAmount;
 
     private String currency;
@@ -41,6 +42,7 @@ public class InsuranceCoverageRequest {
     @Size(max = 100, message = "Emergency contact cannot be longer than 100 characters")
     private String emergencyContact;
 
+    @Min(value = 0, message = ErrorMessageUtil.DISPLAY_ORDER_NEGATIVE)
     private Integer displayOrder;
 
     private Boolean active;

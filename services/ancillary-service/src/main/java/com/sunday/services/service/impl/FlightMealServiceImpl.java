@@ -36,6 +36,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FlightMealServiceImpl implements FlightMealService {
 
+    public static final int MAX_BULK_ROWS = 500;
+
     private final FlightMealRepository flightMealRepository;
     private final MealRepository mealRepository;
     private final AirlineIntegrationService airlineIntegrationService;
@@ -77,6 +79,9 @@ public class FlightMealServiceImpl implements FlightMealService {
         if (requests == null || requests.isEmpty()) {
             return FlightMealBulkCreateResponse.builder().created(List.of()).skipped(List.of()).build();
         }
+        if (requests.size() > MAX_BULK_ROWS) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.BULK_TOO_LARGE, MAX_BULK_ROWS));
+        }
         log.debug("Bulk creating {} flight meals", requests.size());
 
         List<UUID> mealIds = requests.stream().map(FlightMealRequest::getMealId).distinct().toList();
@@ -108,8 +113,8 @@ public class FlightMealServiceImpl implements FlightMealService {
                 continue;
             }
             if (!seenInBatch.add(key)) {
-                skipped.add(skip(request, "Duplicate meal " + request.getMealId()
-                        + " for flight " + request.getFlightId() + " within this request"));
+                skipped.add(skip(request, String.format(
+                        ErrorMessageUtil.FLIGHT_MEAL_DUPLICATE_IN_REQUEST, request.getMealId(), request.getFlightId())));
                 continue;
             }
             toInsert.add(FlightMeal.builder()
@@ -222,18 +227,9 @@ public class FlightMealServiceImpl implements FlightMealService {
             return BigDecimal.ZERO;
         }
 
-        List<UUID> duplicateIds = mealIds.stream()
-                .collect(Collectors.groupingBy(id -> id, Collectors.counting()))
-                .entrySet().stream()
-                .filter(e -> e.getValue() > 1)
-                .map(Map.Entry::getKey)
-                .toList();
-        if (!duplicateIds.isEmpty()) {
-            throw new BadRequestException(String.format(ErrorMessageUtil.FLIGHT_MEAL_DUPLICATE_IN_REQUEST, duplicateIds));
-        }
-
         List<FlightMeal> meals = flightMealRepository.findAllById(mealIds);
 
+        // findAllById silently skips unknown IDs — reject them instead of undercharging
         Set<UUID> foundIds = meals.stream()
                 .map(FlightMeal::getId)
                 .collect(Collectors.toSet());
@@ -253,9 +249,13 @@ public class FlightMealServiceImpl implements FlightMealService {
             throw new ConflictException(String.join("; ", wrongFlight));
         }
 
+        // A repeated meal ID means "buy N", same semantics as FlightCabinAncillaryServiceImpl.calculateAncillaryPrice.
+        Map<UUID, Long> quantities = mealIds.stream().collect(Collectors.groupingBy(id -> id, Collectors.counting()));
+
         BigDecimal total = BigDecimal.ZERO;
         for (FlightMeal flightMeal : meals) {
             String label = flightMeal.getMeal().getName() + " (id " + flightMeal.getId() + ")";
+            long quantity = quantities.get(flightMeal.getId());
             if (!Boolean.TRUE.equals(flightMeal.getAvailable())
                     || !Boolean.TRUE.equals(flightMeal.getMeal().getAvailable())) {
                 throw new BadRequestException(String.format(ErrorMessageUtil.MEAL_NOT_AVAILABLE, label));
@@ -263,7 +263,7 @@ public class FlightMealServiceImpl implements FlightMealService {
             if (flightMeal.getPrice() == null) {
                 throw new BadRequestException(String.format(ErrorMessageUtil.MEAL_PRICE_NOT_SET, label));
             }
-            total = total.add(flightMeal.getPrice());
+            total = total.add(flightMeal.getPrice().multiply(BigDecimal.valueOf(quantity)));
         }
         return total;
     }

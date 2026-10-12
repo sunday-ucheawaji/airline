@@ -1,6 +1,7 @@
 package com.sunday.common_lib.payload.request;
 
 import com.sunday.common_lib.util.ErrorMessageUtil;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
@@ -26,6 +27,7 @@ public class FlightCabinAncillaryRequest {
     @NotNull(message = "Availability status is required")
     private Boolean available;
 
+    @Min(value = 0, message = ErrorMessageUtil.MAX_QUANTITY_NEGATIVE)
     private Integer maxQuantity;
 
     @NotNull(message = ErrorMessageUtil.PRICE_MANDATORY)

@@ -17,6 +17,9 @@ public interface AncillaryService {
 
     List<AncillaryResponse> getAllByAirlineId(UUID userId, UUID airlineId);
 
+    /** Batch variant: one round trip instead of one per ancillary. */
+    List<AncillaryResponse> getAllByIds(List<UUID> ids);
+
     AncillaryResponse update(UUID userId, UUID id, AncillaryRequest request);
 
     void delete(UUID userId, UUID id);

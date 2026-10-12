@@ -15,6 +15,9 @@ public interface MealService {
 
     MealResponse getById(UUID id);
 
+    /** Batch variant of {@link #getById}: one round trip instead of one per meal. */
+    List<MealResponse> getAllByIds(List<UUID> ids);
+
     List<MealResponse> getByAirlineId(UUID userId, UUID airlineId);
 
     MealResponse update(UUID userId, UUID id, MealRequest request);

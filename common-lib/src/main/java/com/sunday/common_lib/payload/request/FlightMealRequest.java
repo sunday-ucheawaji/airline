@@ -25,6 +25,6 @@ public class FlightMealRequest {
     @DecimalMin(value = "0.0", message = ErrorMessageUtil.FLIGHT_MEAL_PRICE_NEGATIVE)
     private BigDecimal price;
 
-    @Min(value = 0, message = "Display order cannot be negative")
+    @Min(value = 0, message = ErrorMessageUtil.DISPLAY_ORDER_NEGATIVE)
     private Integer displayOrder;
 }

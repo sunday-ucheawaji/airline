@@ -40,6 +40,12 @@ public class MealController {
         return ResponseEntity.ok(mealService.getById(id));
     }
 
+    /** Batch variant of {@code GET /{id}}: one round trip instead of one per meal. */
+    @GetMapping("/all")
+    public ResponseEntity<List<MealResponse>> getAllByIds(@RequestParam List<UUID> ids) {
+        return ResponseEntity.ok(mealService.getAllByIds(ids));
+    }
+
     @GetMapping("/airline")
     public ResponseEntity<List<MealResponse>> getMealsByAirlineId(
             @RequestHeader("X-User-Id") UUID userId,

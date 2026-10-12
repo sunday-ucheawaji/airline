@@ -2,6 +2,7 @@ package com.sunday.services.service.impl;
 
 import java.util.UUID;
 import com.sunday.common_lib.constants.AncillaryPermissions;
+import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.InsuranceCoverageRequest;
 import com.sunday.common_lib.payload.response.InsuranceCoverageBulkCreateResponse;
@@ -28,6 +29,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
 
+    public static final int MAX_BULK_ROWS = 500;
+
     private final InsuranceCoverageRepository coverageRepository;
     private final AncillaryRepository ancillaryRepository;
     private final AirlineIntegrationService airlineIntegrationService;
@@ -51,6 +54,9 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
     public InsuranceCoverageBulkCreateResponse createCoveragesBulk(UUID userId, List<InsuranceCoverageRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return InsuranceCoverageBulkCreateResponse.builder().created(List.of()).skipped(List.of()).build();
+        }
+        if (requests.size() > MAX_BULK_ROWS) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.BULK_TOO_LARGE, MAX_BULK_ROWS));
         }
 
         List<UUID> ancillaryIds = requests.stream()
@@ -129,6 +135,16 @@ public class InsuranceCoverageServiceImpl implements InsuranceCoverageService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.INSURANCE_COVERAGE_NOT_FOUND_BY_ID, id)));
         return InsuranceCoverageMapper.toResponse(coverage);
+    }
+
+    @Override
+    public List<InsuranceCoverageResponse> getAllByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return coverageRepository.findAllById(ids).stream()
+                .map(InsuranceCoverageMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override

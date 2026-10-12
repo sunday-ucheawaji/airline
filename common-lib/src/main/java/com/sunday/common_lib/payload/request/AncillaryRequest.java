@@ -2,6 +2,8 @@ package com.sunday.common_lib.payload.request;
 
 import com.sunday.common_lib.domain.metadata.AncillaryMetadata;
 import com.sunday.common_lib.enums.AncillaryType;
+import com.sunday.common_lib.util.ErrorMessageUtil;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -39,5 +41,6 @@ public class AncillaryRequest {
 
     private AncillaryMetadata metadata;
 
+    @Min(value = 0, message = ErrorMessageUtil.DISPLAY_ORDER_NEGATIVE)
     private Integer displayOrder;
 }

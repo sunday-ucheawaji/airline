@@ -19,6 +19,9 @@ public interface InsuranceCoverageService {
 
     InsuranceCoverageResponse getCoverageById(UUID id);
 
+    /** Batch variant of {@link #getCoverageById}: one round trip instead of one per coverage. */
+    List<InsuranceCoverageResponse> getAllByIds(List<UUID> ids);
+
     List<InsuranceCoverageResponse> getCoveragesByAncillaryId(UUID ancillaryId);
 
     List<InsuranceCoverageResponse> getActiveCoveragesByAncillaryId(UUID ancillaryId);
