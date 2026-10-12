@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.Collection;
 import java.util.UUID;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +15,8 @@ import java.util.Optional;
 public interface AirportRepository extends JpaRepository<Airport, UUID> {
 
     Optional<Airport> findByIataCode(String iataCode);
+
+    List<Airport> findByIataCodeIn(Collection<String> iataCodes);
 
     @EntityGraph(attributePaths = "city")
     List<Airport> findByCityId(UUID cityId);

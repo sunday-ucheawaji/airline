@@ -2,6 +2,7 @@ package com.sunday.services.controller;
 
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.payload.request.AirportRequest;
+import com.sunday.common_lib.payload.response.AirportBulkCreateResponse;
 import com.sunday.common_lib.payload.response.ApiResponse;
 import com.sunday.common_lib.payload.response.AirportResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
@@ -36,7 +37,7 @@ public class AirportController {
     }
 
     @PostMapping("/bulk")
-    public ResponseEntity<List<AirportResponse>> createBulkAirports(
+    public ResponseEntity<AirportBulkCreateResponse> createBulkAirports(
             @Valid @RequestBody List<AirportRequest> requests) {
         return ResponseEntity.status(HttpStatus.CREATED).body(airportService.createBulkAirports(requests));
     }

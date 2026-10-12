@@ -1,10 +1,14 @@
 package com.sunday.services.controller;
 
 import com.sunday.common_lib.exception.BadRequestException;
+import com.sunday.common_lib.payload.request.CityAirportReassignmentRequest;
 import com.sunday.common_lib.payload.request.CityRequest;
+import com.sunday.common_lib.payload.response.AirportResponse;
 import com.sunday.common_lib.payload.response.ApiResponse;
+import com.sunday.common_lib.payload.response.CityBulkCreateResponse;
 import com.sunday.common_lib.payload.response.CityResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.service.AirportService;
 import com.sunday.services.service.CityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +32,7 @@ import java.util.Set;
 public class CityController {
 
     private final CityService cityService;
+    private final AirportService airportService;
 
     // Whitelisted so an arbitrary/misspelled field name is a clean 400, not an unmapped
     // PropertyReferenceException surfacing as a raw 500.
@@ -42,10 +47,10 @@ public class CityController {
     }
 
     @PostMapping("/bulk")
-    public ResponseEntity<List<CityResponse>> createBulkCities(
+    public ResponseEntity<CityBulkCreateResponse> createBulkCities(
             @Valid @RequestBody List<CityRequest> requests) {
-        List<CityResponse> responses = cityService.createBulkCities(requests);
-        return ResponseEntity.status(HttpStatus.CREATED).body(responses);
+        CityBulkCreateResponse response = cityService.createBulkCities(requests);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")
@@ -110,5 +115,13 @@ public class CityController {
     @GetMapping("/exists/{cityCode}")
     public ResponseEntity<Boolean> checkCityExists(@PathVariable String cityCode) {
         return ResponseEntity.ok(cityService.cityExists(cityCode.toUpperCase()));
+    }
+
+    /** Bulk-moves every airport out of {@code id} so the city can then be deleted. */
+    @PatchMapping("/{id}/airports/reassign")
+    public ResponseEntity<List<AirportResponse>> reassignAirports(
+            @PathVariable UUID id,
+            @Valid @RequestBody CityAirportReassignmentRequest request) {
+        return ResponseEntity.ok(airportService.reassignAirportsToCity(id, request.getTargetCityId()));
     }
 }

@@ -403,6 +403,9 @@ public class ErrorMessageUtil {
     public static final String TIMEZONE_MANDATORY = "Time zone is required";
     public static final String TIMEZONE_INVALID = "Invalid timezone: %s";
     public static final String CITY_DELETED_SUCCESSFULLY = "City deleted successfully";
+    public static final String CITY_CODE_DUPLICATE_IN_REQUEST = "City code %s is duplicated in this request";
+    public static final String CITY_REASSIGN_SAME_CITY = "Source and target city must be different";
+    public static final String CITY_AIRPORTS_REASSIGNED = "Reassigned %s airport(s) from %s to %s";
 
     // ---------- Location: Airport ----------
     public static final String AIRPORT_IATA_CODE_MANDATORY = "IATA code is mandatory";
@@ -411,8 +414,11 @@ public class ErrorMessageUtil {
     public static final String AIRPORT_CITY_ID_MANDATORY = "City ID is mandatory";
     public static final String AIRPORT_IATA_CODE_ALREADY_EXISTS = "Airport with IATA code %s already exists";
     public static final String AIRPORT_IATA_CODE_TAKEN = "IATA code %s is already taken";
+    public static final String AIRPORT_IATA_CODE_DUPLICATE_IN_REQUEST = "IATA code %s is duplicated in this request";
     public static final String AIRPORT_NOT_FOUND_BY_ID = "Airport not found with id: %s";
     public static final String AIRPORT_DELETED_SUCCESSFULLY = "Airport deleted successfully";
+    public static final String AIRPORT_LATITUDE_OUT_OF_RANGE = "Latitude must be between -90 and 90";
+    public static final String AIRPORT_LONGITUDE_OUT_OF_RANGE = "Longitude must be between -180 and 180";
 
     // ---------- Location: request validation (Bean Validation message attributes) ----------
     public static final String SORT_BY_FIELD_INVALID = "sortBy must be one of %s";

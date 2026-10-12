@@ -4,6 +4,7 @@ import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.CityRequest;
+import com.sunday.common_lib.payload.response.CityBulkCreateResponse;
 import com.sunday.common_lib.payload.response.CityResponse;
 import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.common_lib.util.ErrorMessageUtil;
@@ -26,13 +27,18 @@ import java.util.UUID;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
 public class CityServiceImpl implements CityService {
+
+    public static final int MAX_BULK_ROWS = 500;
 
     private final CityRepository cityRepository;
     private final AirportRepository airportRepository;
@@ -55,34 +61,55 @@ public class CityServiceImpl implements CityService {
     }
 
     @Override
-    public List<CityResponse> createBulkCities(List<CityRequest> requests) {
-        List<CityResponse> createdCities = new ArrayList<>();
-        List<String> skippedCodes = new ArrayList<>();
+    public CityBulkCreateResponse createBulkCities(List<CityRequest> requests) {
+        if (requests.isEmpty()) {
+            return CityBulkCreateResponse.builder().created(List.of()).skipped(List.of()).build();
+        }
+        if (requests.size() > MAX_BULK_ROWS) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.BULK_TOO_LARGE, MAX_BULK_ROWS));
+        }
 
+        List<CityBulkCreateResponse.SkippedRequest> skipped = new ArrayList<>();
+        List<CityRequest> valid = new ArrayList<>();
         for (CityRequest request : requests) {
             try {
                 validateCityRequest(request);
+                valid.add(request);
             } catch (BadRequestException e) {
-                skippedCodes.add(request.getCityCode() + " (invalid: " + e.getMessage() + ")");
-                continue;
+                skipped.add(skip(request, e.getMessage()));
             }
-
-            if (cityRepository.existsByCityCode(request.getCityCode())) {
-                skippedCodes.add(request.getCityCode() + " (already exists)");
-                continue;
-            }
-
-            City city = CityMapper.toEntity(request);
-            City savedCity = cityRepository.save(city);
-            createdCities.add(CityMapper.toResponse(savedCity));
         }
 
-        if (!skippedCodes.isEmpty()) {
-            log.info("Bulk city creation - skipped: {}", skippedCodes);
-        }
-        log.info("Bulk city creation - created {} out of {} cities", createdCities.size(), requests.size());
+        Set<String> requestedCodes = valid.stream().map(CityRequest::getCityCode).collect(Collectors.toSet());
+        Set<String> existingCodes = requestedCodes.isEmpty()
+                ? Set.of()
+                : cityRepository.findByCityCodeIn(requestedCodes).stream()
+                        .map(City::getCityCode)
+                        .collect(Collectors.toSet());
 
-        return createdCities;
+        Set<String> seenCodes = new HashSet<>();
+        List<City> toSave = new ArrayList<>();
+        for (CityRequest request : valid) {
+            String code = request.getCityCode();
+            if (existingCodes.contains(code)) {
+                skipped.add(skip(request, String.format(ErrorMessageUtil.CITY_CODE_ALREADY_EXISTS, code)));
+            } else if (!seenCodes.add(code)) {
+                skipped.add(skip(request, String.format(ErrorMessageUtil.CITY_CODE_DUPLICATE_IN_REQUEST, code)));
+            } else {
+                toSave.add(CityMapper.toEntity(request));
+            }
+        }
+
+        List<CityResponse> created = cityRepository.saveAll(toSave).stream()
+                .map(CityMapper::toResponse)
+                .collect(Collectors.toList());
+
+        log.info("Bulk city creation - created {} out of {} cities", created.size(), requests.size());
+        return CityBulkCreateResponse.builder().created(created).skipped(skipped).build();
+    }
+
+    private static CityBulkCreateResponse.SkippedRequest skip(CityRequest request, String reason) {
+        return CityBulkCreateResponse.SkippedRequest.builder().request(request).reason(reason).build();
     }
 
     @Override

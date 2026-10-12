@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "location-service", fallback = LocationClientFallback.class)
+@FeignClient(name = "location-service", fallbackFactory = LocationClientFallbackFactory.class)
 public interface LocationClient {
 
     @GetMapping("/internal/airports/{id}")
