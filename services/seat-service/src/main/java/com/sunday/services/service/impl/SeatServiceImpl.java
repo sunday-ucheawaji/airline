@@ -66,6 +66,7 @@ public class SeatServiceImpl implements SeatService {
             }
         }
 
+        seatMap.setSeats(seats);
         return seats;
     }
 

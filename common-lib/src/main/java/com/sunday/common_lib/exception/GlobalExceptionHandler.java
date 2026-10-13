@@ -3,9 +3,11 @@ package com.sunday.common_lib.exception;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.sunday.common_lib.payload.response.ErrorResponse;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -71,6 +73,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponse> handleConflict(
             ConflictException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    /** Two requests changed the same {@code @Version}ed row at once; the loser gets 409 instead of a 500. */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(
+            OptimisticLockingFailureException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ErrorMessageUtil.CONCURRENT_MODIFICATION, request);
     }
 
     /** A required downstream service is unreachable; the request fails closed. */

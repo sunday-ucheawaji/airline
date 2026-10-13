@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.interceptor.CacheErrorHandler;
-import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -19,14 +18,8 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import java.lang.reflect.Method;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Configuration
@@ -54,11 +47,8 @@ public class RedisConfig implements CachingConfigurer {
 
         Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
                 // Airline data — 2 h (status changes occasionally)
-                CacheUtil.AIRLINES, defaults.entryTtl(Duration.ofHours(2)),
                 CacheUtil.AIRLINES_BY_USER, defaults.entryTtl(Duration.ofHours(2)),
                 CacheUtil.AIRLINES_DROPDOWN, defaults.entryTtl(Duration.ofHours(2)),
-                // Aircraft models — 6 h (very stable)
-                CacheUtil.AIRCRAFTS, defaults.entryTtl(Duration.ofHours(6)),
                 // roleId -> permission names — ~4 roles system-wide, near-universal hit rate.
                 // No cross-service eviction trigger exists (a permission change happens in
                 // user-service), so staleness is TTL-bounded only, same trade-off as the airline caches.
@@ -69,24 +59,6 @@ public class RedisConfig implements CachingConfigurer {
                 .cacheDefaults(defaults.entryTtl(Duration.ofHours(2)))
                 .withInitialCacheConfigurations(cacheConfigs)
                 .build();
-    }
-
-    /**
-     * Stable cache key for methods whose first argument is a Collection<String>.
-     * Sorts the values so ["AI","6E"] and ["6E","AI"] produce the same key.
-     */
-    @Bean
-    public KeyGenerator sortedListKeyGenerator() {
-        return (Object target, Method method, Object... params) -> {
-            Object first = params[0];
-            if (first instanceof Collection<?> col) {
-                return col.stream()
-                        .map(Object::toString)
-                        .sorted()
-                        .collect(Collectors.joining(","));
-            }
-            return Arrays.deepToString(params);
-        };
     }
 
     @Override

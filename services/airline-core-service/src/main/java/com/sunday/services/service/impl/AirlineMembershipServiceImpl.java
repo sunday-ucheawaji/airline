@@ -95,6 +95,7 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
     }
 
     @Override
+    @Transactional(noRollbackFor = ConflictException.class)
     @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true)
     public AirlineMembershipResponse accept(UUID airlineId, UUID membershipId, UUID actorUserId) {
         AirlineMembership membership = getMembershipOrThrow(airlineId, membershipId);

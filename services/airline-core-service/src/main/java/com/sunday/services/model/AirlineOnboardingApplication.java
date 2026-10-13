@@ -108,6 +108,10 @@ public class AirlineOnboardingApplication {
     @Column(updatable = false, nullable = false)
     private Instant createdAt;
 
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     @LastModifiedDate
     @Column(nullable = false)
     private Instant updatedAt;

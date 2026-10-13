@@ -7,7 +7,6 @@ import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AircraftRequest;
 import com.sunday.common_lib.payload.response.AircraftResponse;
-import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.mapper.AircraftMapper;
 import com.sunday.services.model.Aircraft;
@@ -17,8 +16,6 @@ import com.sunday.services.repository.AirlineRepository;
 import com.sunday.services.service.AircraftService;
 import com.sunday.services.service.AirlineService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,7 +53,6 @@ public class AircraftServiceImpl implements AircraftService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheUtil.AIRCRAFTS, key = "#id")
     public AircraftResponse getAircraftById(UUID id, UUID userId) {
         Aircraft aircraft = getAircraftOrThrow(id);
         airlineService.requirePermission(userId, List.of(aircraft.getAirline().getId()), AircraftPermissions.READ);
@@ -89,7 +85,6 @@ public class AircraftServiceImpl implements AircraftService {
     }
 
     @Override
-    @CacheEvict(cacheNames = CacheUtil.AIRCRAFTS, key = "#id")
     public AircraftResponse updateAircraft(UUID id, AircraftRequest request, UUID userId) {
         Aircraft aircraft = getAircraftOrThrow(id);
         airlineService.requirePermission(userId, List.of(aircraft.getAirline().getId()), AircraftPermissions.MANAGE);
@@ -105,7 +100,6 @@ public class AircraftServiceImpl implements AircraftService {
     }
 
     @Override
-    @CacheEvict(cacheNames = CacheUtil.AIRCRAFTS, key = "#id")
     public void deleteAircraft(UUID id, UUID userId) {
         Aircraft aircraft = getAircraftOrThrow(id);
         airlineService.requirePermission(userId, List.of(aircraft.getAirline().getId()), AircraftPermissions.MANAGE);

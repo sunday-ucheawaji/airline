@@ -47,6 +47,7 @@ public class ErrorMessageUtil {
     // ---------- Airline ----------
     public static final String AIRLINE_NOT_FOUND_BY_ID = "Airline not found with id: %s";
     public static final String NO_ACTIVE_MEMBERSHIP_FOR_AIRLINE = "You do not have an active membership in airline %s";
+    public static final String NO_ACTIVE_MEMBERSHIP_IN_ACTIVE_AIRLINE = "You do not have an active membership in airline %s, or the airline is not active";
     public static final String NO_PERMISSION_FOR_AIRLINE = "You do not have permission %s for airline %s";
     public static final String NO_PERMISSION_FOR_AIRLINES = "You do not have permission %s for airline(s): %s";
     public static final String NO_PERMISSION_FOR_AIRCRAFT = "You do not have permission to view aircraft %s";
@@ -54,6 +55,7 @@ public class ErrorMessageUtil {
     public static final String AIRLINE_IATA_CODE_ALREADY_EXISTS = "IATA code %s is already in use by another airline";
     public static final String AIRLINE_ICAO_CODE_ALREADY_EXISTS = "ICAO code %s is already in use by another airline";
     public static final String AIRLINE_STATUS_UNCHANGED = "Airline %s is already %s";
+    public static final String CONCURRENT_MODIFICATION = "The record was changed by someone else at the same time; reload it and try again";
     public static final String AIRLINE_CLOSED_STATUS_LOCKED = "Airline %s has been closed and its status can no longer be changed";
 
     // ---------- Aircraft ----------

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS airline_onboarding_applications (
     airline_id             CHAR(36),
     submitted_at           DATETIME(6),
     reviewed_at            DATETIME(6),
+    version                BIGINT NOT NULL DEFAULT 0,
     created_at             DATETIME(6) NOT NULL,
     updated_at             DATETIME(6) NOT NULL,
     CONSTRAINT fk_onboarding_applications_airline FOREIGN KEY (airline_id) REFERENCES airlines (id),

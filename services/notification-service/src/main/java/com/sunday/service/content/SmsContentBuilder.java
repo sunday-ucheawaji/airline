@@ -37,12 +37,12 @@ public class SmsContentBuilder {
     }
 
     public String bodyForPaymentFailed(PaymentFailedEvent event) {
-        return String.format("ZoshAir: Payment for booking #%d FAILED. Your seats are still held for a short " +
+        return String.format("ZoshAir: Payment for booking #%s FAILED. Your seats are still held for a short " +
                 "window - please retry payment to confirm. Queries: support@zoshair.com", event.getBookingId());
     }
 
     public String bodyForPaymentRefunded(PaymentRefundedEvent event) {
-        return String.format("ZoshAir: A refund has been processed for booking #%d. It may take a few business " +
+        return String.format("ZoshAir: A refund has been processed for booking #%s. It may take a few business " +
                 "days to reflect in your account. Queries: support@zoshair.com", event.getBookingId());
     }
 }

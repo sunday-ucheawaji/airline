@@ -48,10 +48,9 @@ public class SeatMapServiceImpl implements SeatMapService {
         UUID airlineId = airlineIntegrationService.resolveAirlineIdForAircraft(cabinClass.getAircraftId());
         airlineIntegrationService.requirePermission(userId, airlineId, SeatPermissions.SEAT_CONFIG_MANAGE);
 
-        if (seatMapRepository.existsByAirlineIdAndCabinClassIdAndName(
-                airlineId, request.getCabinClassId(), request.getName())) {
+        if (seatMapRepository.findByCabinClassId(request.getCabinClassId()) != null) {
             throw new ConflictException(
-                    String.format(ErrorMessageUtil.SEAT_MAP_NAME_ALREADY_EXISTS, request.getName()));
+                    String.format(ErrorMessageUtil.SEAT_MAP_CABIN_CLASS_ALREADY_HAS_SEAT_MAP, request.getCabinClassId()));
         }
 
         SeatMap seatMap = SeatMapMapper.toEntity(request, cabinClass);

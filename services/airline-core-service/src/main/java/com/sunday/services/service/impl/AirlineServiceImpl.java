@@ -1,6 +1,7 @@
 package com.sunday.services.service.impl;
 
 import java.util.UUID;
+import com.sunday.common_lib.constants.AirlinePermissions;
 import com.sunday.common_lib.enums.AirlineStatus;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
@@ -53,18 +54,22 @@ public class AirlineServiceImpl implements AirlineService {
     @Override
     @Transactional(readOnly = true)
     public List<String> getMyPermissions(UUID airlineId, UUID userId) {
-        AirlineMembership membership = airlineMembershipRepository.findByUserIdAndAirlineId(userId, airlineId)
-                .filter(m -> m.getStatus() == MembershipStatus.ACTIVE)
-                .orElseThrow(() -> new OperationNotPermittedException(
-                        String.format(ErrorMessageUtil.NO_ACTIVE_MEMBERSHIP_FOR_AIRLINE, airlineId)));
-        return rolePermissionCacheService.getPermissionNamesForRole(membership.getRoleId());
+        UUID roleId = activeRoleIdsByAirline(userId, List.of(airlineId)).get(airlineId);
+        if (roleId == null) {
+            throw new OperationNotPermittedException(
+                    String.format(ErrorMessageUtil.NO_ACTIVE_MEMBERSHIP_IN_ACTIVE_AIRLINE, airlineId));
+        }
+        return rolePermissionCacheService.getPermissionNamesForRole(roleId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public void requirePermission(UUID userId, List<UUID> airlineIds, String permission) {
+        Map<UUID, UUID> roleIds = activeRoleIdsByAirline(userId, airlineIds);
         List<UUID> denied = airlineIds.stream()
-                .filter(airlineId -> !resolvePermissions(userId, airlineId).contains(permission))
+                .distinct()
+                .filter(airlineId -> !roleIds.containsKey(airlineId)
+                        || !rolePermissionCacheService.getPermissionNamesForRole(roleIds.get(airlineId)).contains(permission))
                 .toList();
         if (!denied.isEmpty()) {
             throw new OperationNotPermittedException(
@@ -72,12 +77,11 @@ public class AirlineServiceImpl implements AirlineService {
         }
     }
 
-    /** Empty list (not a throw) when there's no active membership, so callers checking several airlines can collect every denial instead of stopping at the first. */
-    private List<String> resolvePermissions(UUID userId, UUID airlineId) {
-        return airlineMembershipRepository.findByUserIdAndAirlineId(userId, airlineId)
-                .filter(m -> m.getStatus() == MembershipStatus.ACTIVE)
-                .map(m -> rolePermissionCacheService.getPermissionNamesForRole(m.getRoleId()))
-                .orElse(List.of());
+    /** A suspended, banned or closed airline grants nothing: its members keep the membership but lose every permission. */
+    private Map<UUID, UUID> activeRoleIdsByAirline(UUID userId, List<UUID> airlineIds) {
+        return airlineMembershipRepository.findByUserIdAndAirlineIdInAndStatusAndAirlineStatus(
+                        userId, airlineIds, MembershipStatus.ACTIVE, AirlineStatus.ACTIVE).stream()
+                .collect(Collectors.toMap(m -> m.getAirline().getId(), AirlineMembership::getRoleId));
     }
 
     // Deliberately not @Cacheable: the permission check must run on every call. Caching this method
@@ -113,14 +117,13 @@ public class AirlineServiceImpl implements AirlineService {
 
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = CacheUtil.AIRLINES, key = "#airlineId"),
             @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true),
             @CacheEvict(cacheNames = CacheUtil.AIRLINES_DROPDOWN, allEntries = true)
     })
     public AirlineResponse updateAirline(UUID airlineId, AirlineRequest request, UUID userId) {
         Airline airline = getAirlineOrThrow(airlineId);
-        requireActiveMembership(airlineId, userId);
         requireActiveAirline(airline);
+        requirePermission(userId, List.of(airlineId), AirlinePermissions.PROFILE_UPDATE);
         requireUniqueCodes(airlineId, request);
 
         AirlineMapper.updateEntity(airline, request);
@@ -133,14 +136,13 @@ public class AirlineServiceImpl implements AirlineService {
      */
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = CacheUtil.AIRLINES, key = "#id"),
             @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true),
             @CacheEvict(cacheNames = CacheUtil.AIRLINES_DROPDOWN, allEntries = true)
     })
     public void deleteAirline(UUID id, UUID userId) {
         Airline airline = getAirlineOrThrow(id);
-        requireActiveMembership(id, userId);
         requireActiveAirline(airline);
+        requirePermission(userId, List.of(id), AirlinePermissions.CLOSE);
         airline.setStatus(AirlineStatus.INACTIVE);
         airlineRepository.save(airline);
     }
@@ -149,7 +151,6 @@ public class AirlineServiceImpl implements AirlineService {
 
     @Override
     @Caching(evict = {
-            @CacheEvict(cacheNames = CacheUtil.AIRLINES, key = "#airlineId"),
             @CacheEvict(cacheNames = CacheUtil.AIRLINES_BY_USER, allEntries = true),
             @CacheEvict(cacheNames = CacheUtil.AIRLINES_DROPDOWN, allEntries = true)
     })

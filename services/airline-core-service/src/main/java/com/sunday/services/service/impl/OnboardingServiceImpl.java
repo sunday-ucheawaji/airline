@@ -120,6 +120,7 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         platformUserGuard.requireNotPlatformUser(applicantUserId, ErrorMessageUtil.ONBOARDING_PLATFORM_USER_CANNOT_APPLY);
         requireCompleteForSubmission(application);
+        requireAirlineCodesAvailable(application);
         documentGate.requireReadyForSubmission(applicationId);
 
         application.setStatus(OnboardingStatus.SUBMITTED);
@@ -182,6 +183,9 @@ public class OnboardingServiceImpl implements OnboardingService {
         AirlineOnboardingApplication application = support.getVisibleOrThrow(applicationId);
         support.requireStatus(application, PENDING_APPROVAL, ErrorMessageUtil.ONBOARDING_APPLICATION_NOT_PENDING_APPROVAL);
         support.requireNotApplicantOrNominee(application, actorUserId);
+        if (actorUserId.equals(application.getCaseOwnerUserId())) {
+            throw new ConflictException(String.format(ErrorMessageUtil.ONBOARDING_SEGREGATION_OF_DUTIES, "owned"));
+        }
         application.setStatus(OnboardingStatus.APPROVED);
         application.setApprovedByUserId(actorUserId);
         application.setRejectionReason(null);
@@ -243,6 +247,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         support.requireNotApplicantOrNominee(application, actorUserId);
         platformUserGuard.requireNotPlatformUser(
                 ownerUserId, String.format(ErrorMessageUtil.ONBOARDING_PLATFORM_USER_CANNOT_OWN, ownerUserId));
+        requireAirlineCodesAvailable(application);
 
         Airline airline = airlineRepository.save(OnboardingMapper.toAirlineEntity(application));
         airlineMembershipRepository.save(AirlineMembership.builder()
@@ -289,6 +294,15 @@ public class OnboardingServiceImpl implements OnboardingService {
             review.setComments(null);
             review.setDecidedAt(null);
             stageRepository.save(review);
+        }
+    }
+
+    private void requireAirlineCodesAvailable(AirlineOnboardingApplication application) {
+        if (application.getIataCode() != null && airlineRepository.existsByIataCode(application.getIataCode())) {
+            throw new ConflictException(String.format(ErrorMessageUtil.AIRLINE_IATA_CODE_ALREADY_EXISTS, application.getIataCode()));
+        }
+        if (application.getIcaoCode() != null && airlineRepository.existsByIcaoCode(application.getIcaoCode())) {
+            throw new ConflictException(String.format(ErrorMessageUtil.AIRLINE_ICAO_CODE_ALREADY_EXISTS, application.getIcaoCode()));
         }
     }
 

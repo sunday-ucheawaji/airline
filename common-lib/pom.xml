@@ -33,6 +33,7 @@
                              ResponseEntity, MethodArgumentNotValidException
                              (transitively brings spring-web + spring-context)
             jakarta.servlet-api → HttpServletRequest in handler signatures
+            spring-tx      → OptimisticLockingFailureException (@Version conflicts → 409)
             Both optional=true so they are NOT transitively forced onto
             consumers; every business service already brings the web stack.
             Versions are managed by the Spring Boot BOM (no <version> needed).
@@ -45,6 +46,11 @@
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
             <optional>true</optional>
         </dependency>
 
