@@ -2,7 +2,6 @@ package com.sunday.services.service.impl;
 
 import java.util.UUID;
 import com.sunday.common_lib.event.BookingCancelledEvent;
-import com.sunday.common_lib.event.BookingConfirmedEvent;
 import com.sunday.services.model.ProcessedBookingEvent;
 import com.sunday.services.repository.ProcessedBookingEventRepository;
 import com.sunday.services.service.SeatBookingService;
@@ -23,19 +22,6 @@ public class SeatBookingServiceImpl implements SeatBookingService {
     private final ProcessedBookingEventRepository processedBookingEventRepository;
 
     @Override
-    public void markSeatInstancesBooked(BookingConfirmedEvent event) {
-        if (event.getSeatInstanceIds() == null || event.getSeatInstanceIds().isEmpty()) {
-            log.warn("No seat instance IDs in BookingConfirmedEvent for booking: {}", event.getBookingReference());
-            return;
-        }
-        if (!claimEvent(event.getBookingId(), "CONFIRMED")) {
-            return;
-        }
-        seatInstanceService.markSeatsBookedBatch(event.getBookingReference(), event.getSeatInstanceIds());
-        log.info("Seat instances {} marked as BOOKED for booking {}", event.getSeatInstanceIds(), event.getBookingReference());
-    }
-
-    @Override
     public void releaseSeatInstances(BookingCancelledEvent event) {
         if (event.getSeatInstanceIds() == null || event.getSeatInstanceIds().isEmpty()) {
             return;
@@ -43,7 +29,7 @@ public class SeatBookingServiceImpl implements SeatBookingService {
         if (!claimEvent(event.getBookingId(), "CANCELLED")) {
             return;
         }
-        seatInstanceService.releaseSeatsBatch(event.getSeatInstanceIds());
+        seatInstanceService.releaseSeatsForBooking(event.getBookingReference(), event.getSeatInstanceIds());
         log.info("Seat instances {} released for cancelled booking {}", event.getSeatInstanceIds(), event.getBookingReference());
     }
 

@@ -10,6 +10,9 @@ import java.util.Collection;
 public interface SeatService {
 
     void generateSeats(Collection<SeatMap> seatMaps);
+
+    /** Replaces a seat map's seats after its layout changed; only allowed while no flight inventory uses them. */
+    void regenerateSeats(SeatMap seatMap);
     SeatResponse getSeatById(UUID userId, UUID id);
     SeatResponse updateSeat(UUID userId, UUID id, SeatRequest request);
 }

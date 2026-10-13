@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.exception.BadRequestException;
 import java.util.UUID;
 import com.sunday.common_lib.constants.SeatPermissions;
 import com.sunday.common_lib.enums.SeatType;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Collection;
 import java.util.List;
 
@@ -43,6 +45,16 @@ public class SeatServiceImpl implements SeatService {
         seatRepository.saveAll(seats);
     }
 
+    @Override
+    public void regenerateSeats(SeatMap seatMap) {
+        if (seatMap.getSeats() != null) {
+            seatRepository.deleteAll(seatMap.getSeats());
+            seatMap.getSeats().clear();
+            seatRepository.flush();
+        }
+        seatRepository.saveAll(buildSeats(seatMap));
+    }
+
     private List<Seat> buildSeats(SeatMap seatMap) {
         int leftSeatsPerRow = seatMap.getLeftSeatsPerRow();
         int rightSeatsPerRow = seatMap.getRightSeatsPerRow();
@@ -62,11 +74,15 @@ public class SeatServiceImpl implements SeatService {
                         .columnLetter(getSeatLetter(col).charAt(0))
                         .seatType(type)
                         .seatMap(seatMap)
+                        .cabinClass(seatMap.getCabinClass())
                         .build());
             }
         }
 
-        seatMap.setSeats(seats);
+        if (seatMap.getSeats() == null) {
+            seatMap.setSeats(new ArrayList<>());
+        }
+        seatMap.getSeats().addAll(seats);
         return seats;
     }
 
@@ -118,6 +134,11 @@ public class SeatServiceImpl implements SeatService {
             cabinClass = cabinClassRepository.findById(request.getCabinClassId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             String.format(ErrorMessageUtil.CABIN_CLASS_NOT_FOUND_BY_ID, request.getCabinClassId())));
+            if (seatMap.getCabinClass() == null
+                    || !Objects.equals(cabinClass.getAircraftId(), seatMap.getCabinClass().getAircraftId())) {
+                throw new BadRequestException(String.format(
+                        ErrorMessageUtil.SEAT_CABIN_CLASS_OTHER_AIRCRAFT, cabinClass.getId(), seatMap.getId()));
+            }
         }
 
         SeatMapper.updateEntity(request, existing, seatMap, cabinClass);

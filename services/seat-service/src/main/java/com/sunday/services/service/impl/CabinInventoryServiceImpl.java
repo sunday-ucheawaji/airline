@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -155,25 +157,44 @@ public class CabinInventoryServiceImpl implements CabinInventoryService {
                 savedCabins.size(), seatInstancesToSave.size(), flightInstanceIds.size(), aircraftId);
     }
 
+    /**
+     * Rebuilds a cabin's seats on the new aircraft's seat map. Unsold seats are dropped and recreated from the new
+     * seats. Sold or held seats keep their row (so bookings keep their seat instance id and price) but are moved onto
+     * the new aircraft's seat with the same number, or the first free one if that number does not exist there.
+     */
     private void reconcileCabinSeats(FlightInstanceCabin fic, List<Seat> desiredSeats, int desiredCount,
                                      UUID flightId, UUID flightInstanceId) {
         List<SeatInstance> currentSeats = seatInstanceRepository.findByFlightInstanceCabinId(fic.getId());
-        int currentTotal = currentSeats.size();
+        List<SeatInstance> unsold = currentSeats.stream()
+                .filter(si -> si.getStatus() == SeatAvailabilityStatus.AVAILABLE)
+                .toList();
+        List<SeatInstance> sold = currentSeats.stream()
+                .filter(si -> si.getStatus() != SeatAvailabilityStatus.AVAILABLE)
+                .toList();
+        seatInstanceRepository.deleteAll(unsold);
+        seatInstanceRepository.flush();
 
-        if (currentTotal < desiredCount) {
-            Set<UUID> usedSeatIds = currentSeats.stream().map(si -> si.getSeat().getId()).collect(Collectors.toSet());
-            List<Seat> unusedSeats = desiredSeats.stream().filter(s -> !usedSeatIds.contains(s.getId())).toList();
-            int toAdd = desiredCount - currentTotal;
-            seatInstanceRepository.saveAll(buildAvailableSeatInstances(
-                    unusedSeats.stream().limit(toAdd).toList(), fic, flightId, flightInstanceId));
-        } else if (currentTotal > desiredCount) {
-            int toRemove = currentTotal - desiredCount;
-            List<SeatInstance> removable = currentSeats.stream()
-                    .filter(si -> si.getStatus() == SeatAvailabilityStatus.AVAILABLE)
-                    .limit(toRemove)
-                    .toList();
-            seatInstanceRepository.deleteAll(removable);
+        Map<String, Seat> newSeatsByNumber = new LinkedHashMap<>();
+        desiredSeats.forEach(seat -> newSeatsByNumber.putIfAbsent(seat.getSeatNumber(), seat));
+        Set<UUID> taken = new HashSet<>();
+        for (SeatInstance si : sold) {
+            Seat target = newSeatsByNumber.get(si.getSeat().getSeatNumber());
+            if (target == null || taken.contains(target.getId())) {
+                target = desiredSeats.stream().filter(seat -> !taken.contains(seat.getId())).findFirst().orElse(null);
+            }
+            if (target == null) {
+                log.error("No seat left on the new aircraft for sold seat instance {} of flight instance {}",
+                        si.getId(), flightInstanceId);
+                continue;
+            }
+            taken.add(target.getId());
+            si.setSeat(target);
         }
+        seatInstanceRepository.saveAll(sold);
+        seatInstanceRepository.flush();
+
+        List<Seat> free = desiredSeats.stream().filter(seat -> !taken.contains(seat.getId())).toList();
+        seatInstanceRepository.saveAll(buildAvailableSeatInstances(free, fic, flightId, flightInstanceId));
 
         fic.setTotalSeats(desiredCount);
         flightInstanceCabinRepository.save(fic);

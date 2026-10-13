@@ -4,7 +4,7 @@ import java.util.UUID;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.payload.request.SeatInstanceRequest;
 import com.sunday.common_lib.payload.request.SeatPriceRequest;
-import com.sunday.common_lib.payload.response.CabinSeatStatusResponse;
+import com.sunday.common_lib.payload.response.CustomerSeatResponse;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
 import com.sunday.services.service.SeatInstanceService;
 import jakarta.validation.Valid;
@@ -73,9 +73,10 @@ public class SeatInstanceController {
         return ResponseEntity.ok(seatInstanceService.countAvailableByFlightId(userId, flightId));
     }
 
-    @GetMapping("/flight-instance/{flightInstanceId}/status-summary")
-    public ResponseEntity<List<CabinSeatStatusResponse>> getSeatStatusSummary(@PathVariable UUID flightInstanceId) {
-        return ResponseEntity.ok(seatInstanceService.getSeatStatusSummary(flightInstanceId));
+    /** Any signed-in user: the seat map a customer chooses from. Never says who holds or booked a seat. */
+    @GetMapping("/flight-instance/{flightInstanceId}/seat-map")
+    public ResponseEntity<List<CustomerSeatResponse>> getCustomerSeatMap(@PathVariable UUID flightInstanceId) {
+        return ResponseEntity.ok(seatInstanceService.getCustomerSeatMap(flightInstanceId));
     }
 
     @PatchMapping("/{id}/status")

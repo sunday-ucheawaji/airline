@@ -18,5 +18,12 @@ spring:
       circuitbreaker:
         enabled: true
 
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_URL}

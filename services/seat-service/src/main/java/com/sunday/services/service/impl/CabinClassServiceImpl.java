@@ -1,5 +1,8 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.services.repository.SeatInstanceRepository;
+import com.sunday.services.repository.FlightInstanceCabinRepository;
+import com.sunday.common_lib.exception.BadRequestException;
 import java.util.UUID;
 import com.sunday.common_lib.constants.SeatPermissions;
 import com.sunday.common_lib.enums.CabinClassType;
@@ -32,6 +35,8 @@ public class CabinClassServiceImpl implements CabinClassService {
 
     private final CabinClassRepository cabinClassRepository;
     private final AirlineIntegrationService airlineIntegrationService;
+    private final FlightInstanceCabinRepository flightInstanceCabinRepository;
+    private final SeatInstanceRepository seatInstanceRepository;
 
     @Override
     public CabinClassResponse createCabinClass(UUID userId, CabinClassRequest request) {
@@ -133,11 +138,22 @@ public class CabinClassServiceImpl implements CabinClassService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<CabinClassResponse> getCabinClassesByAircraftIdInternal(UUID aircraftId) {
+        return cabinClassRepository.findByAircraftId(aircraftId).stream()
+                .map(cc -> CabinClassMapper.toResponse(cc, cc.getSeatMap()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public CabinClassResponse getByAircraftIdAndName(UUID userId, UUID aircraftId, CabinClassType name) {
         UUID airlineId = airlineIntegrationService.resolveAirlineIdForAircraft(aircraftId);
         airlineIntegrationService.requirePermission(userId, airlineId, SeatPermissions.SEAT_READ);
         CabinClass cabinClass = cabinClassRepository.findByAircraftIdAndName(aircraftId, name);
-        return CabinClassMapper.toResponse(cabinClass, null);
+        if (cabinClass == null) {
+            throw new ResourceNotFoundException(String.format(ErrorMessageUtil.CABIN_CLASS_NOT_FOUND_FOR_AIRCRAFT, aircraftId, name));
+        }
+        return CabinClassMapper.toResponse(cabinClass, cabinClass.getSeatMap());
     }
 
     @Override
@@ -149,8 +165,7 @@ public class CabinClassServiceImpl implements CabinClassService {
         airlineIntegrationService.requirePermission(userId, currentAirlineId, SeatPermissions.SEAT_CONFIG_MANAGE);
 
         if (request.getAircraftId() != null && !request.getAircraftId().equals(existing.getAircraftId())) {
-            UUID destinationAirlineId = airlineIntegrationService.resolveAirlineIdForAircraft(request.getAircraftId());
-            airlineIntegrationService.requirePermission(userId, destinationAirlineId, SeatPermissions.SEAT_CONFIG_MANAGE);
+            throw new BadRequestException(ErrorMessageUtil.CABIN_CLASS_AIRCRAFT_IMMUTABLE);
         }
 
         if (cabinClassRepository.existsByCodeAndAircraftIdAndIdNot(
@@ -170,6 +185,9 @@ public class CabinClassServiceImpl implements CabinClassService {
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.CABIN_CLASS_NOT_FOUND_BY_ID, id)));
         UUID airlineId = airlineIntegrationService.resolveAirlineIdForAircraft(cabinClass.getAircraftId());
         airlineIntegrationService.requirePermission(userId, airlineId, SeatPermissions.SEAT_CONFIG_MANAGE);
+        if (flightInstanceCabinRepository.existsByCabinClassId(id) || seatInstanceRepository.existsBySeatSeatMapCabinClassId(id)) {
+            throw new ConflictException(String.format(ErrorMessageUtil.SEAT_STRUCTURE_IN_USE, "Cabin class", id));
+        }
         cabinClassRepository.delete(cabinClass);
     }
 }

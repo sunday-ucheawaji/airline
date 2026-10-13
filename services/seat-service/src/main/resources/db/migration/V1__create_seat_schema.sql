@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS seat_instances (
     fare                         DECIMAL(12,2),
     premium_surcharge            DECIMAL(12,2),
     held_until                   DATETIME(6),
-    held_by_booking_reference    VARCHAR(255),
+    booking_reference            VARCHAR(255),
     version                      BIGINT,
     flight_schedule_id           CHAR(36),
     created_at                   DATETIME(6),
@@ -118,6 +118,7 @@ CREATE INDEX idx_seat_instances_flight_id ON seat_instances (flight_id);
 CREATE INDEX idx_seat_instances_flight_instance_id ON seat_instances (flight_instance_id);
 CREATE INDEX idx_seat_instances_flight_instance_cabin_id ON seat_instances (flight_instance_cabin_id);
 CREATE INDEX idx_seat_instances_status ON seat_instances (status);
+CREATE INDEX idx_seat_instances_booking_reference ON seat_instances (booking_reference);
 
 -- Inbox-pattern dedup for the booking.confirmed/booking.cancelled consumers: a redelivered event
 -- can never double-apply its seat-status side effect, even if it races a concurrent delivery.

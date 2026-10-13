@@ -1,11 +1,9 @@
 package com.sunday.services.service;
 
 import com.sunday.common_lib.event.BookingCancelledEvent;
-import com.sunday.common_lib.event.BookingConfirmedEvent;
 
 public interface SeatBookingService {
 
-    void markSeatInstancesBooked(BookingConfirmedEvent event);
-
+    /** Frees a cancelled booking's seats, only those it still holds or owns. Deduplicated per booking. */
     void releaseSeatInstances(BookingCancelledEvent event);
 }

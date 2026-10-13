@@ -12,11 +12,11 @@ import java.util.List;
 @FeignClient(name = "seat-service", fallback = SeatClientFallback.class)
 public interface SeatClient {
 
-    @GetMapping("/api/cabin-classes/aircraft/{aircraftId}")
+    @GetMapping("/internal/cabin-classes/aircraft/{aircraftId}")
     List<CabinClassResponse> getCabinClassesByAircraftId(
             @PathVariable UUID aircraftId);
 
     /** Per-cabin count of seats already sold/held (status != AVAILABLE) for one flight instance — used to validate an aircraft reassignment before committing it. */
-    @GetMapping("/api/seat-instances/flight-instance/{flightInstanceId}/status-summary")
+    @GetMapping("/internal/seat-instances/flight-instance/{flightInstanceId}/status-summary")
     List<CabinSeatStatusResponse> getSeatStatusSummary(@PathVariable UUID flightInstanceId);
 }

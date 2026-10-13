@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import java.util.UUID;
 import com.sunday.services.model.FlightInstanceCabin;
 import jakarta.persistence.LockModeType;
@@ -26,4 +27,8 @@ public interface FlightInstanceCabinRepository extends JpaRepository<FlightInsta
     Optional<FlightInstanceCabin> findByIdForUpdate(@Param("id") UUID id);
 
     FlightInstanceCabin findByFlightInstanceIdAndCabinClassId(UUID flightInstanceId, UUID cabinClassId);
+
+    boolean existsByFlightInstanceIdAndCabinClassName(UUID flightInstanceId, CabinClassType name);
+
+    boolean existsByCabinClassId(UUID cabinClassId);
 }

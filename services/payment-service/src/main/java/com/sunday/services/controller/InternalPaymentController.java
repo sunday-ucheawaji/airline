@@ -22,6 +22,12 @@ public class InternalPaymentController {
         return paymentService.getPaymentByBookingId(bookingId);
     }
 
+    /** booking-service only: refunds a payment whose booking could not get its seats. */
+    @PostMapping("/{paymentId}/refund")
+    public PaymentDTO refundPayment(@PathVariable UUID paymentId) {
+        return paymentService.refundPaymentAsSystem(paymentId);
+    }
+
     @PostMapping("/batch/bookings")
     public Map<UUID, PaymentDTO> getPaymentsByBookingIds(@RequestBody List<UUID> bookingIds) {
         return paymentService.getPaymentsByBookingIds(bookingIds);

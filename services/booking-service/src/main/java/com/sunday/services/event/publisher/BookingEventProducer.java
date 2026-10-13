@@ -36,7 +36,8 @@ public class BookingEventProducer {
                                      PaymentCompletedEvent payment,
                                      FlightInstanceResponse flight,
                                      FareResponse fare,
-                                     UserDTO user) {
+                                     UserDTO user,
+                                     boolean seatsReassigned) {
 
         // ── Passengers ────────────────────────────────────────────────────────
         // Build a passengerId → ticketNumber lookup from the Ticket relation
@@ -162,8 +163,8 @@ public class BookingEventProducer {
                 .priorityBoarding(fare != null ? fare.getPriorityBoarding()   : null)
                 .loungeAccess(fare != null   ? fare.getLoungeAccess()         : null)
                 .complimentaryMeals(fare != null ? fare.getComplimentaryMeals() : null)
-                // Legacy — seat-service still reads this to mark seats BOOKED
                 .seatInstanceIds(booking.getSeatInstanceIds())
+                .seatsReassigned(seatsReassigned)
                 .build();
 
         kafkaTemplate.send("booking.confirmed", event);

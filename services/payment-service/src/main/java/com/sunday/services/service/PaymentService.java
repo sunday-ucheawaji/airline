@@ -32,6 +32,12 @@ public interface PaymentService {
     /** Gated on PAYMENT_REFUND_EXECUTE for the payment's airline. amount null means a full refund. */
     PaymentDTO refundPayment(UUID paymentId, UUID userId, BigDecimal amount);
 
+    /**
+     * A full refund the platform itself owes, with no staff decision behind it (booking-service: the seats were gone
+     * when the payment completed). Idempotent: an already refunded payment is returned as it is.
+     */
+    PaymentDTO refundPaymentAsSystem(UUID paymentId);
+
     PaymentDTO getPaymentByBookingId(UUID bookingId);
 
     Map<UUID, PaymentDTO> getPaymentsByBookingIds(List<UUID> bookingIds);

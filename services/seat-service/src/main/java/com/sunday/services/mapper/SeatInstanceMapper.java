@@ -1,5 +1,6 @@
 package com.sunday.services.mapper;
 
+import com.sunday.common_lib.payload.response.CustomerSeatResponse;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.payload.request.SeatInstanceRequest;
 import com.sunday.common_lib.payload.response.SeatInstanceResponse;
@@ -20,6 +21,26 @@ public class SeatInstanceMapper {
                 .mealPreference(request.getMealPreference())
                 .fare(request.getFare())
                 .flightScheduleId(request.getFlightScheduleId())
+                .build();
+    }
+
+    public static CustomerSeatResponse toCustomerResponse(SeatInstance si) {
+        Seat seat = si.getSeat();
+        return CustomerSeatResponse.builder()
+                .seatInstanceId(si.getId())
+                .seatNumber(seat.getSeatNumber())
+                .row(seat.getSeatRow())
+                .column(seat.getColumnLetter())
+                .seatType(seat.getSeatType())
+                .cabinClass(si.getFlightInstanceCabin().getCabinClass().getName())
+                .premiumSurcharge(si.getPremiumSurcharge())
+                .available(si.getStatus() == SeatAvailabilityStatus.AVAILABLE)
+                .emergencyExit(Boolean.TRUE.equals(seat.getIsEmergencyExit()))
+                .extraLegroom(Boolean.TRUE.equals(seat.getHasExtraLegroom()))
+                .bassinet(Boolean.TRUE.equals(seat.getHasBassinet()))
+                .wheelchairAccessible(Boolean.TRUE.equals(seat.getIsWheelchairAccessible()))
+                .powerOutlet(Boolean.TRUE.equals(seat.getHasPowerOutlet()))
+                .nearLavatory(Boolean.TRUE.equals(seat.getIsNearLavatory()))
                 .build();
     }
 

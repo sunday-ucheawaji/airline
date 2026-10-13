@@ -1,5 +1,7 @@
 package com.sunday.services.clients;
 
+import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.common_lib.exception.ServiceUnavailableException;
 import java.util.UUID;
 import com.sunday.common_lib.payload.request.PaymentInitiateRequest;
 import com.sunday.common_lib.payload.response.PaymentDTO;
@@ -57,6 +59,14 @@ public class PaymentClientFallbackFactory
                         HttpStatus.SERVICE_UNAVAILABLE,
                         "Payment service is unavailable"
                 );
+            }
+
+            @Override
+            public PaymentDTO refundPaymentAsSystem(UUID paymentId) {
+                log.warn("payment-service call failed – refund of payment {} could not be made: {}",
+                        paymentId, cause.getMessage(), cause);
+                throw new ServiceUnavailableException(
+                        String.format(ErrorMessageUtil.PAYMENT_SERVICE_REFUND_UNAVAILABLE, paymentId), cause);
             }
 
             @Override

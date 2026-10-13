@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.services.repository.SeatInstanceRepository;
 import java.util.UUID;
 import com.sunday.common_lib.constants.SeatPermissions;
 import com.sunday.common_lib.exception.ConflictException;
@@ -38,6 +39,7 @@ public class SeatMapServiceImpl implements SeatMapService {
     private final CabinClassRepository cabinClassRepository;
     private final SeatService seatService;
     private final AirlineIntegrationService airlineIntegrationService;
+    private final SeatInstanceRepository seatInstanceRepository;
 
     @Override
     public SeatMapResponse createSeatMap(UUID userId, SeatMapRequest request) {
@@ -180,7 +182,16 @@ public class SeatMapServiceImpl implements SeatMapService {
                     String.format(ErrorMessageUtil.SEAT_MAP_NAME_ALREADY_EXISTS, request.getName()));
         }
 
+        boolean layoutChanged = !Objects.equals(request.getTotalRows(), existing.getTotalRows())
+                || !Objects.equals(request.getLeftSeatsPerRow(), existing.getLeftSeatsPerRow())
+                || !Objects.equals(request.getRightSeatsPerRow(), existing.getRightSeatsPerRow());
+        if (layoutChanged && seatInstanceRepository.existsBySeatSeatMapId(id)) {
+            throw new ConflictException(String.format(ErrorMessageUtil.SEAT_MAP_LAYOUT_LOCKED, id));
+        }
         SeatMapMapper.updateEntity(request, existing);
+        if (layoutChanged) {
+            seatService.regenerateSeats(existing);
+        }
         SeatMap saved = seatMapRepository.save(existing);
         return SeatMapMapper.toResponse(saved);
     }
@@ -190,6 +201,9 @@ public class SeatMapServiceImpl implements SeatMapService {
         SeatMap existing = seatMapRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.SEAT_MAP_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, existing.getAirlineId(), SeatPermissions.SEAT_CONFIG_MANAGE);
+        if (seatInstanceRepository.existsBySeatSeatMapId(id)) {
+            throw new ConflictException(String.format(ErrorMessageUtil.SEAT_STRUCTURE_IN_USE, "Seat map", id));
+        }
         seatMapRepository.delete(existing);
     }
 }

@@ -35,7 +35,7 @@ public class SeatHoldExpirySweeper {
         for (SeatInstance si : expired) {
             si.setStatus(SeatAvailabilityStatus.AVAILABLE);
             si.setHeldUntil(null);
-            si.setHeldByBookingReference(null);
+            si.setBookingReference(null);
         }
         seatInstanceRepository.saveAll(expired);
         log.info("Released {} expired seat hold(s)", expired.size());

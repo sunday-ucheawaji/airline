@@ -247,8 +247,25 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new ConflictException(String.format(ErrorMessageUtil.PAYMENT_NOT_REFUNDABLE, paymentId, payment.getStatus()));
         }
+        return executeRefund(payment, amount != null ? amount : payment.getAmount());
+    }
 
-        BigDecimal refundAmount = amount != null ? amount : payment.getAmount();
+    @Override
+    @Transactional
+    public PaymentDTO refundPaymentAsSystem(UUID paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_BY_ID, paymentId)));
+        if (payment.getStatus() == PaymentStatus.REFUNDED) {
+            return PaymentMapper.toDTO(payment);
+        }
+        if (payment.getStatus() != PaymentStatus.SUCCESS) {
+            throw new ConflictException(String.format(ErrorMessageUtil.PAYMENT_NOT_REFUNDABLE, paymentId, payment.getStatus()));
+        }
+        return executeRefund(payment, payment.getAmount());
+    }
+
+    private PaymentDTO executeRefund(Payment payment, BigDecimal refundAmount) {
+        UUID paymentId = payment.getId();
         PaymentGatewayProvider provider = gatewayRegistry.resolve(payment.getProvider());
         try {
             ProviderRefundResult result = provider.initiateRefund(payment, refundAmount);

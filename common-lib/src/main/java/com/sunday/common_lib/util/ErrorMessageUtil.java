@@ -304,6 +304,16 @@ public class ErrorMessageUtil {
     public static final String SEAT_INSTANCE_WRONG_FLIGHT_INSTANCE = "Seat instance %s does not belong to flight instance %s";
     public static final String SEAT_INSTANCE_WRONG_CABIN_CLASS = "Seat instance %s is not in cabin class %s";
     public static final String SEAT_INSTANCE_NOT_AVAILABLE_FOR_HOLD = "Seat instance %s is not available";
+    public static final String SEAT_STRUCTURE_IN_USE = "%s %s is used by flight inventory and cannot be deleted";
+    public static final String SEAT_MAP_LAYOUT_LOCKED = "Seat map %s already has flight inventory; its rows and seats per row can no longer change";
+    public static final String CABIN_CLASS_NOT_FOUND_FOR_AIRCRAFT = "Aircraft %s has no %s cabin";
+    public static final String CABIN_CLASS_AIRCRAFT_IMMUTABLE = "A cabin class cannot be moved to another aircraft";
+    public static final String SEAT_CABIN_CLASS_OTHER_AIRCRAFT = "Cabin class %s belongs to a different aircraft than seat map %s";
+    public static final String FLIGHT_INSTANCE_CABIN_DUPLICATE = "Flight instance %s already has a %s cabin";
+    public static final String FLIGHT_INSTANCE_NOT_FOUND_BY_ID_FOR_SEATS = "Flight instance %s not found";
+    public static final String FLIGHT_INSTANCE_AIRCRAFT_MISMATCH = "Flight instance %s is operated by aircraft %s, not by the aircraft of cabin class %s";
+    public static final String FLIGHT_OPS_SERVICE_UNAVAILABLE = "Flight-ops service unavailable";
+    public static final String FLIGHT_INSTANCE_CABIN_CLASS_IMMUTABLE = "A flight-instance cabin cannot switch cabin class; reassign the flight instance's aircraft instead";
     public static final String NO_SEATS_IN_SEAT_MAP = "No seats found in the seat map for cabin class id %s";
     public static final String FLIGHT_INSTANCE_CABIN_NOT_FOUND_FOR_FLIGHT_AND_CABIN_CLASS =
             "Flight instance cabin not found for flight instance id %s and cabin class id %s";
@@ -425,6 +435,8 @@ public class ErrorMessageUtil {
     public static final String WEBHOOK_SIGNATURE_INVALID = "Webhook signature verification failed";
     public static final String PAYMENT_GATEWAY_NOT_SUPPORTED = "No payment provider is configured for gateway %s";
     public static final String PAYMENT_NOT_REFUNDABLE = "Payment %s is not refundable (status %s)";
+    public static final String BOOKING_CANCELLED_NO_SEATS = "The seats chosen were no longer available and the cabin is full; the booking was cancelled and the payment refunded";
+    public static final String PAYMENT_SERVICE_REFUND_UNAVAILABLE = "Payment service could not refund payment %s";
     public static final String PAYMENT_REFUND_FAILED = "Failed to refund payment %s: %s";
 
     // ---------- Location: City ----------

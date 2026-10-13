@@ -1,5 +1,7 @@
 package com.sunday.services.clients;
 
+import com.sunday.common_lib.payload.response.SeatConfirmResponse;
+import com.sunday.common_lib.payload.request.SeatConfirmRequest;
 import java.util.UUID;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
@@ -33,6 +35,13 @@ public class SeatClientFallbackFactory implements FallbackFactory<SeatClient> {
                     throw new ConflictException(FeignFailureUtil.extractMessage(fe, "Seat is no longer available"));
                 }
                 log.warn("seat-service call failed – seat hold could not be completed: {}", cause.getMessage(), cause);
+                throw new ServiceUnavailableException(ErrorMessageUtil.SEAT_SERVICE_UNAVAILABLE, cause);
+            }
+
+            @Override
+            public SeatConfirmResponse confirmSeats(SeatConfirmRequest request) {
+                log.warn("seat-service call failed – seats of booking {} could not be confirmed: {}",
+                        request.getBookingReference(), cause.getMessage(), cause);
                 throw new ServiceUnavailableException(ErrorMessageUtil.SEAT_SERVICE_UNAVAILABLE, cause);
             }
 

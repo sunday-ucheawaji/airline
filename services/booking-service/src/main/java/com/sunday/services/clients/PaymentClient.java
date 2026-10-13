@@ -22,6 +22,9 @@ public interface PaymentClient {
     @GetMapping("/internal/payments/booking/{bookingId}")
     PaymentDTO getPaymentByBookingId(@PathVariable UUID bookingId);
 
+    @PostMapping("/internal/payments/{paymentId}/refund")
+    PaymentDTO refundPaymentAsSystem(@PathVariable UUID paymentId);
+
     @PostMapping("/internal/payments/batch/bookings")
     Map<UUID, PaymentDTO> getPaymentsByBookingIds(@RequestBody List<UUID> bookingIds);
 }

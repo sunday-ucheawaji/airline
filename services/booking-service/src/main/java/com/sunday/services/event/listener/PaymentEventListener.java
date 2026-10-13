@@ -1,5 +1,11 @@
 package com.sunday.services.event.listener;
 
+import java.util.ArrayList;
+import com.sunday.services.clients.PaymentClient;
+import com.sunday.services.clients.SeatClient;
+import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.common_lib.payload.response.SeatConfirmResponse;
+import com.sunday.common_lib.payload.request.SeatConfirmRequest;
 import java.util.UUID;
 import com.sunday.common_lib.dto.UserDTO;
 import com.sunday.common_lib.enums.BookingStatus;
@@ -35,6 +41,8 @@ public class PaymentEventListener {
     private final FlightClient flightClient;
     private final PricingClient pricingClient;
     private final UserClient userClient;
+    private final SeatClient seatClient;
+    private final PaymentClient paymentClient;
 
     @KafkaListener(topics = "payment.completed", groupId = "booking-service-group")
     @Transactional
@@ -63,6 +71,17 @@ public class PaymentEventListener {
             return;
         }
 
+        SeatConfirmResponse seats = confirmSeats(booking);
+        if (seats != null && !seats.isAllocated()) {
+            cancelAndRefund(booking, event);
+            return;
+        }
+        boolean seatsReassigned = seats != null && !seats.getReassigned().isEmpty();
+        if (seatsReassigned) {
+            booking.setSeatInstanceIds(new ArrayList<>(seats.getSeatInstanceIds()));
+            log.warn("Booking {} had seats reassigned at confirmation: {}", booking.getBookingReference(), seats.getReassigned());
+        }
+
         booking.setStatus(BookingStatus.CONFIRMED);
         booking.setPaymentId(event.getPaymentId());
         booking = bookingRepository.save(booking);
@@ -76,7 +95,7 @@ public class PaymentEventListener {
         UserDTO userDTO = fetchUser(booking.getUserId());
 
         // Publish enriched event (seat-service + notification-service both consume it)
-        bookingEventProducer.sendBookingConfirmed(booking, event, flightInstance, fareResponse, userDTO);
+        bookingEventProducer.sendBookingConfirmed(booking, event, flightInstance, fareResponse, userDTO, seatsReassigned);
     }
 
     @KafkaListener(topics = "payment.failed", groupId = "booking-service-group")
@@ -108,6 +127,34 @@ public class PaymentEventListener {
     }
 
     // ── Private Helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Books the held seats in seat-service, which replaces any seat lost to another booking since the hold expired.
+     * An unreachable seat-service throws, so the whole payment event is retried (the dedup claim rolls back with it).
+     */
+    private SeatConfirmResponse confirmSeats(Booking booking) {
+        if (booking.getSeatInstanceIds() == null || booking.getSeatInstanceIds().isEmpty()) {
+            return null;
+        }
+        return seatClient.confirmSeats(SeatConfirmRequest.builder()
+                .flightInstanceId(booking.getFlightInstanceId())
+                .cabinClass(booking.getCabinClass())
+                .bookingReference(booking.getBookingReference())
+                .seatInstanceIds(booking.getSeatInstanceIds())
+                .build());
+    }
+
+    /** The cabin was full: the customer paid for seats that no longer exist, so the money goes back first. */
+    private void cancelAndRefund(Booking booking, PaymentCompletedEvent event) {
+        paymentClient.refundPaymentAsSystem(event.getPaymentId());
+        booking.setPaymentId(event.getPaymentId());
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking = bookingRepository.save(booking);
+        bookingEventProducer.sendBookingCancelled(booking, ErrorMessageUtil.BOOKING_CANCELLED_NO_SEATS);
+        bookingSagaService.cancel(booking.getId());
+        log.warn("Booking {} cancelled and payment {} refunded: no seat left in the {} cabin",
+                booking.getBookingReference(), event.getPaymentId(), booking.getCabinClass());
+    }
 
     private FlightInstanceResponse fetchFlightInstance(UUID flightInstanceId) {
         if (flightInstanceId == null) return null;

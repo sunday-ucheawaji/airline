@@ -1,9 +1,14 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.services.model.Seat;
+import java.math.BigDecimal;
+import com.sunday.services.integration.FlightInstanceGuard;
+import com.sunday.common_lib.payload.response.FlightInstanceResponse;
+import com.sunday.common_lib.exception.ConflictException;
+import com.sunday.common_lib.exception.BadRequestException;
 import java.util.UUID;
 import com.sunday.common_lib.constants.SeatPermissions;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
-import com.sunday.common_lib.enums.SeatType;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightInstanceCabinRequest;
 import com.sunday.common_lib.payload.response.FlightInstanceCabinResponse;
@@ -22,7 +27,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -35,6 +39,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
     private final SeatMapRepository seatMapRepository;
     private final SeatInstanceRepository seatInstanceRepository;
     private final AirlineIntegrationService airlineIntegrationService;
+    private final FlightInstanceGuard flightInstanceGuard;
 
     @Override
     public FlightInstanceCabinResponse createFlightInstanceCabin(UUID userId, FlightInstanceCabinRequest request) {
@@ -54,8 +59,13 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
             throw new ResourceNotFoundException(
                     String.format(ErrorMessageUtil.NO_SEATS_IN_SEAT_MAP, cabinClass.getId()));
         }
-        int totalSeats = seatMap.getSeats().size();
+        FlightInstanceResponse flightInstance = flightInstanceGuard.requireOperatedBy(request.getFlightInstanceId(), cabinClass);
+        if (flightInstanceCabinRepository.existsByFlightInstanceIdAndCabinClassName(request.getFlightInstanceId(), cabinClass.getName())) {
+            throw new ConflictException(String.format(
+                    ErrorMessageUtil.FLIGHT_INSTANCE_CABIN_DUPLICATE, request.getFlightInstanceId(), cabinClass.getName()));
+        }
 
+        int totalSeats = seatMap.getSeats().size();
         FlightInstanceCabin fic = FlightInstanceCabin.builder()
                 .flightInstanceId(request.getFlightInstanceId())
                 .cabinClass(cabinClass)
@@ -65,18 +75,14 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
         FlightInstanceCabin savedFlightInstanceCabin = flightInstanceCabinRepository.save(fic);
 
         List<SeatInstance> seatInstances = seatMap.getSeats().stream()
-                .map(seat -> {
-                    BigDecimal premiumSurcharge = getPremiumSurcharge(
-                            seat.getSeatType(), BigDecimal.valueOf(1000), BigDecimal.valueOf(500));
-                    return SeatInstance.builder()
-                            .flightId(request.getFlightId())
-                            .status(SeatAvailabilityStatus.AVAILABLE)
-                            .flightInstanceId(request.getFlightInstanceId())
-                            .flightInstanceCabin(savedFlightInstanceCabin)
-                            .seat(seat)
-                            .premiumSurcharge(premiumSurcharge)
-                            .build();
-                })
+                .map(seat -> SeatInstance.builder()
+                        .flightId(flightInstance.getFlightId())
+                        .status(SeatAvailabilityStatus.AVAILABLE)
+                        .flightInstanceId(request.getFlightInstanceId())
+                        .flightInstanceCabin(savedFlightInstanceCabin)
+                        .seat(seat)
+                        .premiumSurcharge(surchargeFor(seat, request))
+                        .build())
                 .toList();
         seatInstanceRepository.saveAll(seatInstances);
         savedFlightInstanceCabin.setSeats(seatInstances);
@@ -132,15 +138,7 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
                 userId, existing.getCabinClass().getSeatMap().getAirlineId(), SeatPermissions.SEAT_INSTANCE_CONFIG_MANAGE);
 
         if (request.getCabinClassId() != null && !request.getCabinClassId().equals(existing.getCabinClass().getId())) {
-            CabinClass cabinClass = cabinClassRepository.findById(request.getCabinClassId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            String.format(ErrorMessageUtil.CABIN_CLASS_NOT_FOUND_BY_ID, request.getCabinClassId())));
-            SeatMap destinationSeatMap = seatMapRepository.findByCabinClassId(cabinClass.getId());
-            if (destinationSeatMap != null) {
-                airlineIntegrationService.requirePermission(
-                        userId, destinationSeatMap.getAirlineId(), SeatPermissions.SEAT_INSTANCE_CONFIG_MANAGE);
-            }
-            existing.setCabinClass(cabinClass);
+            throw new BadRequestException(ErrorMessageUtil.FLIGHT_INSTANCE_CABIN_CLASS_IMMUTABLE);
         }
 
         FlightInstanceCabin saved = flightInstanceCabinRepository.save(existing);
@@ -157,12 +155,16 @@ public class FlightInstanceCabinServiceImpl implements FlightInstanceCabinServic
         flightInstanceCabinRepository.delete(fic);
     }
 
-    private BigDecimal getPremiumSurcharge(SeatType seatType, BigDecimal windowSurcharge, BigDecimal aisleSurcharge) {
-        if (seatType == null) return BigDecimal.ZERO;
-        return switch (seatType) {
-            case WINDOW -> windowSurcharge != null ? windowSurcharge : BigDecimal.ZERO;
-            case AISLE -> aisleSurcharge != null ? aisleSurcharge : BigDecimal.ZERO;
-            default -> BigDecimal.ZERO;
+    /** The request's window/aisle surcharge for this flight when given, otherwise the seat's own. */
+    private static BigDecimal surchargeFor(Seat seat, FlightInstanceCabinRequest request) {
+        if (seat.getSeatType() == null) {
+            return seat.getPremiumSurcharge();
+        }
+        BigDecimal override = switch (seat.getSeatType()) {
+            case WINDOW -> request.getWindowSurcharge();
+            case AISLE -> request.getAisleSurcharge();
+            default -> null;
         };
+        return override != null ? override : seat.getPremiumSurcharge();
     }
 }

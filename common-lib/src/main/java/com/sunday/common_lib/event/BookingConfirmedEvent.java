@@ -89,4 +89,7 @@ public class BookingConfirmedEvent {
 
     // ── Legacy seat IDs (kept for seat-service to mark seats as BOOKED) ──────
     private List<UUID> seatInstanceIds;
+
+    /** True when a seat the customer chose was gone at payment time and seat-service assigned another in the same cabin. */
+    private boolean seatsReassigned;
 }

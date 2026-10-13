@@ -49,6 +49,15 @@
           </td>
         </tr>
 
+        <tr th:if="${event.seatsReassigned}">
+          <td style="background:#fffbeb;border-bottom:1px solid #fde68a;padding:16px 40px;">
+            <p style="margin:0;font-size:14px;color:#92400e;line-height:1.6;">
+              One or more of the seats you chose was no longer available when your payment completed, so we
+              assigned you another seat in the same cabin. You can see your seats in your booking.
+            </p>
+          </td>
+        </tr>
+
         <!-- ═══════════════════════════════════════════════════════════
              BOOKING REFERENCE BAR
         ════════════════════════════════════════════════════════════════ -->

@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import java.util.UUID;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.services.model.SeatInstance;
@@ -45,4 +46,28 @@ public interface SeatInstanceRepository extends JpaRepository<SeatInstance, UUID
     List<SeatInstance> findAllByIdForUpdate(@Param("ids") List<UUID> ids);
 
     List<SeatInstance> findByStatusAndHeldUntilBefore(SeatAvailabilityStatus status, Instant time);
+
+    Optional<SeatInstance> findFirstByFlightId(UUID flightId);
+
+    boolean existsBySeatSeatMapId(UUID seatMapId);
+
+    boolean existsBySeatSeatMapCabinClassId(UUID cabinClassId);
+
+    @Query("SELECT si FROM SeatInstance si JOIN FETCH si.seat s JOIN FETCH si.flightInstanceCabin fc JOIN FETCH fc.cabinClass cc " +
+            "WHERE si.flightInstanceId = :flightInstanceId ORDER BY cc.displayOrder, s.seatRow, s.columnLetter")
+    List<SeatInstance> findSeatMapByFlightInstanceId(@Param("flightInstanceId") UUID flightInstanceId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT si FROM SeatInstance si JOIN si.flightInstanceCabin fc JOIN fc.cabinClass cc " +
+            "WHERE si.flightInstanceId = :flightInstanceId AND cc.name = :cabinClass AND si.status = 'AVAILABLE' ORDER BY si.id")
+    List<SeatInstance> findAvailableInCabinForUpdate(@Param("flightInstanceId") UUID flightInstanceId,
+                                                     @Param("cabinClass") CabinClassType cabinClass);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT si FROM SeatInstance si JOIN si.flightInstanceCabin fc JOIN fc.cabinClass cc " +
+            "WHERE si.flightInstanceId = :flightInstanceId AND cc.name = :cabinClass AND si.bookingReference = :bookingReference " +
+            "AND si.status IN ('HELD', 'BOOKED') ORDER BY si.id")
+    List<SeatInstance> findOwnedInCabinForUpdate(@Param("flightInstanceId") UUID flightInstanceId,
+                                                 @Param("cabinClass") CabinClassType cabinClass,
+                                                 @Param("bookingReference") String bookingReference);
 }

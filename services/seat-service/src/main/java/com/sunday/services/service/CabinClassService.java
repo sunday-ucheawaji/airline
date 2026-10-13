@@ -14,6 +14,9 @@ public interface CabinClassService {
     CabinClassBulkCreateResponse createCabinClasses(UUID userId, List<CabinClassRequest> requests);
     CabinClassResponse getCabinClassById(UUID userId, UUID id);
     List<CabinClassResponse> getCabinClassesByAircraftId(UUID userId, UUID aircraftId);
+
+    /** No permission check: flight-ops' capacity check before an aircraft reassignment. */
+    List<CabinClassResponse> getCabinClassesByAircraftIdInternal(UUID aircraftId);
     CabinClassResponse getByAircraftIdAndName(UUID userId, UUID aircraftId, CabinClassType name);
     CabinClassResponse updateCabinClass(UUID userId, UUID id, CabinClassRequest request);
     void deleteCabinClass(UUID userId, UUID id);

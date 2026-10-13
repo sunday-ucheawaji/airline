@@ -53,7 +53,9 @@ public class SeatInstance {
 
     // Set while status is HELD; cleared when the hold is confirmed, released, or swept.
     private Instant heldUntil;
-    private String heldByBookingReference;
+    /** The booking holding or owning the seat; kept once BOOKED so a cancellation only frees its own seats. */
+    @Column(name = "booking_reference")
+    private String bookingReference;
 
     @Version
     private Long version;
