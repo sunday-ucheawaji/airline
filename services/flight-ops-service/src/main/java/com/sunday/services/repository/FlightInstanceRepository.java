@@ -1,27 +1,21 @@
 package com.sunday.services.repository;
 
 import java.util.UUID;
-import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.services.model.FlightInstance;
-import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 public interface FlightInstanceRepository extends JpaRepository<
         FlightInstance, UUID>,
         JpaSpecificationExecutor<FlightInstance> {
-
-
 
     @Query("SELECT fi FROM FlightInstance fi WHERE fi.airlineId = :airlineId" +
             " AND (:departureAirportId IS NULL OR fi.departureAirportId = :departureAirportId)" +
@@ -37,29 +31,6 @@ public interface FlightInstanceRepository extends JpaRepository<
             @Param("dayStart") LocalDateTime dayStart,
             @Param("dayEnd") LocalDateTime dayEnd,
             Pageable pageable);
-
-    Page<FlightInstance> findByStatus(FlightStatus status, Pageable pageable);
-
-    @Query("SELECT fi FROM FlightInstance fi WHERE fi.departureAirportId = :depId AND fi.arrivalAirportId = :arrId AND fi.departureDateTime >= :fromDate AND fi.departureDateTime <= :toDate AND fi.status = 'SCHEDULED'")
-    List<FlightInstance> searchFlights(
-            @Param("depId") UUID departureAirportId,
-            @Param("arrId") UUID arrivalAirportId,
-            @Param("fromDate") LocalDateTime fromDate,
-            @Param("toDate") LocalDateTime toDate);
-
-    @Query("SELECT fi FROM FlightInstance fi WHERE fi.departureAirportId = :depId AND fi.arrivalAirportId = :arrId AND fi.departureDateTime >= :fromDate AND fi.departureDateTime <= :toDate")
-    Page<FlightInstance> searchFlightsPaged(
-            @Param("depId") UUID departureAirportId,
-            @Param("arrId") UUID arrivalAirportId,
-            @Param("fromDate") LocalDateTime fromDate,
-            @Param("toDate") LocalDateTime toDate,
-            Pageable pageable);
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT fi FROM FlightInstance fi WHERE fi.id = :id")
-    Optional<FlightInstance> findByIdForUpdate(@Param("id") UUID id);
-
-    Long countByFlightIdAndStatus(UUID flightId, FlightStatus status);
 
     @Query("SELECT fi FROM FlightInstance fi JOIN FETCH fi.flight WHERE fi.id IN :ids")
     List<FlightInstance> findAllByIdInWithFlight(@Param("ids") Collection<UUID> ids);

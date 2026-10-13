@@ -1,7 +1,6 @@
 package com.sunday.services.repository;
 
 import java.util.UUID;
-import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.services.model.Flight;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,9 +32,4 @@ public interface FlightRepository extends JpaRepository<Flight, UUID> {
             @Param("depId") UUID departureAirportId,
             @Param("arrId") UUID arrivalAirportId,
             Pageable pageable);
-
-    Page<Flight> findByStatus(FlightStatus status, Pageable pageable);
-
-    @Query("SELECT f FROM Flight f WHERE f.flightNumber LIKE %:keyword% OR CAST(f.airlineId AS string) = :keyword")
-    Page<Flight> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 }

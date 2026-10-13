@@ -30,7 +30,7 @@ public class Flight {
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID id;
 
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 10, unique = true)
     private String flightNumber;
 
     // Cross-service ref: Airline is in airline-core-service

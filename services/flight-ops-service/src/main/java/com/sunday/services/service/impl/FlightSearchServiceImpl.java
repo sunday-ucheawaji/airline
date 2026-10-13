@@ -127,8 +127,7 @@ public class FlightSearchServiceImpl implements FlightSearchService {
                 response.setFare(fareMap.get(departureOf(fi)));
                 results.add(response);
             } catch (Exception e) {
-                log.error("searchFlights: enrichment failed for FlightInstance id={} – skipping: {}",
-                        fi.getId(), e.getMessage());
+                log.error("searchFlights: enrichment failed for FlightInstance id={} – skipping", fi.getId(), e);
             }
         }
         return results;

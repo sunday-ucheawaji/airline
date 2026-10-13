@@ -32,7 +32,6 @@ import com.sunday.services.service.FlightInstanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -55,7 +54,6 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     private final AirlineClient airlineClient;
     private final SeatClient seatClient;
     private final FlightInstanceEventProducer flightInstanceEventProducer;
-    private final ApplicationEventPublisher applicationEventPublisher;
     private final AirlineIntegrationService airlineIntegrationService;
     private final LocationClient locationClient;
 
@@ -222,7 +220,9 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
         instance.setAvailableSeats(newAircraft.getTotalSeats() - (int) totalNonAvailable);
         FlightInstance saved = flightInstanceRepository.save(instance);
 
-        applicationEventPublisher.publishEvent(
+        // Enqueues onto the outbox (same transaction as the save above) rather than publishing
+        // to Kafka directly — see OutboxEventPublisher.
+        flightInstanceEventProducer.sendFlightInstanceAircraftChanged(
                 FlightInstanceAircraftChangedEvent.builder()
                         .flightInstanceId(saved.getId())
                         .flightId(saved.getFlight().getId())

@@ -4,6 +4,7 @@ import java.util.UUID;
 import com.sunday.common_lib.constants.FlightOpsPermissions;
 import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.common_lib.exception.BadRequestException;
+import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightRequest;
 import com.sunday.common_lib.payload.response.AirlineResponse;
@@ -36,6 +37,8 @@ import java.util.stream.Stream;
 @Transactional
 public class FlightServiceImpl implements FlightService {
 
+    public static final int MAX_BULK_ROWS = 500;
+
     private final FlightRepository flightRepository;
     private final AirlineClient airlineClient;
     private final LocationClient locationClient;
@@ -44,7 +47,7 @@ public class FlightServiceImpl implements FlightService {
     @Override
     public FlightResponse createFlight(UUID userId, FlightRequest request) {
         if (flightRepository.existsByFlightNumber(request.getFlightNumber())) {
-            throw new IllegalArgumentException(
+            throw new ConflictException(
                     String.format(ErrorMessageUtil.FLIGHT_NUMBER_ALREADY_EXISTS, request.getFlightNumber()));
         }
         UUID airlineId = request.getAirlineId();
@@ -60,6 +63,9 @@ public class FlightServiceImpl implements FlightService {
 
     @Override
     public List<FlightResponse> createFlights(UUID userId, List<FlightRequest> requests) {
+        if (requests.size() > MAX_BULK_ROWS) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.BULK_TOO_LARGE, MAX_BULK_ROWS));
+        }
         if (requests.stream().anyMatch(req -> req.getAirlineId() == null)) {
             throw new BadRequestException(ErrorMessageUtil.AIRLINE_ID_REQUIRED);
         }
@@ -136,7 +142,7 @@ public class FlightServiceImpl implements FlightService {
 
         if (request.getFlightNumber() != null &&
                 flightRepository.existsByFlightNumberAndIdNot(request.getFlightNumber(), id)) {
-            throw new IllegalArgumentException(
+            throw new ConflictException(
                     String.format(ErrorMessageUtil.FLIGHT_NUMBER_ALREADY_EXISTS, request.getFlightNumber()));
         }
 

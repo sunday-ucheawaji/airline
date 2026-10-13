@@ -4,6 +4,7 @@ import java.util.UUID;
 import com.sunday.common_lib.constants.FlightOpsPermissions;
 import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.common_lib.enums.RecurrenceType;
+import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FlightInstanceRequest;
 import com.sunday.common_lib.payload.request.FlightScheduleRequest;
@@ -30,8 +31,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +56,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
         airlineIntegrationService.requirePermission(userId, flight.getAirlineId(), FlightOpsPermissions.SCHEDULE_MANAGE);
 
         if (request.getEndDate().isBefore(request.getStartDate())) {
-            throw new IllegalArgumentException(ErrorMessageUtil.SCHEDULE_END_DATE_BEFORE_START_DATE);
+            throw new BadRequestException(ErrorMessageUtil.SCHEDULE_END_DATE_BEFORE_START_DATE);
         }
 
         FlightSchedule schedule = FlightScheduleMapper.toEntity(request, flight);
@@ -96,7 +99,7 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
         if (schedule.getRecurrenceType() == RecurrenceType.DAILY) {
             return new HashSet<>(List.of(DayOfWeek.values()));
         }
-        throw new IllegalArgumentException(ErrorMessageUtil.SCHEDULE_OPERATING_DAYS_MANDATORY);
+        throw new BadRequestException(ErrorMessageUtil.SCHEDULE_OPERATING_DAYS_MANDATORY);
     }
 
     @Override
@@ -113,9 +116,19 @@ public class FlightScheduleServiceImpl implements FlightScheduleService {
     public List<FlightScheduleResponse> getFlightScheduleByAirline(UUID userId, UUID airlineId) {
         airlineIntegrationService.requirePermission(userId, airlineId, FlightOpsPermissions.SCHEDULE_READ);
         List<FlightSchedule> schedules = flightScheduleRepository.findByFlightAirlineId(airlineId);
-        return schedules
-                .stream()
-                .map(this::getFlightScheduleResponse)
+        if (schedules.isEmpty()) {
+            return List.of();
+        }
+
+        // One batched airport lookup for the whole list instead of two Feign calls per schedule.
+        List<UUID> airportIds = schedules.stream()
+                .flatMap(s -> Stream.of(s.getArrivalAirportId(), s.getDepartureAirportId()))
+                .distinct().toList();
+        Map<UUID, AirportResponse> airports = locationClient.getAirportsByIds(airportIds);
+
+        return schedules.stream()
+                .map(s -> FlightScheduleMapper.toResponse(
+                        s, airports.get(s.getArrivalAirportId()), airports.get(s.getDepartureAirportId())))
                 .collect(Collectors.toList());
     }
 

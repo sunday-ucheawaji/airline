@@ -24,8 +24,6 @@ public class FlightSearchController {
 
     private final FlightSearchService flightSearchService;
 
-
-
     @GetMapping("/api/flights/search")
     public ResponseEntity<Page<FlightInstanceResponse>> searchFlights(
             @RequestParam UUID departureAirportId,
@@ -43,8 +41,6 @@ public class FlightSearchController {
             @RequestParam(required = false) String sortOrder,
             @RequestParam(required = false) String alliance,
             Pageable pageable) {
-
-        System.out.println("------ search flights"+arrivalAirportId+" "+departureAirportId);
 
         FlightSearchRequest request = FlightSearchRequest.builder()
                 .departureAirportId(departureAirportId)
@@ -66,6 +62,4 @@ public class FlightSearchController {
 
         return ResponseEntity.ok(res);
     }
-
-
 }

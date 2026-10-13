@@ -4,25 +4,29 @@ import com.sunday.common_lib.event.FlightInstanceAircraftChangedEvent;
 import com.sunday.common_lib.event.FlightInstanceCreatedEvent;
 import com.sunday.common_lib.event.FlightInstancesBulkCreatedEvent;
 import lombok.RequiredArgsConstructor;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+/**
+ * Enqueues onto the outbox (see {@link OutboxEventPublisher}) instead of calling Kafka directly —
+ * the actual send happens asynchronously via {@link OutboxEventSweeper}, atomically with whatever
+ * business transaction the caller is in.
+ */
 @Service
 @RequiredArgsConstructor
 public class FlightInstanceEventProducer {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxEventPublisher outboxEventPublisher;
 
     public void sendFlightInstanceCreated(FlightInstanceCreatedEvent event) {
-        kafkaTemplate.send("flight-instance-created", event);
+        outboxEventPublisher.enqueue("flight-instance-created", event);
     }
 
     /** One event for the whole batch instead of one FlightInstanceCreatedEvent per instance — see FlightInstancesBulkCreatedEvent. */
     public void sendFlightInstancesBulkCreated(FlightInstancesBulkCreatedEvent event) {
-        kafkaTemplate.send("flight-instances-bulk-created", event);
+        outboxEventPublisher.enqueue("flight-instances-bulk-created", event);
     }
 
     public void sendFlightInstanceAircraftChanged(FlightInstanceAircraftChangedEvent event) {
-        kafkaTemplate.send("flight-instance-aircraft-changed", event);
+        outboxEventPublisher.enqueue("flight-instance-aircraft-changed", event);
     }
 }
