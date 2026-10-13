@@ -42,12 +42,13 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException(String.format(ErrorMessageUtil.USER_NOT_FOUND_BY_EMAIL, email));
         }
 
-        List<Role> roles = userPlatformRoleRepository.findByUserId(user.getId()).stream()
+        // Staff whose platform roles are all INACTIVE get nothing, not the customer baseline: they are still staff.
+        List<Role> heldPlatformRoles = userPlatformRoleRepository.findByUserId(user.getId()).stream()
                 .map(UserPlatformRole::getRole)
                 .toList();
-        if (roles.isEmpty()) {
-            roles = roleRepository.findByScopeAndStatus(RoleScope.BASELINE, RoleStatus.ACTIVE);
-        }
+        List<Role> roles = heldPlatformRoles.isEmpty()
+                ? roleRepository.findByScopeAndStatus(RoleScope.BASELINE, RoleStatus.ACTIVE)
+                : heldPlatformRoles.stream().filter(role -> role.getStatus() == RoleStatus.ACTIVE).toList();
 
         List<String> roleNames = roles.stream().map(Role::getName).distinct().sorted().toList();
         List<String> permissionNames = roles.isEmpty() ? List.of()

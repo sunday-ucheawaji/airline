@@ -1,5 +1,7 @@
 package com.sunday.services.controller;
 
+import com.sunday.common_lib.payload.request.ResetPasswordRequest;
+import com.sunday.common_lib.payload.request.ForgotPasswordRequest;
 import com.sunday.common_lib.payload.request.LoginRequest;
 import com.sunday.common_lib.payload.request.RefreshTokenRequest;
 import com.sunday.common_lib.payload.request.RegisterRequest;
@@ -61,6 +63,18 @@ public class AuthController {
         return ResponseEntity.ok("If that email is registered and not yet verified, a verification link has been sent");
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestBody @Valid ForgotPasswordRequest req) {
+        authService.forgotPassword(req.getEmail());
+        return ResponseEntity.ok("If that email belongs to an active account, a password reset link has been sent");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody @Valid ResetPasswordRequest req) {
+        authService.resetPassword(req.getToken(), req.getNewPassword());
+        return ResponseEntity.ok("Password reset; please log in again");
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
             @RequestBody @Valid RefreshTokenRequest req, HttpServletRequest request) {
@@ -80,11 +94,15 @@ public class AuthController {
         return request.getHeader("User-Agent");
     }
 
-    /** Prefers the gateway-forwarded client IP over the immediate socket peer (the gateway, behind a reverse proxy). */
+    /**
+     * The last X-Forwarded-For entry is the address the api-gateway itself saw and appended; earlier entries are
+     * whatever the client sent and cannot be trusted.
+     */
     private String clientIpOf(HttpServletRequest request) {
         String forwardedFor = request.getHeader("X-Forwarded-For");
         if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
+            String[] hops = forwardedFor.split(",");
+            return hops[hops.length - 1].trim();
         }
         return request.getRemoteAddr();
     }

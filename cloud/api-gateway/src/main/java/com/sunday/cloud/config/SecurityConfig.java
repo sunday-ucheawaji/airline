@@ -1,5 +1,6 @@
 package com.sunday.cloud.config;
 
+import com.sunday.cloud.security.AccessTokenRevocationCheck;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -196,6 +197,8 @@ public class SecurityConfig {
                                 "/api/users",
                                 "/api/users/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}",
                                 "/api/users/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/roles").hasAuthority(USER_READ)
+                        .pathMatchers(HttpMethod.PUT, "/api/users/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/status").hasAuthority(USER_DISABLE)
+                        .pathMatchers(HttpMethod.POST, "/api/users/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/unlock").hasAuthority(USER_DISABLE)
                         .pathMatchers(HttpMethod.POST, "/api/roles/{roleId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/users/{userId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}").hasAuthority(USER_ROLE_ASSIGN)
                         .pathMatchers(HttpMethod.DELETE, "/api/roles/{roleId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/users/{userId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}").hasAuthority(USER_ROLE_REVOKE)
                         .pathMatchers(HttpMethod.GET, "/api/roles/**", "/api/permissions/**").hasAnyAuthority(USER_ROLE_ASSIGN, USER_ROLE_REVOKE)
@@ -244,7 +247,8 @@ public class SecurityConfig {
     @Bean
     public ReactiveJwtDecoder jwtDecoder(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.issuer}") String issuer) {
+            @Value("${jwt.issuer}") String issuer,
+            AccessTokenRevocationCheck revocationCheck) {
 
         byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (secretBytes.length < MIN_SECRET_BYTES) {
@@ -259,7 +263,7 @@ public class SecurityConfig {
         OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefaultWithIssuer(issuer));
         decoder.setJwtValidator(validator);
-        return decoder;
+        return token -> decoder.decode(token).flatMap(revocationCheck::check);
     }
 
     /**

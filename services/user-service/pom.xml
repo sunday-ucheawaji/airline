@@ -115,7 +115,13 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Redis: only for UserAccessLock, shared with airline-core-service (staff/member mutual exclusion) -->
+        <!-- Kafka: verification and password-reset emails are handed to notification-service -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-kafka</artifactId>
+        </dependency>
+
+        <!-- Redis: UserAccessLock (shared with airline-core-service) and the access-token revocation the gateway checks -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>

@@ -1,5 +1,8 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.services.enums.RoleStatus;
+import com.sunday.services.enums.PermissionScope;
+import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.constants.PlatformRoles;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
@@ -44,6 +47,8 @@ public class RoleServiceImpl implements RoleService {
     private final UserPlatformRoleRepository userPlatformRoleRepository;
     private final MembershipClient membershipClient;
     private final UserAccessLock userAccessLock;
+    private final AccessTokenRevoker accessTokenRevoker;
+
 
     @Override
     public List<Role> getRoles() {
@@ -67,15 +72,17 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public Role createRole(RoleRequest request) {
-        if (roleRepository.findByName(request.getName()) != null) {
-            throw new OperationNotPermittedException(String.format(ErrorMessageUtil.ROLE_ALREADY_EXISTS, request.getName()));
+        RoleScope scope = request.getScope() != null ? RoleScope.valueOf(request.getScope()) : RoleScope.AIRLINE;
+        if (scope == RoleScope.BASELINE) {
+            throw new BadRequestException(ErrorMessageUtil.ROLE_BASELINE_NOT_CREATABLE);
         }
-
+        if (roleRepository.findByName(request.getName()) != null) {
+            throw new ConflictException(String.format(ErrorMessageUtil.ROLE_ALREADY_EXISTS, request.getName()));
+        }
         Role role = new Role();
         role.setName(request.getName());
         role.setDescription(request.getDescription());
-        role.setScope(request.getScope() != null ? RoleScope.valueOf(request.getScope()) : RoleScope.AIRLINE);
-
+        role.setScope(scope);
         return roleRepository.save(role);
     }
 
@@ -97,6 +104,8 @@ public class RoleServiceImpl implements RoleService {
         for (UUID permissionId : request.getPermissionIds()) {
             Permission permission = permissionRepository.findById(permissionId)
                     .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PERMISSION_NOT_FOUND_BY_ID, permissionId)));
+            requireGrantableTo(permission, role);
+
 
             if (!rolePermissionRepository.existsByRoleIdAndPermissionId(roleId, permissionId)) {
                 RolePermission rolePermission = new RolePermission();
@@ -163,6 +172,10 @@ public class RoleServiceImpl implements RoleService {
         if (userPlatformRoleRepository.existsByUserIdAndRoleId(userId, roleId)) {
             return;
         }
+        if (role.getStatus() != RoleStatus.ACTIVE) {
+            throw new ConflictException(String.format(ErrorMessageUtil.ROLE_NOT_ACTIVE, role.getName()));
+        }
+
 
         userAccessLock.lockForCurrentTransaction(userId);
         requireNotAirlineMember(userId);
@@ -177,20 +190,35 @@ public class RoleServiceImpl implements RoleService {
         grant.setUser(user);
         grant.setRole(role);
         userPlatformRoleRepository.save(grant);
+        accessTokenRevoker.revokeAll(userId);
     }
 
     @Override
+    @Transactional
     public void unassignPlatformRoleFromUser(UUID roleId, UUID userId, Collection<String> grantorRoles) {
         Role role = getRoleById(roleId);
         requireSuperAdminForSuperAdminRole(role, grantorRoles);
-        getUserOrThrow(userId);
-
+        User user = getUserOrThrow(userId);
         UserPlatformRole grant = userPlatformRoleRepository
                 .findByUserIdAndRoleId(userId, roleId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.PLATFORM_ROLE_NOT_ASSIGNED_TO_USER, roleId, userId)));
-
+        if (PlatformRoles.SUPER_ADMIN.equals(role.getName()) && user.getStatus() == UserStatus.ACTIVE
+                && userPlatformRoleRepository.countByRoleNameAndUserStatus(PlatformRoles.SUPER_ADMIN, UserStatus.ACTIVE) <= 1) {
+            throw new ConflictException(ErrorMessageUtil.LAST_SUPER_ADMIN);
+        }
         userPlatformRoleRepository.delete(grant);
+        accessTokenRevoker.revokeAll(userId);
+    }
+
+    /** PLATFORM permissions travel in the JWT, so they go to PLATFORM/BASELINE roles; AIRLINE ones only to AIRLINE roles. */
+    private static void requireGrantableTo(Permission permission, Role role) {
+        boolean airlineRole = role.getScope() == RoleScope.AIRLINE;
+        boolean airlinePermission = permission.getScope() == PermissionScope.AIRLINE;
+        if (airlineRole != airlinePermission) {
+            throw new ConflictException(String.format(ErrorMessageUtil.PERMISSION_SCOPE_MISMATCH,
+                    permission.getName(), permission.getScope(), role.getScope(), role.getName()));
+        }
     }
 
     private void requireSuperAdminForSuperAdminRole(Role role, Collection<String> grantorRoles) {

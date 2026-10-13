@@ -56,6 +56,7 @@ public final class GatewayPermissions {
     public static final String AIRLINE_IDENTITY_CHANGE_REVIEW = "AIRLINE_IDENTITY_CHANGE_REVIEW";
 
     public static final String USER_READ = "USER_READ";
+    public static final String USER_DISABLE = "USER_DISABLE";
     public static final String USER_ROLE_ASSIGN = "USER_ROLE_ASSIGN";
     public static final String USER_ROLE_REVOKE = "USER_ROLE_REVOKE";
     public static final String ACCESS_MANAGE = "ACCESS_MANAGE";

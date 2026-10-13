@@ -24,11 +24,19 @@ spring:
       port: ${SPRING_DATA_REDIS_PORT:6379}
       timeout: 2000ms
 
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_URL}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      acks: all
+
 auth:
   verification-token-ttl-hours: ${VERIFICATION_TOKEN_TTL_HOURS}
   refresh-token-ttl-days: ${REFRESH_TOKEN_TTL_DAYS}
   max-failed-login-attempts: ${MAX_FAILED_LOGIN_ATTEMPTS}
   account-lockout-minutes: ${ACCOUNT_LOCKOUT_MINUTES}
+  password-reset-token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
 
 jwt:
   secret: ${JWT_SECRET_KEY}

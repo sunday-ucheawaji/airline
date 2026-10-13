@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.services.repository.PasswordResetTokenRepository;
 import com.sunday.services.repository.EmailVerificationTokenRepository;
 import com.sunday.services.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class TokenCleanupScheduler {
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Scheduled(cron = "${auth.token-cleanup-cron:0 0 3 * * *}")
     @Transactional
@@ -26,5 +28,6 @@ public class TokenCleanupScheduler {
         LocalDateTime now = LocalDateTime.now();
         refreshTokenRepository.deleteByExpiresAtBefore(now);
         emailVerificationTokenRepository.deleteByExpiresAtBefore(now);
+        passwordResetTokenRepository.deleteByExpiresAtBefore(now);
     }
 }

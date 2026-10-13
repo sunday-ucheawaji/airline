@@ -19,6 +19,7 @@ public class RegisterRequest {
 
     @NotBlank
     @Size(min = 8, message = ErrorMessageUtil.PASSWORD_MIN_LENGTH)
+    @Size(max = 72, message = ErrorMessageUtil.PASSWORD_TOO_LONG)
     private String password;
 
     @NotBlank

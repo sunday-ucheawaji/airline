@@ -21,6 +21,17 @@ public class ErrorMessageUtil {
     public static final String EMAIL_NOT_VERIFIED = "Please verify your email before logging in";
     public static final String ACCOUNT_LOCKED = "Account is temporarily locked due to repeated failed login attempts. Try again later.";
     public static final String ACCOUNT_NOT_ACTIVE = "Account is not active";
+    public static final String PASSWORD_TOO_LONG = "Password must be at most 72 bytes";
+    public static final String CURRENT_PASSWORD_INCORRECT = "Current password is incorrect";
+    public static final String PASSWORD_UNCHANGED = "The new password must differ from the current one";
+    public static final String USER_STATUS_INVALID = "Status must be ACTIVE or SUSPENDED";
+    public static final String USER_STATUS_SELF_CHANGE_FORBIDDEN = "You cannot change the status of your own account";
+    public static final String USER_STATUS_SUPER_ADMIN_ONLY = "Only a super admin can change the status of a super admin";
+    public static final String LAST_SUPER_ADMIN = "The last active super admin cannot be removed or suspended";
+    public static final String ACCESS_REVOCATION_UNAVAILABLE = "Cannot revoke the user's access tokens right now; try again";
+
+    // ---------- Password reset ----------
+    public static final String INVALID_PASSWORD_RESET_TOKEN = "Invalid or expired password reset token";
 
     // ---------- Email verification ----------
     public static final String INVALID_VERIFICATION_TOKEN = "Invalid verification token";
@@ -39,6 +50,11 @@ public class ErrorMessageUtil {
     public static final String ROLE_ALREADY_EXISTS = "Role with name %s already exists";
     public static final String PERMISSION_NOT_FOUND_BY_ID = "Permission not found with id: %s";
     public static final String PERMISSION_ALREADY_EXISTS = "Permission with name %s already exists";
+    public static final String PERMISSION_NAME_RESERVED_PREFIX = "Permission names cannot start with ROLE_ (reserved for roles in the access token)";
+    public static final String PERMISSION_SCOPE_INVALID = "Permission scope must be PLATFORM or AIRLINE";
+    public static final String PERMISSION_SCOPE_MISMATCH = "Permission %s is %s-scoped and cannot be granted to %s role %s";
+    public static final String ROLE_BASELINE_NOT_CREATABLE = "BASELINE roles apply to every non-staff user and can only be created by a migration";
+    public static final String ROLE_NOT_ACTIVE = "Role %s is not active and cannot be granted";
     public static final String PERMISSION_NOT_ASSIGNED_TO_ROLE = "Permission %s is not assigned to role %s";
     public static final String ROLE_NOT_PLATFORM_SCOPED =
             "Role %s is airline-scoped and cannot be assigned directly to a user; airline-scoped roles are granted through airline membership";

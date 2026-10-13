@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import com.sunday.services.enums.UserStatus;
 import com.sunday.services.model.UserPlatformRole;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,4 +20,6 @@ public interface UserPlatformRoleRepository extends JpaRepository<UserPlatformRo
     Optional<UserPlatformRole> findByUserIdAndRoleId(UUID userId, UUID roleId);
 
     boolean existsByUserIdAndRoleId(UUID userId, UUID roleId);
+
+    long countByRoleNameAndUserStatus(String roleName, UserStatus status);
 }

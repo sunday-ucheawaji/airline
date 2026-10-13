@@ -49,10 +49,9 @@ public class RedisConfig implements CachingConfigurer {
                 // Airline data — 2 h (status changes occasionally)
                 CacheUtil.AIRLINES_BY_USER, defaults.entryTtl(Duration.ofHours(2)),
                 CacheUtil.AIRLINES_DROPDOWN, defaults.entryTtl(Duration.ofHours(2)),
-                // roleId -> permission names — ~4 roles system-wide, near-universal hit rate.
-                // No cross-service eviction trigger exists (a permission change happens in
-                // user-service), so staleness is TTL-bounded only, same trade-off as the airline caches.
-                CacheUtil.ROLE_PERMISSIONS, defaults.entryTtl(Duration.ofHours(6))
+                // roleId -> permission names. A permission change in user-service is not pushed here, so this TTL
+                // is how long it takes to reach airline permission checks; kept short, the lookup is cheap.
+                CacheUtil.ROLE_PERMISSIONS, defaults.entryTtl(Duration.ofMinutes(5))
         );
 
         return RedisCacheManager.builder(factory)

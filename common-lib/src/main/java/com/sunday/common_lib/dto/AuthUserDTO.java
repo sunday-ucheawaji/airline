@@ -16,5 +16,6 @@ public class AuthUserDTO {
     private String middleName;
     private String phoneNumber;
     private Boolean emailVerified;
+    private String status;
     private LocalDateTime lastLogin;
 }

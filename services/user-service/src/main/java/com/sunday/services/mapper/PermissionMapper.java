@@ -15,6 +15,7 @@ public class PermissionMapper {
         dto.setId(permission.getId());
         dto.setName(permission.getName());
         dto.setDescription(permission.getDescription());
+        dto.setScope(permission.getScope().name());
         return dto;
     }
 

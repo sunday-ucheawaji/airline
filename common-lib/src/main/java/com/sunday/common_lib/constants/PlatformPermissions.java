@@ -87,7 +87,8 @@ public final class PlatformPermissions {
     public static final String AIRLINE_BAN = "AIRLINE_BAN";
     public static final String LOCATION_MANAGE = "LOCATION_MANAGE";
     public static final String USER_CREATE = "USER_CREATE"; // reserved
-    public static final String USER_DISABLE = "USER_DISABLE"; // reserved
+    /** Suspend or reactivate an account, and lift a login lockout. */
+    public static final String USER_DISABLE = "USER_DISABLE";
     public static final String TENANT_READ = "TENANT_READ"; // reserved
     public static final String TENANT_UPDATE = "TENANT_UPDATE"; // reserved
     public static final String SYSTEM_CONFIGURATION_UPDATE = "SYSTEM_CONFIGURATION_UPDATE"; // reserved
