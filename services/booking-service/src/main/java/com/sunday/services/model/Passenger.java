@@ -9,6 +9,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.hibernate.annotations.UuidGenerator;
@@ -16,7 +17,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "passengers")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -54,11 +56,15 @@ public class Passenger {
     private String nationality;
     private String frequentFlyerNumber;
 
-    // Cross-service ref: User (user-service)
     @Column(name = "primary_user_id")
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID primaryUserId;
 
+    @Column(name = "seat_instance_id")
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID seatInstanceId;
+
+    @Builder.Default
     private Boolean requiresWheelchairAssistance = false;
     private String dietaryPreferences;
     private String medicalConditions;
@@ -86,8 +92,7 @@ public class Passenger {
     }
 
     public int getAge() {
-
-        return LocalDate.now().getYear() - dateOfBirth.getYear();
+        return Period.between(dateOfBirth, LocalDate.now()).getYears();
     }
 
     public boolean isAdult() {

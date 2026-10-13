@@ -220,6 +220,7 @@ public class SecurityConfig {
                         // Bookings, tickets, passengers: owner and airline checks happen inside booking-service. Customer care
                         // reads a booking through the platform-only support path, with passenger data masked.
                         .pathMatchers(HttpMethod.GET, "/api/bookings/support/**").hasAuthority(BOOKING_SUPPORT_READ)
+                        .pathMatchers(HttpMethod.POST, "/api/bookings").hasAuthority(BOOKING_CREATE_OWN)
                         .pathMatchers("/api/bookings/**", "/api/tickets/**", "/api/passengers/**").authenticated()
 
                         // Fares/rules/baggage: gateway only checks authentication — FARE_* permissions are checked

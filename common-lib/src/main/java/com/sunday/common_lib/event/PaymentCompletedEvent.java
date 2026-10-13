@@ -18,6 +18,7 @@ public class PaymentCompletedEvent {
     private UUID bookingId;
     private UUID userId;
     private BigDecimal amount;
+    private String currency;
     private String transactionId;
     private String providerPaymentId;
     private LocalDateTime paidAt;

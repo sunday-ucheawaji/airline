@@ -7,6 +7,7 @@ import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.model.Fare;
+import com.sunday.services.model.FareRules;
 import com.sunday.services.repository.FareRepository;
 import com.sunday.services.service.FareQuoteService;
 import com.sunday.services.validation.FareValidityPolicy;
@@ -41,6 +42,7 @@ public class FareQuoteServiceImpl implements FareQuoteService {
             throw new ConflictException(reason);
         });
 
+        FareRules rules = fare.getFareRules();
         return FareQuoteResponse.builder()
                 .fareId(fare.getId())
                 .version(fare.getVersion())
@@ -50,8 +52,11 @@ public class FareQuoteServiceImpl implements FareQuoteService {
                 .taxesAndFees(fare.getTaxesAndFees())
                 .airlineFees(fare.getAirlineFees())
                 .totalPrice(fare.getTotalAmount())
-                .fareRulesId(fare.getFareRules() != null ? fare.getFareRules().getId() : null)
+                .fareRulesId(rules != null ? rules.getId() : null)
                 .baggagePolicyId(fare.getBaggagePolicy() != null ? fare.getBaggagePolicy().getId() : null)
+                .refundable(rules != null && Boolean.TRUE.equals(rules.getIsRefundable()))
+                .cancellationFee(rules != null ? rules.getCancellationFee() : null)
+                .refundDeadlineDays(rules != null ? rules.getRefundDeadlineDays() : null)
                 .build();
     }
 }

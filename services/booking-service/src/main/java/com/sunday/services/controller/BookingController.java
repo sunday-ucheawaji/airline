@@ -9,11 +9,11 @@ import com.sunday.common_lib.payload.response.PaymentInitiateResponse;
 import com.sunday.services.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -55,30 +55,25 @@ public class BookingController {
     }
 
     @GetMapping("/airline")
-    public ResponseEntity<List<BookingResponse>> getBookingsByAirline(
+    public ResponseEntity<Page<BookingResponse>> getBookingsByAirline(
             @RequestParam UUID airlineId,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) BookingStatus status,
             @RequestParam(required = false) UUID flightInstanceId,
             @RequestParam(defaultValue = "DESC") String sortDirection,
-            @RequestHeader("X-User-Id") UUID userId
-    ) {
-        List<BookingResponse> responses = bookingService.getBookingsByAirline(
-                userId,
-                airlineId,
-                search,
-                status,
-                flightInstanceId,
-                sortDirection
-        );
-        return ResponseEntity.ok(responses);
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(bookingService.getBookingsByAirline(
+                userId, airlineId, search, status, flightInstanceId, sortDirection, page, size));
     }
 
     @GetMapping("/user/history")
-    public ResponseEntity<List<BookingResponse>> getBookingsByUser(
+    public ResponseEntity<Page<BookingResponse>> getBookingsByUser(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestHeader("X-User-Id") UUID userId) {
-        List<BookingResponse> responses = bookingService.getBookingsByUser(userId);
-        return ResponseEntity.ok(responses);
+        return ResponseEntity.ok(bookingService.getBookingsByUser(userId, page, size));
     }
 
     @PatchMapping("/{id}/cancel")
@@ -87,14 +82,6 @@ public class BookingController {
             @RequestHeader("X-User-Id") UUID userId) {
         BookingResponse response = bookingService.cancelBooking(id, userId);
         return ResponseEntity.ok(response);
-    }
-
-    @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
-    public ResponseEntity<Void> deleteBooking(
-            @PathVariable UUID id,
-            @RequestHeader("X-User-Id") UUID userId) {
-        bookingService.deleteBooking(id, userId);
-        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/count/flight/{flightInstanceId}")

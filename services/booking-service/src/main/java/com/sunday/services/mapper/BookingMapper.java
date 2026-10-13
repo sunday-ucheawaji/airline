@@ -1,24 +1,29 @@
 package com.sunday.services.mapper;
 
-import java.util.UUID;
 import com.sunday.common_lib.payload.request.BookingRequest;
-import com.sunday.common_lib.payload.response.*;
+import com.sunday.common_lib.payload.response.AirlineResponse;
+import com.sunday.common_lib.payload.response.AirportResponse;
+import com.sunday.common_lib.payload.response.BookingResponse;
+import com.sunday.common_lib.payload.response.FareResponse;
+import com.sunday.common_lib.payload.response.FlightCabinAncillaryResponse;
+import com.sunday.common_lib.payload.response.FlightInstanceResponse;
+import com.sunday.common_lib.payload.response.FlightMealResponse;
+import com.sunday.common_lib.payload.response.FlightResponse;
+import com.sunday.common_lib.payload.response.PassengerResponse;
+import com.sunday.common_lib.payload.response.PaymentDTO;
+import com.sunday.common_lib.payload.response.SeatInstanceResponse;
+import com.sunday.common_lib.payload.response.TicketResponse;
 import com.sunday.services.model.Booking;
 import com.sunday.services.model.Passenger;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 public class BookingMapper {
 
-    public static Booking toEntity(
-            BookingRequest request,
-            UUID userId,
-            Set<Passenger> passengers,
-            String bookingReference
-    ) {
+    public static Booking toEntity(BookingRequest request, UUID userId, Set<Passenger> passengers, String bookingReference) {
         return Booking.builder()
                 .bookingReference(bookingReference)
                 .userId(userId)
@@ -36,76 +41,62 @@ public class BookingMapper {
                 .build();
     }
 
-    public static void updateEntityFromRequest(
-            BookingRequest request, Booking booking,
-            Set<Passenger> passengers) {
-        booking.setFlightInstanceId(request.getFlightInstanceId());
-        booking.setFlightId(request.getFlightId());
-        booking.setFareId(request.getFareId());
-        booking.setPassengers(passengers);
-        booking.setLastModified(LocalDateTime.now());
-    }
-
-    public static BookingResponse
-    toResponse(Booking booking,
-                                             PaymentDTO paymentDTO,
-                                             FareResponse fareResponse,
-                                             FlightResponse flightResponse,
-                                             FlightInstanceResponse flightInstanceResponse,
+    public static BookingResponse toResponse(Booking booking,
+                                             PaymentDTO payment,
+                                             FareResponse fare,
+                                             FlightResponse flight,
+                                             FlightInstanceResponse flightInstance,
                                              List<FlightCabinAncillaryResponse> ancillaries,
                                              List<FlightMealResponse> meals,
                                              List<SeatInstanceResponse> seats) {
-        List<PassengerResponse> passengerResponses = booking.getPassengers() != null ?
-                booking.getPassengers().stream()
-                        .map(PassengerMapper::toResponse)
-                        .collect(Collectors.toList()) : null;
-
-        List<TicketResponse> ticketResponses = booking.getTickets() != null ?
-                booking.getTickets().stream()
-                        .map(TicketMapper::toResponse)
-                        .collect(Collectors.toList()) : null;
-
+        List<PassengerResponse> passengers = booking.getPassengers().stream()
+                .map(PassengerMapper::toResponse)
+                .toList();
+        List<TicketResponse> tickets = booking.getTickets().stream()
+                .map(TicketMapper::toResponse)
+                .toList();
+        AirportResponse departure = flight != null ? flight.getDepartureAirport() : null;
+        AirportResponse arrival = flight != null ? flight.getArrivalAirport() : null;
+        AirlineResponse airline = flight != null ? flight.getAirline() : null;
 
         return BookingResponse.builder()
                 .id(booking.getId())
                 .bookingReference(booking.getBookingReference())
                 .userId(booking.getUserId())
-//                flight details
-                .flightId(booking.getFlightInstanceId())
-                .flightNumber(flightResponse != null ? flightResponse.getFlightNumber() : null)
-                .flightName(flightResponse != null && flightResponse.getArrivalAirport() != null && flightResponse.getDepartureAirport() != null
-                        ? flightResponse.getDepartureAirport().getCity().getName() + " - " + flightResponse.getArrivalAirport().getCity().getName()
-                        : null)
-                .departureTime(flightInstanceResponse != null ? flightInstanceResponse.getDepartureDateTime() : null)
-                .arrivalTime(flightInstanceResponse != null ? flightInstanceResponse.getArrivalDateTime() : null)
-                .flightDuration(flightInstanceResponse != null ? flightInstanceResponse.getFormattedDuration() : null)
-//                airport details
-                .departureAirport(flightResponse != null && flightResponse.getDepartureAirport() != null ? flightResponse.getDepartureAirport().getDetailedName() : null)
-                .arrivalAirport(flightResponse != null && flightResponse.getArrivalAirport() != null ? flightResponse.getArrivalAirport().getName() : null)
+                .flightId(booking.getFlightId())
+                .flightNumber(flight != null ? flight.getFlightNumber() : null)
+                .flightName(cityName(departure) != null && cityName(arrival) != null
+                        ? cityName(departure) + " - " + cityName(arrival) : null)
+                .departureTime(flightInstance != null ? flightInstance.getDepartureDateTime() : null)
+                .arrivalTime(flightInstance != null ? flightInstance.getArrivalDateTime() : null)
+                .flightDuration(flightInstance != null ? flightInstance.getFormattedDuration() : null)
+                .departureAirport(departure != null ? departure.getName() : null)
+                .arrivalAirport(arrival != null ? arrival.getName() : null)
                 .status(booking.getStatus())
                 .bookingDate(booking.getBookingDate())
                 .lastModified(booking.getLastModified())
-                .passengers(passengerResponses)
-                .tickets(ticketResponses)
-                .fareId(booking.getFareId())
-                .totalPassengers(booking.getPassengers() != null ? booking.getPassengers().size() : 0)
+                .passengers(passengers)
+                .tickets(tickets)
+                .totalPassengers(passengers.size())
                 .ancillaries(ancillaries)
                 .meals(meals)
                 .seatInstances(seats)
-                .paymentStatus(paymentDTO != null ? paymentDTO.getStatus() : null)
-//                fare details
-                .fareName(fareResponse != null ? fareResponse.getName() : null)
-                .fareBaseFare(fareResponse != null ? fareResponse.getBaseFare() : null)
-                .fareTaxesAndFees(fareResponse != null ? fareResponse.getTaxesAndFees() : null)
-                .fareAirlineFees(fareResponse != null ? fareResponse.getAirlineFees() : null)
-                .totalAmount(fareResponse!=null?fareResponse.getTotalPrice():null)
-
-//                arline details
-                .airlineName(flightResponse!=null? flightResponse.getAirline().getName():null)
-                .airlineLogo(flightResponse!=null?flightResponse.getAirline().getLogoUrl():null)
-//                contact information
+                .paymentStatus(payment != null ? payment.getStatus() : null)
+                .fareId(booking.getFareId())
+                .fareName(fare != null ? fare.getName() : null)
+                .fareBaseFare(booking.getFareBaseAmount())
+                .fareTaxesAndFees(booking.getFareTaxAmount())
+                .fareAirlineFees(booking.getFareFeeAmount())
+                .totalAmount(booking.getTotalAmount())
+                .refundAmount(booking.getRefundAmount())
+                .currency(booking.getFareCurrency())
+                .airlineName(airline != null ? airline.getName() : null)
+                .airlineLogo(airline != null ? airline.getLogoUrl() : null)
                 .contactInfo(booking.getContactInfo())
-
                 .build();
+    }
+
+    private static String cityName(AirportResponse airport) {
+        return airport != null && airport.getCity() != null ? airport.getCity().getName() : null;
     }
 }

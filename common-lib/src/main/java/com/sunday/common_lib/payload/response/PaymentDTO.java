@@ -25,6 +25,7 @@ public class PaymentDTO {
     private PaymentStatus status;
     private PaymentGateway gateway;
     private BigDecimal amount;
+    private String currency;
     private String transactionId;
     private String gatewayPaymentId;
     private String gatewayOrderId;

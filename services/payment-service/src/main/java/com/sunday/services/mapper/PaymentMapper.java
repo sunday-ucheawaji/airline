@@ -16,6 +16,7 @@ public class PaymentMapper {
         dto.setId(payment.getId());
         dto.setGateway(payment.getProvider());
         dto.setAmount(payment.getAmount());
+        dto.setCurrency(payment.getCurrency());
         dto.setTransactionId(payment.getTransactionId());
         dto.setPaymentMethod(payment.getMethod());
         dto.setStatus(payment.getStatus());

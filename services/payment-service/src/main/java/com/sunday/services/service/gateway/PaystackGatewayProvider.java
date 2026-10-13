@@ -53,7 +53,8 @@ public class PaystackGatewayProvider implements PaymentGatewayProvider {
             String reference = "PS_" + payment.getId() + "_" + UUID.randomUUID().toString().substring(0, 8);
             Map<String, Object> body = Map.of(
                     "email", payer.getEmail(),
-                    "amount", MoneyUtil.toSmallestUnit(payment.getAmount()),
+                    "amount", MoneyUtil.toSmallestUnit(payment.getAmount(), payment.getCurrency()),
+                    "currency", payment.getCurrency(),
                     "reference", reference,
                     "callback_url", callbackBaseUrl + "/booking-success/" + payment.getBookingId(),
                     "metadata", Map.of("payment_id", String.valueOf(payment.getId()), "booking_id", String.valueOf(payment.getBookingId())));
@@ -87,8 +88,9 @@ public class PaystackGatewayProvider implements PaymentGatewayProvider {
                     .retrieve()
                     .body(String.class);
             JSONObject data = new JSONObject(json).getJSONObject("data");
+            String currency = data.optString("currency");
             return new ProviderPaymentStatus(providerReference, mapStatus(data.optString("status")),
-                    MoneyUtil.fromSmallestUnit(data.optLong("amount")));
+                    MoneyUtil.fromSmallestUnit(data.optLong("amount"), currency), currency);
         } catch (Exception e) {
             throw new PaymentException(String.format(ErrorMessageUtil.PAYSTACK_FETCH_PAYMENT_FAILED, e.getMessage()));
         }
@@ -120,13 +122,14 @@ public class PaystackGatewayProvider implements PaymentGatewayProvider {
             JSONObject data = root.getJSONObject("data");
             String reference = data.optString("reference");
             String status = data.optString("status");
-            long amountInKobo = data.optLong("amount");
+            long amountInSmallestUnit = data.optLong("amount");
+            String currency = data.optString("currency");
             JSONObject metadata = data.optJSONObject("metadata");
             String internalPaymentIdStr = metadata != null ? metadata.optString("payment_id", null) : null;
             UUID internalPaymentId = internalPaymentIdStr == null || internalPaymentIdStr.isBlank()
                     ? null : UUID.fromString(internalPaymentIdStr);
             return new ProviderWebhookEvent(eventType, reference, mapStatus(status),
-                    MoneyUtil.fromSmallestUnit(amountInKobo), internalPaymentId);
+                    MoneyUtil.fromSmallestUnit(amountInSmallestUnit, currency), internalPaymentId);
         } catch (Exception e) {
             throw new PaymentException(String.format(ErrorMessageUtil.PAYSTACK_WEBHOOK_PROCESSING_FAILED, e.getMessage()));
         }
@@ -138,7 +141,7 @@ public class PaystackGatewayProvider implements PaymentGatewayProvider {
         try {
             Map<String, Object> body = Map.of(
                     "transaction", payment.getProviderPaymentId(),
-                    "amount", MoneyUtil.toSmallestUnit(refundAmount));
+                    "amount", MoneyUtil.toSmallestUnit(refundAmount, payment.getCurrency()));
             String json = restClient.post()
                     .uri("/refund")
                     .headers(h -> h.setBearerAuth(secretKey))

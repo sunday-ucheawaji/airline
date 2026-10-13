@@ -25,4 +25,7 @@ public class FareQuoteResponse {
     private BigDecimal totalPrice;
     private UUID fareRulesId;
     private UUID baggagePolicyId;
+    private Boolean refundable;
+    private BigDecimal cancellationFee;
+    private Integer refundDeadlineDays;
 }

@@ -33,10 +33,10 @@ public interface PaymentService {
     PaymentDTO refundPayment(UUID paymentId, UUID userId, BigDecimal amount);
 
     /**
-     * A full refund the platform itself owes, with no staff decision behind it (booking-service: the seats were gone
-     * when the payment completed). Idempotent: an already refunded payment is returned as it is.
+     * A refund the platform itself owes, with no staff decision behind it (booking-service: seats gone, late or
+     * duplicate payments, cancellations within fare rules). amount null means a full refund. Idempotent: an already refunded payment is returned as it is.
      */
-    PaymentDTO refundPaymentAsSystem(UUID paymentId);
+    PaymentDTO refundPaymentAsSystem(UUID paymentId, BigDecimal amount);
 
     PaymentDTO getPaymentByBookingId(UUID bookingId);
 

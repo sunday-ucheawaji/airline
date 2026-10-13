@@ -37,17 +37,14 @@ public class Booking {
     @Column(unique = true, nullable = false)
     private String bookingReference;
 
-    // Cross-service ref: User (user-service)
     @Column(name = "user_id")
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID userId;
 
-    // Cross-service ref: Flight (flight-ops-service)
     @Column(name = "flight_id")
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID flightId;
 
-    // Cross-service ref: FlightInstance (flight-ops-service)
     @Column(name = "flight_instance_id")
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID flightInstanceId;
@@ -56,17 +53,17 @@ public class Booking {
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID airlineId;
 
+    @Builder.Default
     private TripType tripType = TripType.ONE_WAY;
 
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     private CabinClassType cabinClass = CabinClassType.ECONOMY;
 
-    // Cross-service ref: Fare (pricing-service)
     @Column(name = "fare_id")
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID fareId;
 
-    // Fare as priced at purchase time, so a later repricing or rule edit does not change this booking.
     private Long fareVersion;
     private String fareCurrency;
     private BigDecimal fareBaseAmount;
@@ -77,31 +74,33 @@ public class Booking {
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID fareBaggagePolicyId;
     private LocalDate fareTravelDate;
+    private Boolean fareRefundable;
+    private BigDecimal fareCancellationFee;
+    private Integer fareRefundDeadlineDays;
 
-    // What the customer owes for this booking, fixed at creation. Payment must match it.
     private BigDecimal totalAmount;
+
+    private BigDecimal refundAmount;
 
     private boolean flexibleTicket;
     private LocalDateTime ticketTimeLimit;
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private Set<Passenger> passengers = new HashSet<>();
 
-    // Cross-service ref: SeatInstance IDs (seat-service)
     @ElementCollection
     @CollectionTable(name = "booking_seat_instances", joinColumns = @JoinColumn(name = "booking_id"))
     @Column(name = "seat_instance_id")
     @JdbcTypeCode(SqlTypes.CHAR)
     private List<UUID> seatInstanceIds;
 
-    // Cross-service ref: FlightCabinAncillary IDs (ancillary-service)
     @ElementCollection
     @CollectionTable(name = "booking_ancillaries", joinColumns = @JoinColumn(name = "booking_id"))
     @Column(name = "ancillary_id")
     @JdbcTypeCode(SqlTypes.CHAR)
     private List<UUID> ancillaryIds;
 
-    // Cross-service ref: FlightMeal IDs (ancillary-service)
     @ElementCollection
     @CollectionTable(name = "booking_meals",
             joinColumns = @JoinColumn(name = "booking_id"))
@@ -110,7 +109,8 @@ public class Booking {
     private List<UUID> mealIds;
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
-    private Set<Ticket> tickets=new HashSet<>();
+    @Builder.Default
+    private Set<Ticket> tickets = new HashSet<>();
 
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID paymentId;

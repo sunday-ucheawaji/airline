@@ -11,6 +11,7 @@ import com.sunday.common_lib.payload.response.CityResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
 import com.sunday.common_lib.payload.response.FlightInstanceResponse;
 import com.sunday.common_lib.event.PaymentCompletedEvent;
+import com.sunday.services.config.BookingPaymentProperties;
 import com.sunday.services.model.Booking;
 import com.sunday.services.model.Passenger;
 import com.sunday.services.model.Ticket;
@@ -18,8 +19,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +34,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class BookingEventProducer {
 
+    private static final String BOOKING_CONFIRMED = "booking.confirmed";
+    private static final String BOOKING_CANCELLED = "booking.cancelled";
+
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final BookingPaymentProperties paymentProperties;
 
     public void sendBookingConfirmed(Booking booking,
                                      PaymentCompletedEvent payment,
@@ -39,14 +47,12 @@ public class BookingEventProducer {
                                      UserDTO user,
                                      boolean seatsReassigned) {
 
-        // ── Passengers ────────────────────────────────────────────────────────
-        // Build a passengerId → ticketNumber lookup from the Ticket relation
         Map<UUID, String> ticketByPassenger = booking.getTickets().stream()
                 .filter(t -> t.getPassenger() != null)
                 .collect(Collectors.toMap(
                         t -> t.getPassenger().getId(),
                         Ticket::getTicketNumber,
-                        (a, b) -> a   // keep first if duplicate
+                        (a, b) -> a
                 ));
 
         List<PassengerNotificationData> passengers = booking.getPassengers().stream()
@@ -64,11 +70,9 @@ public class BookingEventProducer {
                         .build())
                 .collect(Collectors.toList());
 
-        // ── Contact Info ──────────────────────────────────────────────────────
         String contactEmail = resolveContactEmail(booking);
         String contactPhone = resolveContactPhone(booking);
 
-        // ── Flight Details ─────────────────────────────────────────────────────
         String flightNumber   = flight != null ? flight.getFlightNumber()  : "N/A";
         String airlineName    = flight != null ? flight.getAirlineName()   : "N/A";
         String airlineLogo    = flight != null ? flight.getAirlineLogo()   : null;
@@ -93,9 +97,6 @@ public class BookingEventProducer {
         String arrCityName      = arrCity != null ? arrCity.getName()    : "N/A";
         String arrCountry       = arrCity != null ? arrCity.getCountryName() : "N/A";
 
-        // ── Fare & Baggage ────────────────────────────────────────────────────
-        // BookingConfirmedEvent is a display payload for notification-service's email/SMS templates, not part of
-        // the settlement ledger, so it stays Double; the BigDecimal source values are converted here, once.
         String fareName         = fare != null ? fare.getName()                     : null;
         BigDecimal baseFare     = fare != null ? fare.getBaseFare()                 : null;
         BigDecimal taxes        = fare != null ? fare.getTaxesAndFees()             : null;
@@ -105,7 +106,6 @@ public class BookingEventProducer {
         Integer cbPieces        = bag  != null ? bag.getCabinBaggagePieces()        : null;
         Double  cbWeightPer     = bag  != null ? bag.getCabinBaggageWeightPerPiece() : null;
 
-        // ── Build & Publish ───────────────────────────────────────────────────
         BookingConfirmedEvent event = BookingConfirmedEvent.builder()
                 .bookingId(booking.getId())
                 .bookingReference(booking.getBookingReference())
@@ -114,14 +114,11 @@ public class BookingEventProducer {
                 .cabinClass(booking.getCabinClass() != null ? booking.getCabinClass().name() : "ECONOMY")
                 .tripType(booking.getTripType() != null ? booking.getTripType().name() : "ONE_WAY")
                 .flexibleTicket(booking.isFlexibleTicket())
-                // Contact
                 .userId(booking.getUserId())
                 .userName(user != null ? (user.getFirstName() + " " + user.getLastName()).trim() : "Valued Customer")
                 .contactEmail(contactEmail)
                 .contactPhone(contactPhone)
-                // Passengers
                 .passengers(passengers)
-                // Flight
                 .flightInstanceId(booking.getFlightInstanceId())
                 .flightNumber(flightNumber)
                 .airlineName(airlineName)
@@ -140,23 +137,19 @@ public class BookingEventProducer {
                 .arrivalCountry(arrCountry)
                 .arrivalDateTime(arrTime)
                 .flightDuration(duration)
-                // Payment
                 .totalAmount(payment.getAmount() != null ? payment.getAmount().doubleValue() : null)
-                .currency("INR")
+                .currency(booking.getFareCurrency())
                 .transactionId(payment.getTransactionId())
                 .providerPaymentId(payment.getProviderPaymentId())
-                .paymentGateway("RAZORPAY")
+                .paymentGateway(paymentProperties.gatewayFor(booking.getFareCurrency()).name())
                 .paidAt(payment.getPaidAt())
-                // Fare breakdown
                 .fareName(fareName)
                 .baseFare(baseFare != null ? baseFare.doubleValue() : null)
                 .taxesAndFees(taxes != null ? taxes.doubleValue() : null)
-                // Baggage
                 .checkinBaggagePieces(ciPieces)
                 .checkinBaggageWeightPerPiece(ciWeightPer)
                 .cabinBaggagePieces(cbPieces)
                 .cabinBaggageWeightPerPiece(cbWeightPer)
-                // Policies
                 .freeDateChange(fare != null ? fare.getFreeDateChange()       : null)
                 .partialRefund(fare != null  ? fare.getPartialRefund()        : null)
                 .fullRefund(fare != null     ? fare.getFullRefund()           : null)
@@ -167,14 +160,7 @@ public class BookingEventProducer {
                 .seatsReassigned(seatsReassigned)
                 .build();
 
-        kafkaTemplate.send("booking.confirmed", event);
-        log.info("Published enriched BookingConfirmedEvent for booking={}", booking.getBookingReference());
-    }
-
-    /** A prompt-release optimization on top of seat-service's hold-expiry sweeper, not a substitute for it. */
-    public void sendBookingCancelled(Booking booking) {
-        sendBookingCancelled(booking.getId(), booking.getBookingReference(), booking.getSeatInstanceIds(),
-                resolveContactEmail(booking), resolveContactPhone(booking), null);
+        publishAfterCommit(BOOKING_CONFIRMED, booking.getBookingReference(), event);
     }
 
     public void sendBookingCancelled(Booking booking, String reason) {
@@ -182,31 +168,46 @@ public class BookingEventProducer {
                 resolveContactEmail(booking), resolveContactPhone(booking), reason);
     }
 
-    /** Overload for compensation paths (e.g. BookingSagaRecoverySweeper) that only have the saga's own
-     *  record of what was held, not a persisted Booking row — so no contact info is available either;
-     *  notification-service treats a blank contact as "nothing to notify", not an error. */
-    public void sendBookingCancelled(UUID bookingId, String bookingReference, List<UUID> seatInstanceIds) {
-        sendBookingCancelled(bookingId, bookingReference, seatInstanceIds, null, null, null);
+    public void sendSeatsReleased(UUID bookingId, String bookingReference, List<UUID> seatInstanceIds) {
+        UUID eventBookingId = bookingId != null
+                ? bookingId : UUID.nameUUIDFromBytes(bookingReference.getBytes(StandardCharsets.UTF_8));
+        sendBookingCancelled(eventBookingId, bookingReference, seatInstanceIds, null, null, null);
     }
 
     private void sendBookingCancelled(UUID bookingId, String bookingReference, List<UUID> seatInstanceIds,
-                                       String contactEmail, String contactPhone, String reason) {
-        if (seatInstanceIds == null || seatInstanceIds.isEmpty()) {
+                                      String contactEmail, String contactPhone, String reason) {
+        if (bookingReference == null || seatInstanceIds == null || seatInstanceIds.isEmpty()) {
             return;
         }
         BookingCancelledEvent event = BookingCancelledEvent.builder()
                 .bookingId(bookingId)
                 .bookingReference(bookingReference)
-                .seatInstanceIds(seatInstanceIds)
+                .seatInstanceIds(List.copyOf(seatInstanceIds))
                 .contactEmail(contactEmail)
                 .contactPhone(contactPhone)
                 .reason(reason)
                 .build();
-        kafkaTemplate.send("booking.cancelled", event);
-        log.info("Published BookingCancelledEvent for booking={}", bookingReference);
+        publishAfterCommit(BOOKING_CANCELLED, bookingReference, event);
     }
 
-    /** Prefer booking.contactInfo; fall back to first passenger. Shared by sendBookingConfirmed/sendBookingCancelled. */
+    private void publishAfterCommit(String topic, String key, Object event) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            publish(topic, key, event);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                publish(topic, key, event);
+            }
+        });
+    }
+
+    private void publish(String topic, String key, Object event) {
+        kafkaTemplate.send(topic, key, event);
+        log.info("Published {} for booking {}", topic, key);
+    }
+
     private String resolveContactEmail(Booking booking) {
         String contactEmail = booking.getContactInfo() != null ? booking.getContactInfo().getEmail() : null;
         if (contactEmail == null || contactEmail.isBlank()) {

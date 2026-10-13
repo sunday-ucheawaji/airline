@@ -22,7 +22,7 @@ public class SmsContentBuilder {
         String depStr = event.getDepartureDateTime() != null ? event.getDepartureDateTime().format(SMS_DT_FMT) : "N/A";
         String route = event.getDepartureAirportCode() + "→" + event.getArrivalAirportCode();
         String total = event.getTotalAmount() != null ? String.format("%.0f", event.getTotalAmount()) : "N/A";
-        String currency = event.getCurrency() != null ? event.getCurrency() : "INR";
+        String currency = event.getCurrency() != null ? event.getCurrency() : "";
 
         return String.format(
                 "ZoshAir: Booking CONFIRMED! Ref: %s | %s %s | %s | %d pax | %s %s paid. " +
@@ -37,12 +37,14 @@ public class SmsContentBuilder {
     }
 
     public String bodyForPaymentFailed(PaymentFailedEvent event) {
-        return String.format("ZoshAir: Payment for booking #%s FAILED. Your seats are still held for a short " +
-                "window - please retry payment to confirm. Queries: support@zoshair.com", event.getBookingId());
+        return String.format("ZoshAir: Payment for booking #%s FAILED and the booking has been cancelled. " +
+                "Please book again. Queries: support@zoshair.com", event.getBookingId());
     }
 
     public String bodyForPaymentRefunded(PaymentRefundedEvent event) {
-        return String.format("ZoshAir: A refund has been processed for booking #%s. It may take a few business " +
-                "days to reflect in your account. Queries: support@zoshair.com", event.getBookingId());
+        String amount = event.getAmount() != null ? event.getAmount().toPlainString() : "";
+        String currency = event.getCurrency() != null ? event.getCurrency() : "";
+        return String.format("ZoshAir: A refund of %s %s has been processed for booking #%s. It may take a few business " +
+                "days to reflect in your account. Queries: support@zoshair.com", currency, amount, event.getBookingId());
     }
 }

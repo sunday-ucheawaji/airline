@@ -1,10 +1,9 @@
 package com.sunday.services.service.impl;
 
-import java.util.UUID;
 import com.sunday.common_lib.constants.BookingPermissions;
 import com.sunday.common_lib.enums.AirlineStatus;
 import com.sunday.common_lib.enums.BookingStatus;
-import com.sunday.common_lib.enums.PaymentGateway;
+import com.sunday.common_lib.enums.TicketStatus;
 import com.sunday.common_lib.enums.TripType;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
@@ -17,6 +16,7 @@ import com.sunday.common_lib.payload.request.SeatHoldRequest;
 import com.sunday.common_lib.payload.response.*;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.clients.*;
+import com.sunday.services.config.BookingPaymentProperties;
 import com.sunday.services.event.publisher.BookingEventProducer;
 import com.sunday.services.integration.PricingIntegrationService;
 import com.sunday.services.mapper.BookingMapper;
@@ -26,12 +26,16 @@ import com.sunday.services.model.BookingSaga;
 import com.sunday.services.model.Passenger;
 import com.sunday.services.model.SagaStatus;
 import com.sunday.services.repository.BookingRepository;
+import com.sunday.services.repository.CurrencyTotal;
 import com.sunday.services.service.BookingAccessService;
 import com.sunday.services.service.BookingSagaService;
 import com.sunday.services.service.BookingService;
-import com.sunday.services.service.PassengerService;
+import com.sunday.services.service.TicketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -40,12 +44,15 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -54,9 +61,11 @@ import java.util.stream.Stream;
 @Slf4j
 public class BookingServiceImpl implements BookingService {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final BookingRepository bookingRepository;
-    private final PassengerService passengerService;
     private final BookingSagaService bookingSagaService;
+    private final TicketService ticketService;
     private final PricingIntegrationService pricingIntegrationService;
     private final PricingClient pricingClient;
     private final AncillaryClient ancillaryClient;
@@ -65,39 +74,35 @@ public class BookingServiceImpl implements BookingService {
     private final FlightClient flightClient;
     private final BookingAccessService bookingAccess;
     private final BookingEventProducer bookingEventProducer;
+    private final BookingPaymentProperties paymentProperties;
+    private final Clock clock;
 
-    // Deliberately not @Transactional: bookingRepository.save(booking) below must commit on its own
-    // (via Spring Data's default per-call transaction) before paymentClient.initiatePayment is called,
-    // since payment-service calls back into this service's own /internal/bookings/{id}/payable to read
-    // the booking it was just told about — a shared transaction would keep that row invisible until this
-    // whole method returns, long after the callback needed it. The saga bookkeeping calls already commit
-    // independently via REQUIRES_NEW (see BookingSagaServiceImpl); this mirrors that for the booking itself.
     @Override
     public PaymentInitiateResponse createBooking(BookingRequest request, UUID userId, String idempotencyKey) {
-        log.info("Creating booking for user: {}", userId);
-
         String key = idempotencyKey != null ? idempotencyKey : UUID.randomUUID().toString();
         String requestHash = bookingSagaService.hashRequest(request, userId);
         BookingSaga saga = bookingSagaService.tryStart(userId, key, requestHash);
         if (!saga.getRequestHash().equals(requestHash)) {
             throw new ConflictException(String.format(ErrorMessageUtil.IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_REQUEST, key));
         }
-        if (saga.getStatus() == SagaStatus.COMPLETED) {
-            log.info("Idempotency-Key {} already completed, returning the original response", key);
+        if (saga.getResponseJson() != null
+                && (saga.getStatus() == SagaStatus.PAYMENT_INITIATED || saga.getStatus() == SagaStatus.COMPLETED)) {
+            log.info("Idempotency-Key {} already initiated payment, returning the original response", key);
             return bookingSagaService.readResponse(saga);
         }
         if (saga.getStatus() != SagaStatus.STARTED) {
             throw new ConflictException(String.format(ErrorMessageUtil.IDEMPOTENCY_REQUEST_IN_PROGRESS, key));
         }
 
-        Booking booking = null;
+        Booking saved = null;
+        String bookingReference = null;
+        List<UUID> heldSeatIds = null;
         try {
             if (request.getTripType() != TripType.ONE_WAY) {
                 throw new BadRequestException(ErrorMessageUtil.ONLY_ONE_WAY_BOOKINGS_SUPPORTED);
             }
+            List<UUID> seatInstanceIds = requireDistinctSeats(request.getPassengers());
 
-            // The flight instance is the source of truth for which flight this is — a client-supplied flightId is
-            // only ever used to catch a mismatched request, never trusted on its own.
             FlightInstanceResponse flightInstanceResponse = flightClient.getFlightInstanceResponse(request.getFlightInstanceId());
             UUID flightId = flightInstanceResponse.getFlightId();
             if (request.getFlightId() != null && !request.getFlightId().equals(flightId)) {
@@ -111,7 +116,6 @@ public class BookingServiceImpl implements BookingService {
             FareQuoteResponse quote = pricingIntegrationService.quoteFare(
                     request.getFareId(), flightId, request.getCabinClass(), departureDate);
 
-            // Skip the call when nothing was selected: an empty list sends no body the service can read.
             List<UUID> ancillaryIds = request.getAncillaryIds();
             BigDecimal ancillaryPrice = ancillaryIds == null || ancillaryIds.isEmpty()
                     ? BigDecimal.ZERO : ancillaryClient.calculateAncillariesPrice(flightId, ancillaryIds);
@@ -119,28 +123,28 @@ public class BookingServiceImpl implements BookingService {
             BigDecimal mealPrice = mealIds == null || mealIds.isEmpty()
                     ? BigDecimal.ZERO : ancillaryClient.calculateMealPrice(flightId, mealIds);
 
-            String bookingReference = generateBookingReference();
-            List<UUID> seatInstanceIds = request.getPassengers().stream()
-                    .map(PassengerRequest::getSeatInstanceId)
-                    .collect(Collectors.toList());
+            bookingReference = generateBookingReference();
             SeatHoldResponse hold = seatClient.holdSeats(SeatHoldRequest.builder()
                     .flightInstanceId(request.getFlightInstanceId())
                     .cabinClass(request.getCabinClass())
                     .seatInstanceIds(seatInstanceIds)
                     .bookingReference(bookingReference)
                     .build());
+            heldSeatIds = seatInstanceIds;
             bookingSagaService.recordSeatsHeld(saga.getId(), bookingReference, seatInstanceIds);
 
             Set<Passenger> passengers = new HashSet<>();
             for (PassengerRequest passengerRequest : request.getPassengers()) {
-                passengers.add(passengerService.createPassengerEntity(passengerRequest, userId));
+                Passenger passenger = PassengerMapper.toEntity(passengerRequest);
+                passenger.setPrimaryUserId(userId);
+                passengers.add(passenger);
             }
 
-            booking = BookingMapper.toEntity(request, userId, passengers, bookingReference);
+            Booking booking = BookingMapper.toEntity(request, userId, passengers, bookingReference);
             booking.setFlightId(flightId);
             booking.setStatus(BookingStatus.PENDING);
             booking.setAirlineId(flightResponse.getAirline().getId());
-            booking.setSeatInstanceIds(seatInstanceIds);
+            booking.setSeatInstanceIds(new ArrayList<>(seatInstanceIds));
             booking.setTicketTimeLimit(LocalDateTime.ofInstant(hold.getHoldExpiresAt(), ZoneId.systemDefault()));
 
             booking.setFareVersion(quote.getVersion());
@@ -151,45 +155,44 @@ public class BookingServiceImpl implements BookingService {
             booking.setFareRulesId(quote.getFareRulesId());
             booking.setFareBaggagePolicyId(quote.getBaggagePolicyId());
             booking.setFareTravelDate(departureDate);
+            booking.setFareRefundable(Boolean.TRUE.equals(quote.getRefundable()));
+            booking.setFareCancellationFee(quote.getCancellationFee());
+            booking.setFareRefundDeadlineDays(quote.getRefundDeadlineDays());
 
             BigDecimal fareTotal = quote.getTotalPrice().multiply(BigDecimal.valueOf(passengers.size()));
             BigDecimal totalPrice = fareTotal.add(hold.getTotalPremium()).add(ancillaryPrice).add(mealPrice)
                     .setScale(2, RoundingMode.HALF_EVEN);
-            // The stored total is what payment-service and PaymentEventListener check the payment against.
             booking.setTotalAmount(totalPrice);
 
-            booking = bookingRepository.save(booking);
             for (Passenger passenger : passengers) {
                 passenger.setBooking(booking);
             }
-            bookingSagaService.recordBookingCreated(saga.getId(), booking.getId());
-            // Tickets are issued once the booking is CONFIRMED (payment success), not here — see
-            // PaymentEventListener.handlePaymentCompleted.
+            saved = bookingRepository.save(booking);
+            bookingSagaService.recordBookingCreated(saga.getId(), saved.getId());
 
-            PaymentInitiateRequest paymentRequest = PaymentInitiateRequest.builder()
+            PaymentInitiateResponse paymentInit = paymentClient.initiatePayment(PaymentInitiateRequest.builder()
                     .userId(userId)
-                    .bookingId(booking.getId())
+                    .bookingId(saved.getId())
                     .amount(totalPrice)
-                    .gateway(PaymentGateway.RAZORPAY)
+                    .currency(quote.getCurrency())
+                    .gateway(paymentProperties.gatewayFor(quote.getCurrency()))
                     .description("Booking: " + bookingReference)
                     .idempotencyKey(bookingReference)
-                    .build();
-
-            log.info("Payment initiated for booking {} amount {}", bookingReference, totalPrice);
-
-            PaymentInitiateResponse paymentInit = paymentClient.initiatePayment(paymentRequest, userId);
+                    .build(), userId);
             if (paymentInit == null) {
-                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                        ErrorMessageUtil.PAYMENT_SERVICE_UNAVAILABLE);
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, ErrorMessageUtil.PAYMENT_SERVICE_UNAVAILABLE);
             }
             bookingSagaService.recordPaymentInitiated(saga.getId(), paymentInit);
+            log.info("Booking {} created for user {}, payment initiated for {}", bookingReference, userId, totalPrice);
             return paymentInit;
         } catch (RuntimeException e) {
             log.error("createBooking failed for Idempotency-Key {}, compensating", key, e);
-            if (booking != null) {
-                booking.setStatus(BookingStatus.CANCELLED);
-                bookingRepository.save(booking);
-                bookingEventProducer.sendBookingCancelled(booking);
+            if (saved != null) {
+                saved.setStatus(BookingStatus.CANCELLED);
+                bookingRepository.save(saved);
+            }
+            if (heldSeatIds != null) {
+                bookingEventProducer.sendSeatsReleased(saved != null ? saved.getId() : null, bookingReference, heldSeatIds);
             }
             bookingSagaService.fail(saga.getId(), e.getMessage());
             throw e;
@@ -205,15 +208,18 @@ public class BookingServiceImpl implements BookingService {
             throw new ConflictException(String.format(
                     ErrorMessageUtil.BOOKING_NOT_MODIFIABLE, booking.getBookingReference(), booking.getStatus()));
         }
+        requireDetailsOnlyChange(booking, request);
 
-        Set<Passenger> passengers = new HashSet<>();
+        Map<UUID, Passenger> passengersBySeat = booking.getPassengers().stream()
+                .collect(Collectors.toMap(Passenger::getSeatInstanceId, Function.identity()));
         for (PassengerRequest passengerRequest : request.getPassengers()) {
-            passengers.add(passengerService.createPassengerEntity(passengerRequest, booking.getUserId()));
+            PassengerMapper.updateEntityFromRequest(passengerRequest, passengersBySeat.get(passengerRequest.getSeatInstanceId()));
         }
-
-        BookingMapper.updateEntityFromRequest(request, booking, passengers);
+        if (request.getContactInfo() != null) {
+            booking.setContactInfo(request.getContactInfo());
+        }
         Booking updated = bookingRepository.save(booking);
-        return convertBookingResponse(updated, canSeePii(booking, userId));
+        return convertBookingResponse(updated, canSeePii(updated, userId));
     }
 
     @Override
@@ -236,26 +242,23 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<BookingResponse> getBookingsByAirline(
+    public Page<BookingResponse> getBookingsByAirline(
             UUID userId,
             UUID airlineId,
             String searchQuery,
             BookingStatus status,
             UUID flightInstanceId,
-            String sortDirection
+            String sortDirection,
+            int page,
+            int size
     ) {
         bookingAccess.requireAirlinePermission(airlineId, userId, BookingPermissions.BOOKING_READ);
         boolean seePii = bookingAccess.hasAirlinePermission(airlineId, userId, BookingPermissions.PASSENGER_PII_READ);
 
-        Sort.Direction direction = "asc".equalsIgnoreCase(sortDirection)
-                ? Sort.Direction.ASC
-                : Sort.Direction.DESC;
-        Sort sort = Sort.by(direction, "bookingDate");
-
-        List<Booking> bookings = bookingRepository.findByAirlineWithFilters(
-                airlineId, searchQuery, status, flightInstanceId, sort);
-
-        List<BookingResponse> responses = enrichBatch(bookings);
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDirection) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String search = searchQuery == null || searchQuery.isBlank() ? null : searchQuery.trim();
+        Page<BookingResponse> responses = loadPage(bookingRepository.findIdsByAirlineWithFilters(
+                airlineId, search, status, flightInstanceId, pageRequest(page, size, direction)));
         if (!seePii) {
             responses.forEach(this::maskPii);
         }
@@ -264,29 +267,23 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<BookingResponse> getBookingsByUser(UUID userId) {
-        return bookingRepository.findByUserId(userId).stream()
-                .map(booking -> convertBookingResponse(booking, true))
-                .collect(Collectors.toList());
+    public Page<BookingResponse> getBookingsByUser(UUID userId, int page, int size) {
+        return loadPage(bookingRepository.findIdsByUserId(userId, pageRequest(page, size, Sort.Direction.DESC)));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PassengerResponse> getPassengersByBooking(UUID bookingId, UUID userId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.BOOKING_NOT_FOUND_BY_ID, bookingId)));
+        Booking booking = findBookingOrThrow(bookingId);
         bookingAccess.requireOwnerOrPermission(booking, userId, BookingPermissions.PASSENGER_READ);
 
-        boolean seePii = canSeePii(booking, userId);
-        return booking.getPassengers().stream()
+        List<PassengerResponse> passengers = booking.getPassengers().stream()
                 .map(PassengerMapper::toResponse)
-                .peek(passenger -> {
-                    if (!seePii) {
-                        passenger.setPassportNumber(null);
-                        passenger.setDateOfBirth(null);
-                    }
-                })
                 .collect(Collectors.toList());
+        if (!canSeePii(booking, userId)) {
+            passengers.forEach(BookingServiceImpl::maskPii);
+        }
+        return passengers;
     }
 
     @Override
@@ -294,34 +291,28 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse cancelBooking(UUID id, UUID userId) {
         Booking booking = findBookingOrThrow(id);
         bookingAccess.requireOwnerOrPermission(booking, userId, BookingPermissions.BOOKING_MANAGE);
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new ConflictException(String.format(
+                    ErrorMessageUtil.BOOKING_NOT_CANCELLABLE, booking.getBookingReference(), booking.getStatus()));
+        }
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            BigDecimal refund = refundDue(booking, LocalDate.now(clock));
+            ticketService.closeTicketsForBooking(booking, refund.signum() > 0 ? TicketStatus.REFUNDED : TicketStatus.CANCELLED);
+            if (refund.signum() > 0) {
+                if (booking.getPaymentId() == null) {
+                    throw new ConflictException(String.format(ErrorMessageUtil.BOOKING_NO_PAYMENT_TO_REFUND, booking.getBookingReference()));
+                }
+                paymentClient.refundPaymentAsSystem(booking.getPaymentId(), refund);
+                booking.setRefundAmount(refund);
+            }
+        }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        booking.setLastModified(LocalDateTime.now());
         Booking updated = bookingRepository.save(booking);
-        bookingEventProducer.sendBookingCancelled(updated, "Cancelled by request");
-
-        log.info("Booking cancelled: {}", booking.getBookingReference());
-        return convertBookingResponse(updated, canSeePii(booking, userId));
-    }
-
-    @Override
-    @Transactional
-    public void deleteBooking(UUID id, UUID userId) {
-        Booking booking = findBookingOrThrow(id);
-        bookingAccess.requireAirlinePermission(booking.getAirlineId(), userId, BookingPermissions.BOOKING_MANAGE);
-        bookingEventProducer.sendBookingCancelled(booking);
-        bookingRepository.delete(booking);
-        log.info("Booking deleted: {}", booking.getBookingReference());
-    }
-
-    @Override
-    public boolean existsById(UUID id) {
-        return bookingRepository.existsById(id);
-    }
-
-    @Override
-    public long count() {
-        return bookingRepository.count();
+        bookingEventProducer.sendBookingCancelled(updated, ErrorMessageUtil.BOOKING_CANCELLED_BY_REQUEST);
+        bookingSagaService.cancel(updated.getId());
+        log.info("Booking {} cancelled by {}", updated.getBookingReference(), userId);
+        return convertBookingResponse(updated, canSeePii(updated, userId));
     }
 
     @Override
@@ -336,17 +327,25 @@ public class BookingServiceImpl implements BookingService {
     public BookingStatisticsResponse getBookingStatisticsForAirline(UUID userId, UUID airlineId) {
         bookingAccess.requireAirlinePermission(airlineId, userId, BookingPermissions.BOOKING_READ);
 
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
-        LocalDateTime startOfMonth = YearMonth.now().atDay(1).atStartOfDay();
-        LocalDateTime endOfMonth = YearMonth.now().atEndOfMonth().atTime(LocalTime.MAX);
+        LocalDate today = LocalDate.now(clock);
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+        LocalDateTime startOfMonth = YearMonth.from(today).atDay(1).atStartOfDay();
+        LocalDateTime endOfMonth = YearMonth.from(today).atEndOfMonth().atTime(LocalTime.MAX);
 
-        // Trend series (daily and monthly) are not computed yet, so they are returned empty rather than zero-filled.
+        Map<String, BigDecimal> revenueToday = revenueByCurrency(airlineId, startOfDay, endOfDay);
+        Map<String, BigDecimal> revenueThisMonth = revenueByCurrency(airlineId, startOfMonth, endOfMonth);
+        String currency = revenueThisMonth.size() == 1 ? revenueThisMonth.keySet().iterator().next() : null;
+        boolean singleCurrency = revenueThisMonth.size() <= 1;
+
         return BookingStatisticsResponse.builder()
                 .totalBookingsToday(bookingRepository.countByAirlineIdAndBookingDateBetween(airlineId, startOfDay, endOfDay))
-                .revenueToday(bookingRepository.sumTotalAmountByAirlineIdAndBookingDateBetween(airlineId, startOfDay, endOfDay))
+                .revenueToday(singleCurrency ? revenueToday.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add) : null)
+                .revenueTodayByCurrency(revenueToday)
                 .totalBookingsThisMonth(bookingRepository.countByAirlineIdAndBookingDateBetween(airlineId, startOfMonth, endOfMonth))
-                .revenueThisMonth(bookingRepository.sumTotalAmountByAirlineIdAndBookingDateBetween(airlineId, startOfMonth, endOfMonth))
+                .revenueThisMonth(singleCurrency ? revenueThisMonth.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add) : null)
+                .revenueThisMonthByCurrency(revenueThisMonth)
+                .currency(currency)
                 .dailyTrend(new ArrayList<>())
                 .monthlyData(new ArrayList<>())
                 .build();
@@ -361,6 +360,7 @@ public class BookingServiceImpl implements BookingService {
                 .userId(booking.getUserId())
                 .airlineId(booking.getAirlineId())
                 .totalAmount(booking.getTotalAmount())
+                .currency(booking.getFareCurrency())
                 .status(booking.getStatus())
                 .build();
     }
@@ -370,7 +370,70 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.BOOKING_NOT_FOUND_BY_ID, id)));
     }
 
-    /** The customer always sees their own passport and date of birth; anyone else needs PASSENGER_PII_READ on the airline. */
+    static BigDecimal refundDue(Booking booking, LocalDate today) {
+        if (!Boolean.TRUE.equals(booking.getFareRefundable()) || booking.getTotalAmount() == null) {
+            return BigDecimal.ZERO;
+        }
+        LocalDate travelDate = booking.getFareTravelDate();
+        int deadlineDays = booking.getFareRefundDeadlineDays() != null ? booking.getFareRefundDeadlineDays() : 0;
+        if (travelDate != null && ChronoUnit.DAYS.between(today, travelDate) < deadlineDays) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal feePerPassenger = booking.getFareCancellationFee() != null ? booking.getFareCancellationFee() : BigDecimal.ZERO;
+        BigDecimal refund = booking.getTotalAmount()
+                .subtract(feePerPassenger.multiply(BigDecimal.valueOf(booking.getPassengers().size())));
+        return refund.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_EVEN);
+    }
+
+    private Map<String, BigDecimal> revenueByCurrency(UUID airlineId, LocalDateTime from, LocalDateTime to) {
+        return bookingRepository.sumConfirmedRevenueByCurrency(airlineId, from, to).stream()
+                .collect(Collectors.toMap(CurrencyTotal::getCurrency, CurrencyTotal::getTotal, BigDecimal::add, TreeMap::new));
+    }
+
+    private static PageRequest pageRequest(int page, int size, Sort.Direction direction) {
+        return PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE), Sort.by(direction, "bookingDate"));
+    }
+
+    private Page<BookingResponse> loadPage(Page<UUID> ids) {
+        Map<UUID, Booking> byId = byId(bookingRepository.findWithDetailsByIdIn(ids.getContent()), Booking::getId);
+        List<Booking> bookings = ids.getContent().stream().map(byId::get).filter(Objects::nonNull).toList();
+        return new PageImpl<>(enrichBatch(bookings), ids.getPageable(), ids.getTotalElements());
+    }
+
+    private static List<UUID> requireDistinctSeats(List<PassengerRequest> passengers) {
+        List<UUID> seatInstanceIds = passengers.stream().map(PassengerRequest::getSeatInstanceId).toList();
+        Set<UUID> seen = new HashSet<>();
+        for (UUID seatInstanceId : seatInstanceIds) {
+            if (!seen.add(seatInstanceId)) {
+                throw new BadRequestException(String.format(ErrorMessageUtil.DUPLICATE_SEAT_IN_BOOKING, seatInstanceId));
+            }
+        }
+        return seatInstanceIds;
+    }
+
+    private static void requireDetailsOnlyChange(Booking booking, BookingRequest request) {
+        Set<UUID> requestedSeats = new HashSet<>(requireDistinctSeats(request.getPassengers()));
+        boolean unchanged = Objects.equals(booking.getFlightInstanceId(), request.getFlightInstanceId())
+                && (request.getFlightId() == null || Objects.equals(booking.getFlightId(), request.getFlightId()))
+                && Objects.equals(booking.getFareId(), request.getFareId())
+                && booking.getCabinClass() == request.getCabinClass()
+                && booking.getTripType() == request.getTripType()
+                && sameItems(booking.getAncillaryIds(), request.getAncillaryIds())
+                && sameItems(booking.getMealIds(), request.getMealIds())
+                && requestedSeats.equals(new HashSet<>(booking.getSeatInstanceIds()));
+        if (!unchanged) {
+            throw new BadRequestException(ErrorMessageUtil.BOOKING_UPDATE_DETAILS_ONLY);
+        }
+    }
+
+    private static boolean sameItems(List<UUID> current, List<UUID> requested) {
+        List<UUID> a = current == null ? new ArrayList<>() : new ArrayList<>(current);
+        List<UUID> b = requested == null ? new ArrayList<>() : new ArrayList<>(requested);
+        a.sort(null);
+        b.sort(null);
+        return a.equals(b);
+    }
+
     private boolean canSeePii(Booking booking, UUID userId) {
         return bookingAccess.isOwner(booking, userId)
                 || bookingAccess.hasAirlinePermission(booking.getAirlineId(), userId, BookingPermissions.PASSENGER_PII_READ);
@@ -378,14 +441,15 @@ public class BookingServiceImpl implements BookingService {
 
     private void maskPii(BookingResponse response) {
         if (response.getPassengers() != null) {
-            response.getPassengers().forEach(passenger -> {
-                passenger.setPassportNumber(null);
-                passenger.setDateOfBirth(null);
-            });
+            response.getPassengers().forEach(BookingServiceImpl::maskPii);
         }
     }
 
-    /** Suspended, banned or closed airlines sell nothing new; existing bookings are untouched. */
+    private static void maskPii(PassengerResponse passenger) {
+        passenger.setPassportNumber(null);
+        passenger.setDateOfBirth(null);
+    }
+
     private static void requireAirlineAcceptingBookings(FlightResponse flight) {
         AirlineResponse airline = flight.getAirline();
         if (airline == null || airline.getStatus() == null) {
@@ -401,120 +465,91 @@ public class BookingServiceImpl implements BookingService {
         String reference;
         do {
             reference = "BK" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        } while (bookingRepository.findByBookingReference(reference).isPresent());
+        } while (bookingRepository.existsByBookingReference(reference));
         return reference;
     }
 
     private List<BookingResponse> enrichBatch(List<Booking> bookings) {
-        if (bookings.isEmpty()) return new ArrayList<>();
+        if (bookings.isEmpty()) {
+            return new ArrayList<>();
+        }
 
-        List<UUID> bookingIds = bookings.stream().map(Booking::getId).collect(Collectors.toList());
+        List<UUID> bookingIds = bookings.stream().map(Booking::getId).toList();
+        List<UUID> fareIds = distinct(bookings.stream().map(Booking::getFareId));
+        List<UUID> flightIds = distinct(bookings.stream().map(Booking::getFlightId));
+        List<UUID> flightInstanceIds = distinct(bookings.stream().map(Booking::getFlightInstanceId));
+        List<UUID> seatIds = distinct(bookings.stream().flatMap(b -> stream(b.getSeatInstanceIds())));
+        List<UUID> ancillaryIds = distinct(bookings.stream().flatMap(b -> stream(b.getAncillaryIds())));
+        List<UUID> mealIds = distinct(bookings.stream().flatMap(b -> stream(b.getMealIds())));
 
-        List<UUID> fareIds = bookings.stream().map(Booking::getFareId)
-                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
-        List<UUID> flightIds = bookings.stream().map(Booking::getFlightId)
-                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
-        List<UUID> flightInstanceIds = bookings.stream().map(Booking::getFlightInstanceId)
-                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
-        List<UUID> allSeatIds = bookings.stream()
-                .flatMap(b -> b.getSeatInstanceIds() != null ? b.getSeatInstanceIds().stream() : Stream.empty())
-                .distinct().collect(Collectors.toList());
-        List<UUID> allAncillaryIds = bookings.stream()
-                .flatMap(b -> b.getAncillaryIds() != null ? b.getAncillaryIds().stream() : Stream.empty())
-                .distinct().collect(Collectors.toList());
-        List<UUID> allMealIds = bookings.stream()
-                .flatMap(b -> b.getMealIds() != null ? b.getMealIds().stream() : Stream.empty())
-                .distinct().collect(Collectors.toList());
-
-        Map<UUID, FareResponse> fareMap = pricingClient.getFaresByIds(fareIds);
-        Map<UUID, FlightResponse> flightMap = flightClient.getFlightsByIds(flightIds);
-        Map<UUID, FlightInstanceResponse> flightInstanceMap = flightClient.getFlightInstancesByIds(flightInstanceIds);
+        Map<UUID, FareResponse> fareMap = fareIds.isEmpty() ? Map.of() : pricingClient.getFaresByIds(fareIds);
+        Map<UUID, FlightResponse> flightMap = flightIds.isEmpty() ? Map.of() : flightClient.getFlightsByIds(flightIds);
+        Map<UUID, FlightInstanceResponse> flightInstanceMap = flightInstanceIds.isEmpty()
+                ? Map.of() : flightClient.getFlightInstancesByIds(flightInstanceIds);
         Map<UUID, PaymentDTO> paymentMap = paymentClient.getPaymentsByBookingIds(bookingIds);
+        Map<UUID, SeatInstanceResponse> seatMap = seatIds.isEmpty()
+                ? Map.of() : byId(seatClient.getAllByIds(seatIds), SeatInstanceResponse::getId);
+        Map<UUID, FlightCabinAncillaryResponse> ancillaryMap = ancillaryIds.isEmpty()
+                ? Map.of() : byId(ancillaryClient.getAllByIds(ancillaryIds), FlightCabinAncillaryResponse::getId);
+        Map<UUID, FlightMealResponse> mealMap = mealIds.isEmpty()
+                ? Map.of() : byId(ancillaryClient.getMealsByIds(mealIds), FlightMealResponse::getId);
 
-        Map<UUID, SeatInstanceResponse> seatMap = allSeatIds.isEmpty()
-                ? Collections.emptyMap()
-                : seatClient.getAllByIds(allSeatIds).stream()
-                        .collect(Collectors.toMap(SeatInstanceResponse::getId, s -> s));
-        Map<UUID, FlightCabinAncillaryResponse> ancillaryMap = allAncillaryIds.isEmpty()
-                ? Collections.emptyMap()
-                : ancillaryClient.getAllByIds(allAncillaryIds).stream()
-                        .collect(Collectors.toMap(FlightCabinAncillaryResponse::getId, a -> a));
-        Map<UUID, FlightMealResponse> mealMap = allMealIds.isEmpty()
-                ? Collections.emptyMap()
-                : ancillaryClient.getMealsByIds(allMealIds).stream()
-                        .collect(Collectors.toMap(FlightMealResponse::getId, m -> m));
-
-        return bookings.stream().map(booking -> {
-            List<SeatInstanceResponse> seats = booking.getSeatInstanceIds() != null
-                    ? booking.getSeatInstanceIds().stream()
-                            .map(seatMap::get).filter(Objects::nonNull).collect(Collectors.toList())
-                    : Collections.emptyList();
-            List<FlightCabinAncillaryResponse> ancillaries = booking.getAncillaryIds() != null
-                    ? booking.getAncillaryIds().stream()
-                            .map(ancillaryMap::get).filter(Objects::nonNull).collect(Collectors.toList())
-                    : Collections.emptyList();
-            List<FlightMealResponse> meals = booking.getMealIds() != null
-                    ? booking.getMealIds().stream()
-                            .map(mealMap::get).filter(Objects::nonNull).collect(Collectors.toList())
-                    : Collections.emptyList();
-
-            return BookingMapper.toResponse(
-                    booking,
-                    paymentMap.get(booking.getId()),
-                    fareMap.get(booking.getFareId()),
-                    flightMap.get(booking.getFlightId()),
-                    flightInstanceMap.get(booking.getFlightInstanceId()),
-                    ancillaries,
-                    meals,
-                    seats
-            );
-        }).collect(Collectors.toList());
+        return bookings.stream()
+                .map(booking -> BookingMapper.toResponse(
+                        booking,
+                        paymentMap.get(booking.getId()),
+                        lookup(fareMap, booking.getFareId()),
+                        lookup(flightMap, booking.getFlightId()),
+                        lookup(flightInstanceMap, booking.getFlightInstanceId()),
+                        resolve(booking.getAncillaryIds(), ancillaryMap),
+                        resolve(booking.getMealIds(), mealMap),
+                        resolve(booking.getSeatInstanceIds(), seatMap)))
+                .collect(Collectors.toList());
     }
 
     private BookingResponse convertBookingResponse(Booking booking, boolean seePii) {
-        // Bulk lookups return one response per unique id, so re-map over the booking's own (possibly repeated)
-        // id list: a quantity-2 item still renders as two entries.
         List<UUID> ancillaryIds = booking.getAncillaryIds() != null ? booking.getAncillaryIds() : List.of();
         List<UUID> mealIds = booking.getMealIds() != null ? booking.getMealIds() : List.of();
         List<UUID> seatIds = booking.getSeatInstanceIds() != null ? booking.getSeatInstanceIds() : List.of();
 
         Map<UUID, FlightCabinAncillaryResponse> ancillaryMap = ancillaryIds.isEmpty()
-                ? Collections.emptyMap()
-                : ancillaryClient.getAllByIds(ancillaryIds).stream()
-                        .collect(Collectors.toMap(FlightCabinAncillaryResponse::getId, a -> a));
+                ? Map.of() : byId(ancillaryClient.getAllByIds(ancillaryIds), FlightCabinAncillaryResponse::getId);
         Map<UUID, FlightMealResponse> mealMap = mealIds.isEmpty()
-                ? Collections.emptyMap()
-                : ancillaryClient.getMealsByIds(mealIds).stream()
-                        .collect(Collectors.toMap(FlightMealResponse::getId, m -> m));
+                ? Map.of() : byId(ancillaryClient.getMealsByIds(mealIds), FlightMealResponse::getId);
         Map<UUID, SeatInstanceResponse> seatMap = seatIds.isEmpty()
-                ? Collections.emptyMap()
-                : seatClient.getAllByIds(seatIds).stream()
-                        .collect(Collectors.toMap(SeatInstanceResponse::getId, s -> s));
-
-        List<FlightCabinAncillaryResponse> ancillaryResponses = ancillaryIds.stream()
-                .map(ancillaryMap::get).filter(Objects::nonNull).collect(Collectors.toList());
-        List<FlightMealResponse> mealResponses = mealIds.stream()
-                .map(mealMap::get).filter(Objects::nonNull).collect(Collectors.toList());
-        List<SeatInstanceResponse> seatResponses = seatIds.stream()
-                .map(seatMap::get).filter(Objects::nonNull).collect(Collectors.toList());
-
-        PaymentDTO paymentDTO = paymentClient.getPaymentByBookingId(booking.getId());
-        FareResponse fareResponse = pricingClient.getFareById(booking.getFareId());
-        FlightResponse flightResponse = flightClient.getFlightById(booking.getFlightId());
-        FlightInstanceResponse flightInstanceResponse = flightClient.getFlightInstanceResponse(booking.getFlightInstanceId());
+                ? Map.of() : byId(seatClient.getAllByIds(seatIds), SeatInstanceResponse::getId);
 
         BookingResponse response = BookingMapper.toResponse(booking,
-                paymentDTO,
-                fareResponse,
-                flightResponse,
-                flightInstanceResponse,
-                ancillaryResponses,
-                mealResponses,
-                seatResponses
-        );
+                paymentClient.getPaymentByBookingId(booking.getId()),
+                booking.getFareId() != null ? pricingClient.getFareById(booking.getFareId()) : null,
+                booking.getFlightId() != null ? flightClient.getFlightById(booking.getFlightId()) : null,
+                booking.getFlightInstanceId() != null ? flightClient.getFlightInstanceResponse(booking.getFlightInstanceId()) : null,
+                resolve(ancillaryIds, ancillaryMap),
+                resolve(mealIds, mealMap),
+                resolve(seatIds, seatMap));
         if (!seePii) {
             maskPii(response);
         }
         return response;
+    }
+
+    private static <T> Stream<T> stream(List<T> values) {
+        return values != null ? values.stream() : Stream.empty();
+    }
+
+    private static List<UUID> distinct(Stream<UUID> ids) {
+        return ids.filter(Objects::nonNull).distinct().toList();
+    }
+
+    private static <T> Map<UUID, T> byId(List<T> values, Function<T, UUID> id) {
+        return values.stream().collect(Collectors.toMap(id, Function.identity(), (a, b) -> a));
+    }
+
+    private static <T> T lookup(Map<UUID, T> values, UUID id) {
+        return id != null ? values.get(id) : null;
+    }
+
+    private static <T> List<T> resolve(List<UUID> ids, Map<UUID, T> values) {
+        return stream(ids).map(values::get).filter(Objects::nonNull).toList();
     }
 }

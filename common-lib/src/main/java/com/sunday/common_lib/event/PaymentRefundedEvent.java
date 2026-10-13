@@ -18,6 +18,7 @@ public class PaymentRefundedEvent {
     private UUID bookingId;
     private UUID userId;
     private BigDecimal amount;
+    private String currency;
     private String providerRefundId;
     private LocalDateTime refundedAt;
 

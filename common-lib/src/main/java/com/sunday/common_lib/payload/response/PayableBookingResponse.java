@@ -20,5 +20,6 @@ public class PayableBookingResponse {
     private UUID userId;
     private UUID airlineId;
     private BigDecimal totalAmount;
+    private String currency;
     private BookingStatus status;
 }

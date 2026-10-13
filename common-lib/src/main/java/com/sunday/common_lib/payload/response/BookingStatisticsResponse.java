@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -14,10 +15,14 @@ public class BookingStatisticsResponse {
     // Daily statistics
     private Long totalBookingsToday;
     private BigDecimal revenueToday;
+    private Map<String, BigDecimal> revenueTodayByCurrency;
 
     // Monthly statistics
     private Long totalBookingsThisMonth;
     private BigDecimal revenueThisMonth;
+    private Map<String, BigDecimal> revenueThisMonthByCurrency;
+
+    private String currency;
 
     // Daily trend data (for the last 30 days)
     private List<DailyBookingData> dailyTrend;

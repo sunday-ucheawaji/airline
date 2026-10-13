@@ -26,6 +26,7 @@ import com.sunday.services.repository.PaymentRepository;
 import com.sunday.services.repository.ProcessedWebhookEventRepository;
 import com.sunday.services.service.PaymentAccessService;
 import com.sunday.services.service.PaymentService;
+import com.sunday.services.service.gateway.MoneyUtil;
 import com.sunday.services.service.gateway.PaymentGatewayProvider;
 import com.sunday.services.service.gateway.PaymentGatewayRegistry;
 import com.sunday.services.service.gateway.ProviderCheckoutResult;
@@ -89,6 +90,11 @@ public class PaymentServiceImpl implements PaymentService {
             throw new ConflictException(String.format(
                     ErrorMessageUtil.BOOKING_AMOUNT_MISMATCH, request.getAmount(), booking.getTotalAmount()));
         }
+        if (!request.getCurrency().equals(booking.getCurrency())) {
+            throw new ConflictException(String.format(
+                    ErrorMessageUtil.PAYMENT_CURRENCY_MISMATCH, request.getCurrency(), booking.getCurrency()));
+        }
+        MoneyUtil.requireSupported(request.getCurrency());
         paymentRepository.findFirstByBookingIdOrderByIdDesc(request.getBookingId())
                 .filter(existing -> existing.getStatus() == PaymentStatus.SUCCESS)
                 .ifPresent(existing -> {
@@ -104,6 +110,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .bookingId(request.getBookingId())
                     .airlineId(booking.getAirlineId())
                     .amount(request.getAmount())
+                    .currency(request.getCurrency())
                     .provider(request.getGateway())
                     .status(PaymentStatus.PENDING)
                     .transactionId(generateTransactionId())
@@ -130,6 +137,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .gateway(request.getGateway())
                     .transactionId(payment.getTransactionId())
                     .amount(request.getAmount())
+                    .currency(request.getCurrency())
                     .description(request.getDescription())
                     .success(true)
                     .message("Payment initiated successfully")
@@ -186,7 +194,8 @@ public class PaymentServiceImpl implements PaymentService {
         String failureReason = null;
         if (authoritative.status() != PaymentStatus.SUCCESS) {
             failureReason = ErrorMessageUtil.PAYMENT_VERIFICATION_FAILED;
-        } else if (amountsDiffer(authoritative.capturedAmount(), payment.getAmount())) {
+        } else if (authoritative.currency() == null || !authoritative.currency().equalsIgnoreCase(payment.getCurrency())
+                || amountsDiffer(authoritative.capturedAmount(), payment.getAmount())) {
             failureReason = ErrorMessageUtil.PAYMENT_CAPTURED_AMOUNT_MISMATCH;
             log.error("Payment {} captured {} via {}, expected {}", payment.getId(), authoritative.capturedAmount(), gateway, payment.getAmount());
         }
@@ -247,12 +256,12 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new ConflictException(String.format(ErrorMessageUtil.PAYMENT_NOT_REFUNDABLE, paymentId, payment.getStatus()));
         }
-        return executeRefund(payment, amount != null ? amount : payment.getAmount());
+        return executeRefund(payment, refundAmount(payment, amount));
     }
 
     @Override
     @Transactional
-    public PaymentDTO refundPaymentAsSystem(UUID paymentId) {
+    public PaymentDTO refundPaymentAsSystem(UUID paymentId, BigDecimal amount) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_BY_ID, paymentId)));
         if (payment.getStatus() == PaymentStatus.REFUNDED) {
@@ -261,7 +270,17 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new ConflictException(String.format(ErrorMessageUtil.PAYMENT_NOT_REFUNDABLE, paymentId, payment.getStatus()));
         }
-        return executeRefund(payment, payment.getAmount());
+        return executeRefund(payment, refundAmount(payment, amount));
+    }
+
+    private static BigDecimal refundAmount(Payment payment, BigDecimal requested) {
+        if (requested == null) {
+            return payment.getAmount();
+        }
+        if (requested.signum() <= 0 || requested.compareTo(payment.getAmount()) > 0) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.PAYMENT_REFUND_AMOUNT_INVALID, requested, payment.getAmount()));
+        }
+        return requested;
     }
 
     private PaymentDTO executeRefund(Payment payment, BigDecimal refundAmount) {
@@ -271,6 +290,7 @@ public class PaymentServiceImpl implements PaymentService {
             ProviderRefundResult result = provider.initiateRefund(payment, refundAmount);
             payment.setStatus(PaymentStatus.REFUNDED);
             payment.setRefundId(result.providerRefundId());
+            payment.setRefundedAmount(refundAmount);
             payment = paymentRepository.save(payment);
             paymentEventProducer.sendPaymentRefunded(payment, userClient.getUserById(payment.getUserId()));
             log.info("Payment {} refunded via {} (provider refund id {})", paymentId, payment.getProvider(), result.providerRefundId());

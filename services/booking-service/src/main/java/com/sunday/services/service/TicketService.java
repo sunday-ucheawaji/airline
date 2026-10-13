@@ -1,6 +1,7 @@
 package com.sunday.services.service;
 
 import java.util.UUID;
+import com.sunday.common_lib.enums.TicketStatus;
 import com.sunday.services.model.Booking;
 import com.sunday.services.model.Ticket;
 
@@ -9,6 +10,8 @@ import java.util.List;
 public interface TicketService {
 
     List<Ticket> generateTicketsForBooking(Booking booking);
+
+    void closeTicketsForBooking(Booking booking, TicketStatus status);
 
     Ticket getTicketByNumber(String ticketNumber, UUID userId);
 

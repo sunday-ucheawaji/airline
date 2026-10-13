@@ -18,17 +18,24 @@ spring:
       circuitbreaker:
         enabled: true
 
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_URL}
     consumer:
       group-id: booking-service-group
-#      auto-offset-reset: earliest
-#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-#      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
-#      properties:
-#        spring.json.trusted.packages: com.zosh.common_lib.event
 
-
-
-
-
+booking:
+  payment:
+    default-gateway: STRIPE
+    gateways:
+      INR: RAZORPAY
+      NGN: PAYSTACK
+      GHS: PAYSTACK
+      KES: PAYSTACK
+      ZAR: PAYSTACK

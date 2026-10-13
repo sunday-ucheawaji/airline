@@ -201,6 +201,26 @@ services:
       - zosh
 
 
+  notificationdb:
+    image: mysql:8.0
+    container_name: notificationdb
+    mem_limit: 512m
+    mem_reservation: 256m
+    cpus: 0.5
+    ports:
+      - "127.0.0.1:3311:3306"  # LOCALHOST ONLY
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: airline_notification_db
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+    networks:
+      - zosh
+
   # ===========================================================================
   # REDIS — shared cache for location, airline, pricing, flight-ops, api-gateway
   # ===========================================================================
@@ -395,6 +415,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_APPLICATION_NAME: "airline-core-service"
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
@@ -405,6 +427,13 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://service-registry:8761/eureka/"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_URL: kafka:9092
+      DOCUMENT_STORAGE_ENDPOINT: "${DOCUMENT_STORAGE_ENDPOINT:-}"
+      DOCUMENT_STORAGE_REGION: "${DOCUMENT_STORAGE_REGION:-us-east-1}"
+      DOCUMENT_STORAGE_ACCESS_KEY: "${DOCUMENT_STORAGE_ACCESS_KEY:-}"
+      DOCUMENT_STORAGE_SECRET_KEY: "${DOCUMENT_STORAGE_SECRET_KEY:-}"
+      DOCUMENT_SCANNER_HOST: "${DOCUMENT_SCANNER_HOST:-clamav}"
+      DOCUMENT_SCANNER_PORT: "${DOCUMENT_SCANNER_PORT:-3310}"
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
     restart: unless-stopped
     networks:
@@ -575,6 +604,8 @@ services:
         condition: service_healthy
       bookingdb:
         condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_APPLICATION_NAME: "booking-service"
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
@@ -583,6 +614,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://service-registry:8761/eureka/"
+      SPRING_KAFKA_URL: kafka:9092
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
     restart: unless-stopped
     networks:
@@ -602,6 +634,8 @@ services:
         condition: service_healthy
       paymentdb:
         condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_APPLICATION_NAME: "payment-service"
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
@@ -610,7 +644,61 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://service-registry:8761/eureka/"
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_URL: kafka:9092
+      RAZORPAY_API_KEY: "${RAZORPAY_API_KEY:-}"
+      RAZORPAY_API_SECRET: "${RAZORPAY_API_SECRET:-}"
+      RAZORPAY_WEBHOOK_SECRET: "${RAZORPAY_WEBHOOK_SECRET:-}"
+      RAZORPAY_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL:-http://localhost:3000}"
+      STRIPE_API_SECRET_KEY: "${STRIPE_API_SECRET_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      STRIPE_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL:-http://localhost:3000}"
+      PAYSTACK_API_SECRET_KEY: "${PAYSTACK_API_SECRET_KEY:-}"
+      PAYSTACK_CALLBACK_BASE_URL: "${PAYMENT_CALLBACK_BASE_URL:-http://localhost:3000}"
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
+    restart: unless-stopped
+    networks:
+      - zosh
+
+  notification-service:
+    image: "zoshilo/gds-notification:1.0.0"
+    container_name: gds-notification-service
+    mem_limit: 512m
+    mem_reservation: 256m
+    cpus: 0.5
+    # NO PORTS EXPOSED - Internal only
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      notificationdb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: "notification-service"
+      SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://notificationdb:3306/airline_notification_db?useSSL=false&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://service-registry:8761/eureka/"
+      SPRING_KAFKA_URL: kafka:9092
+      SPRING_THYMELEAF_CACHE: "true"
+      MAIL_USERNAME: "${MAIL_USERNAME:-}"
+      MAIL_APP_PASSWORD: "${MAIL_APP_PASSWORD:-}"
+      MAIL_FROM: "${MAIL_FROM:-}"
+      MAIL_FROM_NAME: "${MAIL_FROM_NAME:-GDS Airline}"
+      SUPPORT_EMAIL: "${SUPPORT_EMAIL:-}"
+      SUPPORT_PHONE: "${SUPPORT_PHONE:-}"
+      CHECKIN_URL: "${FRONTEND_BASE_URL:-http://localhost:3000}/check-in"
+      MANAGE_BOOKING_URL: "${FRONTEND_BASE_URL:-http://localhost:3000}/bookings"
+      VERIFY_EMAIL_URL: "${FRONTEND_BASE_URL:-http://localhost:3000}/verify-email"
+      RESET_PASSWORD_URL: "${FRONTEND_BASE_URL:-http://localhost:3000}/reset-password"
+      TWILIO_ENABLED: "${TWILIO_ENABLED:-false}"
+      TWILIO_ACCOUNT_SID: "${TWILIO_ACCOUNT_SID:-}"
+      TWILIO_AUTH_TOKEN: "${TWILIO_AUTH_TOKEN:-}"
+      TWILIO_FROM_NUMBER: "${TWILIO_FROM_NUMBER:-}"
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
     restart: unless-stopped
     networks:

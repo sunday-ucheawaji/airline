@@ -2,7 +2,9 @@ package com.sunday.common_lib.payload.request;
 
 import com.sunday.common_lib.enums.PaymentGateway;
 import com.sunday.common_lib.util.ErrorMessageUtil;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,6 +32,10 @@ public class PaymentInitiateRequest {
     @NotNull(message = ErrorMessageUtil.PAYMENT_AMOUNT_MANDATORY)
     @Positive(message = ErrorMessageUtil.PAYMENT_AMOUNT_POSITIVE)
     private BigDecimal amount;
+
+    @NotBlank(message = ErrorMessageUtil.PAYMENT_CURRENCY_MANDATORY)
+    @Pattern(regexp = "^[A-Z]{3}$", message = ErrorMessageUtil.PAYMENT_CURRENCY_INVALID)
+    private String currency;
 
     private String description;
 

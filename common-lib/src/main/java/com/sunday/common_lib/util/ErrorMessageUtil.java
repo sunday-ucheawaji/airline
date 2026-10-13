@@ -375,6 +375,16 @@ public class ErrorMessageUtil {
             "Idempotency-Key %s was already used with a different request body";
     public static final String IDEMPOTENCY_REQUEST_IN_PROGRESS =
             "A request with Idempotency-Key %s is already in progress";
+    public static final String BOOKING_NOT_CANCELLABLE = "Booking %s cannot be cancelled (status %s)";
+    public static final String BOOKING_HAS_USED_TICKETS = "Booking %s has a used ticket and can no longer be cancelled";
+    public static final String BOOKING_UPDATE_DETAILS_ONLY =
+            "Only passenger details and contact information can be changed; cancel and rebook to change the flight, fare, cabin, seats or extras";
+    public static final String DUPLICATE_SEAT_IN_BOOKING = "Seat instance %s is assigned to more than one passenger";
+    public static final String BOOKING_CANCELLED_BY_REQUEST = "Cancelled by request";
+    public static final String BOOKING_NO_PAYMENT_TO_REFUND = "Booking %s is confirmed but has no payment to refund";
+    public static final String BOOKING_CANCELLED_PAYMENT_TIMEOUT = "The booking was not paid in time and has been cancelled";
+    public static final String BOOKING_CANCELLED_PAYMENT_FAILED = "Payment failed: %s";
+    public static final String BOOKING_CANCELLED_AMOUNT_MISMATCH = "The amount paid did not match the booking total; the booking was cancelled and the payment refunded";
 
     // ---------- Passenger ----------
     public static final String PASSENGER_FIRST_NAME_MANDATORY = "First name is required";
@@ -405,6 +415,11 @@ public class ErrorMessageUtil {
     public static final String PAYMENT_GATEWAY_MANDATORY = "Payment gateway is mandatory";
     public static final String PAYMENT_AMOUNT_MANDATORY = "Amount is mandatory";
     public static final String PAYMENT_AMOUNT_POSITIVE = "Amount must be positive";
+    public static final String PAYMENT_CURRENCY_MANDATORY = "Currency is mandatory";
+    public static final String PAYMENT_CURRENCY_INVALID = "Currency must be a three-letter ISO 4217 code";
+    public static final String PAYMENT_CURRENCY_MISMATCH = "Payment currency %s does not match booking currency %s";
+    public static final String PAYMENT_CURRENCY_NOT_SUPPORTED = "Currency %s is not supported";
+    public static final String PAYMENT_REFUND_AMOUNT_INVALID = "Refund amount %s must be positive and at most the paid amount %s";
     public static final String PAYMENT_ALREADY_COMPLETED = "Payment already completed for this booking";
     public static final String PAYMENT_NOT_FOUND_BY_ID = "Payment not found with ID: %s";
     public static final String PAYMENT_NOT_FOUND_FOR_BOOKING = "No payment found for booking: %s";

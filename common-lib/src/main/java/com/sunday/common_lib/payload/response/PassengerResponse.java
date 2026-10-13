@@ -27,6 +27,7 @@ public class PassengerResponse {
     private String passportNumber;
     private String nationality;
     private String frequentFlyerNumber;
+    private UUID seatInstanceId;
 
     private UUID primaryUserId;
     private String primaryUserName;

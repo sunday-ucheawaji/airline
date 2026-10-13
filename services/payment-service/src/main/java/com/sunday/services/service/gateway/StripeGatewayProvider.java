@@ -68,8 +68,8 @@ public class StripeGatewayProvider implements PaymentGatewayProvider {
                     .addLineItem(SessionCreateParams.LineItem.builder()
                             .setQuantity(1L)
                             .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
-                                    .setCurrency("usd")
-                                    .setUnitAmount(MoneyUtil.toSmallestUnit(payment.getAmount()))
+                                    .setCurrency(payment.getCurrency().toLowerCase())
+                                    .setUnitAmount(MoneyUtil.toSmallestUnit(payment.getAmount(), payment.getCurrency()))
                                     .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
                                             .setName("Booking " + payment.getBookingId())
                                             .build())
@@ -89,8 +89,9 @@ public class StripeGatewayProvider implements PaymentGatewayProvider {
         requireConfigured();
         try {
             PaymentIntent intent = PaymentIntent.retrieve(providerReference);
+            String currency = intent.getCurrency().toUpperCase();
             return new ProviderPaymentStatus(providerReference, mapIntentStatus(intent.getStatus()),
-                    MoneyUtil.fromSmallestUnit(intent.getAmount()));
+                    MoneyUtil.fromSmallestUnit(intent.getAmount(), currency), currency);
         } catch (StripeException e) {
             throw new PaymentException(String.format(ErrorMessageUtil.STRIPE_FETCH_PAYMENT_FAILED, e.getMessage()));
         }
@@ -123,6 +124,7 @@ public class StripeGatewayProvider implements PaymentGatewayProvider {
             String eventType = root.path("type").asText();
             JsonNode object = root.path("data").path("object");
             String objectKind = object.path("object").asText();
+            String currency = object.path("currency").asText("").toUpperCase();
 
             if ("checkout.session".equals(objectKind)) {
                 String providerReference = object.path("payment_intent").asText(null);
@@ -130,12 +132,12 @@ public class StripeGatewayProvider implements PaymentGatewayProvider {
                 PaymentStatus status = "paid".equalsIgnoreCase(object.path("payment_status").asText())
                         ? PaymentStatus.SUCCESS : PaymentStatus.PENDING;
                 return new ProviderWebhookEvent(eventType, providerReference, status,
-                        MoneyUtil.fromSmallestUnit(object.path("amount_total").asLong(0)), internalPaymentId);
+                        MoneyUtil.fromSmallestUnit(object.path("amount_total").asLong(0), currency), internalPaymentId);
             }
             if ("payment_intent".equals(objectKind)) {
                 UUID internalPaymentId = parseUuid(object.path("metadata").path("payment_id").asText(null));
                 return new ProviderWebhookEvent(eventType, object.path("id").asText(), mapIntentStatus(object.path("status").asText()),
-                        MoneyUtil.fromSmallestUnit(object.path("amount").asLong(0)), internalPaymentId);
+                        MoneyUtil.fromSmallestUnit(object.path("amount").asLong(0), currency), internalPaymentId);
             }
             throw new PaymentException(String.format(ErrorMessageUtil.STRIPE_WEBHOOK_PROCESSING_FAILED, "unhandled event data type " + objectKind));
         } catch (PaymentException e) {
@@ -151,7 +153,7 @@ public class StripeGatewayProvider implements PaymentGatewayProvider {
         try {
             RefundCreateParams params = RefundCreateParams.builder()
                     .setPaymentIntent(payment.getProviderPaymentId())
-                    .setAmount(MoneyUtil.toSmallestUnit(refundAmount))
+                    .setAmount(MoneyUtil.toSmallestUnit(refundAmount, payment.getCurrency()))
                     .build();
             RequestOptions options = RequestOptions.builder()
                     .setIdempotencyKey("refund_" + payment.getTransactionId())

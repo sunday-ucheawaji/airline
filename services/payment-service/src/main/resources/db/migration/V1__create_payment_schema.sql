@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS payments (
     -- airlineId at initiatePayment time, so permission checks never need a Feign round trip per check.
     airline_id          CHAR(36),
     amount              DECIMAL(12,2),
+    currency            VARCHAR(3),
     provider            ENUM('RAZORPAY','STRIPE','PAYSTACK'),
     provider_payment_id VARCHAR(255),
     transaction_id      VARCHAR(255),
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS payments (
     failure_reason      VARCHAR(255),
     paid_at             DATETIME(6),
     refund_id           VARCHAR(255),
+    refunded_amount     DECIMAL(12,2),
     idempotency_key         VARCHAR(255) UNIQUE,
     initiate_response_json  LONGTEXT,
     version                 BIGINT,

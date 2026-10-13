@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +24,7 @@ public interface PaymentClient {
     PaymentDTO getPaymentByBookingId(@PathVariable UUID bookingId);
 
     @PostMapping("/internal/payments/{paymentId}/refund")
-    PaymentDTO refundPaymentAsSystem(@PathVariable UUID paymentId);
+    PaymentDTO refundPaymentAsSystem(@PathVariable UUID paymentId, @RequestParam(value = "amount", required = false) BigDecimal amount);
 
     @PostMapping("/internal/payments/batch/bookings")
     Map<UUID, PaymentDTO> getPaymentsByBookingIds(@RequestBody List<UUID> bookingIds);

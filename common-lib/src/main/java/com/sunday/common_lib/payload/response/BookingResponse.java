@@ -59,6 +59,7 @@ public class BookingResponse {
 
     private Integer totalPassengers;
     private BigDecimal totalAmount;
+    private BigDecimal refundAmount;
     private String currency;
 
     private String specialRequests;

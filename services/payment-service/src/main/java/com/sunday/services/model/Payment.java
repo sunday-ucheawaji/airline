@@ -47,6 +47,9 @@ public class Payment {
 
     private BigDecimal amount;
 
+    @Column(length = 3)
+    private String currency;
+
     @Enumerated(EnumType.STRING)
     private PaymentGateway provider;
 
@@ -60,6 +63,7 @@ public class Payment {
     private String failureReason;
     private LocalDateTime paidAt;
     private String refundId;
+    private BigDecimal refundedAmount;
 
     // Correlates back to the caller's own saga/attempt (booking-service passes its bookingReference).
     // Lets a retried initiatePayment Feign call return the original response instead of a second row.

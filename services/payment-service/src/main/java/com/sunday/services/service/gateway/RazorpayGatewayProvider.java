@@ -48,8 +48,8 @@ public class RazorpayGatewayProvider implements PaymentGatewayProvider {
             RazorpayClient razorpay = new RazorpayClient(keyId, keySecret);
 
             JSONObject request = new JSONObject();
-            request.put("amount", MoneyUtil.toSmallestUnit(payment.getAmount()));
-            request.put("currency", "INR");
+            request.put("amount", MoneyUtil.toSmallestUnit(payment.getAmount(), payment.getCurrency()));
+            request.put("currency", payment.getCurrency());
             request.put("description", payment.getTransactionId());
 
             JSONObject customer = new JSONObject();
@@ -89,10 +89,12 @@ public class RazorpayGatewayProvider implements PaymentGatewayProvider {
             RazorpayClient razorpay = new RazorpayClient(keyId, keySecret);
             com.razorpay.Payment payment = razorpay.payments.fetch(providerReference);
             JSONObject json = payment.toJson();
+            String currency = json.optString("currency");
             return new ProviderPaymentStatus(
                     providerReference,
                     mapStatus(json.optString("status")),
-                    MoneyUtil.fromSmallestUnit(json.optLong("amount")));
+                    MoneyUtil.fromSmallestUnit(json.optLong("amount"), currency),
+                    currency);
         } catch (RazorpayException e) {
             throw new PaymentException(String.format(ErrorMessageUtil.RAZORPAY_FETCH_PAYMENT_FAILED, e.getMessage()));
         }
@@ -119,13 +121,14 @@ public class RazorpayGatewayProvider implements PaymentGatewayProvider {
             JSONObject entity = root.getJSONObject("payload").getJSONObject("payment").getJSONObject("entity");
             String providerReference = entity.optString("id");
             String status = entity.optString("status");
-            long amountInPaise = entity.optLong("amount");
+            long amountInSmallestUnit = entity.optLong("amount");
+            String currency = entity.optString("currency");
             String internalPaymentIdStr = entity.optJSONObject("notes") != null
                     ? entity.getJSONObject("notes").optString("payment_id", null) : null;
             UUID internalPaymentId = internalPaymentIdStr == null || internalPaymentIdStr.isBlank()
                     ? null : UUID.fromString(internalPaymentIdStr);
             return new ProviderWebhookEvent(eventType, providerReference, mapStatus(status),
-                    MoneyUtil.fromSmallestUnit(amountInPaise), internalPaymentId);
+                    MoneyUtil.fromSmallestUnit(amountInSmallestUnit, currency), internalPaymentId);
         } catch (Exception e) {
             throw new PaymentException(String.format(ErrorMessageUtil.RAZORPAY_WEBHOOK_PROCESSING_FAILED, e.getMessage()));
         }
@@ -137,7 +140,7 @@ public class RazorpayGatewayProvider implements PaymentGatewayProvider {
         try {
             RazorpayClient razorpay = new RazorpayClient(keyId, keySecret);
             JSONObject request = new JSONObject();
-            request.put("amount", MoneyUtil.toSmallestUnit(refundAmount));
+            request.put("amount", MoneyUtil.toSmallestUnit(refundAmount, payment.getCurrency()));
             JSONObject notes = new JSONObject();
             notes.put("payment_id", payment.getId());
             request.put("notes", notes);

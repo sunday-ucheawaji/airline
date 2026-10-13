@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,9 +32,7 @@ public class TicketServiceImpl implements TicketService {
     @Override
     @Transactional
     public List<Ticket> generateTicketsForBooking(Booking booking) {
-        log.info("Generating tickets for booking: {}", booking.getBookingReference());
-
-        List<Ticket> tickets = booking.getPassengers().stream()
+        List<Ticket> tickets = ticketRepository.saveAll(booking.getPassengers().stream()
                 .map(passenger -> Ticket.builder()
                         .ticketNumber(generateTicketNumber())
                         .status(TicketStatus.BOOKED)
@@ -43,12 +40,22 @@ public class TicketServiceImpl implements TicketService {
                         .booking(booking)
                         .passenger(passenger)
                         .build())
-                .collect(Collectors.toList());
-
-        tickets = ticketRepository.saveAll(tickets);
-
-        log.info("Successfully generated {} tickets for booking {}", tickets.size(), booking.getBookingReference());
+                .toList());
+        booking.getTickets().addAll(tickets);
+        booking.setTicketIssued(true);
+        log.info("Issued {} tickets for booking {}", tickets.size(), booking.getBookingReference());
         return tickets;
+    }
+
+    @Override
+    @Transactional
+    public void closeTicketsForBooking(Booking booking, TicketStatus status) {
+        if (booking.getTickets().stream().anyMatch(ticket -> ticket.getStatus() == TicketStatus.USED)) {
+            throw new ConflictException(String.format(ErrorMessageUtil.BOOKING_HAS_USED_TICKETS, booking.getBookingReference()));
+        }
+        booking.getTickets().stream()
+                .filter(ticket -> ticket.getStatus() == TicketStatus.BOOKED)
+                .forEach(ticket -> ticket.setStatus(status));
     }
 
     @Override
@@ -122,7 +129,6 @@ public class TicketServiceImpl implements TicketService {
         return updatedTicket;
     }
 
-    /** Refunds are an airline decision only: the customer never holds TICKET_REFUND_APPROVE and is not the owner check here. */
     @Override
     @Transactional
     public Ticket refundTicket(UUID ticketId, UUID userId) {
@@ -147,7 +153,6 @@ public class TicketServiceImpl implements TicketService {
                         String.format(ErrorMessageUtil.TICKET_NOT_FOUND_BY_ID, ticketId)));
     }
 
-    /** Relies on the column's UNIQUE constraint, not a pre-check: a collision on an 8-hex-char random suffix is astronomically unlikely. */
     private String generateTicketNumber() {
         String datePart = LocalDateTime.now().toString().substring(0, 10).replace("-", "");
         String randomPart = UUID.randomUUID().toString().substring(0, 8).toUpperCase();

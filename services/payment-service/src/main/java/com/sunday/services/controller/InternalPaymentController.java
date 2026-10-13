@@ -6,6 +6,7 @@ import com.sunday.services.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -22,10 +23,9 @@ public class InternalPaymentController {
         return paymentService.getPaymentByBookingId(bookingId);
     }
 
-    /** booking-service only: refunds a payment whose booking could not get its seats. */
     @PostMapping("/{paymentId}/refund")
-    public PaymentDTO refundPayment(@PathVariable UUID paymentId) {
-        return paymentService.refundPaymentAsSystem(paymentId);
+    public PaymentDTO refundPayment(@PathVariable UUID paymentId, @RequestParam(required = false) BigDecimal amount) {
+        return paymentService.refundPaymentAsSystem(paymentId, amount);
     }
 
     @PostMapping("/batch/bookings")

@@ -101,7 +101,7 @@ public class EmailContentBuilder {
         Context ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("bookingId", event.getBookingId());
         ctx.setVariable("amount", event.getAmount() != null ? fmt(event.getAmount().doubleValue()) : "N/A");
-        ctx.setVariable("currency", "NGN");
+        ctx.setVariable("currency", event.getCurrency());
         ctx.setVariable("failureReason", event.getFailureReason());
         return templateEngine.process("email/payment-failed", ctx);
     }
@@ -116,7 +116,7 @@ public class EmailContentBuilder {
         Context ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("bookingId", event.getBookingId());
         ctx.setVariable("amount", event.getAmount() != null ? fmt(event.getAmount().doubleValue()) : "N/A");
-        ctx.setVariable("currency", "NGN");
+        ctx.setVariable("currency", event.getCurrency());
         return templateEngine.process("email/payment-refunded", ctx);
     }
 

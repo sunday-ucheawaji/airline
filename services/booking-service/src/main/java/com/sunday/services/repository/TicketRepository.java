@@ -1,7 +1,6 @@
 package com.sunday.services.repository;
 
 import java.util.UUID;
-import com.sunday.common_lib.enums.TicketStatus;
 import com.sunday.services.model.Ticket;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,13 +15,7 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
 
     Optional<Ticket> findByTicketNumber(String ticketNumber);
 
-    List<Ticket> findByBookingId(UUID bookingId);
-
     List<Ticket> findByPassengerId(UUID passengerId);
-
-    List<Ticket> findByStatus(TicketStatus status);
-
-    boolean existsByTicketNumber(String ticketNumber);
 
     @Query("SELECT t FROM Ticket t " +
             "LEFT JOIN FETCH t.booking " +
