@@ -67,6 +67,8 @@ public final class PlatformPermissions {
     public static final String AIRLINE_ADMIN_ASSIGN = "AIRLINE_ADMIN_ASSIGN";
     public static final String AIRLINE_ACTIVATE = "AIRLINE_ACTIVATE";
     public static final String AIRLINE_UPDATE = "AIRLINE_UPDATE"; // reserved at platform level
+    /** Approve or reject a member's request to change an airline's verified identity fields. */
+    public static final String AIRLINE_IDENTITY_CHANGE_REVIEW = "AIRLINE_IDENTITY_CHANGE_REVIEW";
     public static final String AIRLINE_DEACTIVATE = "AIRLINE_DEACTIVATE"; // reserved
     public static final String TENANT_CREATE = "TENANT_CREATE"; // reserved
     public static final String TENANT_CONFIGURE = "TENANT_CONFIGURE"; // reserved
@@ -93,5 +95,5 @@ public final class PlatformPermissions {
     // ---------- Audit ----------
     public static final String APPROVAL_HISTORY_READ = "APPROVAL_HISTORY_READ";
     public static final String AUDIT_LOG_READ = "AUDIT_LOG_READ"; // reserved
-    public static final String DOCUMENT_AUDIT_READ = "DOCUMENT_AUDIT_READ"; // reserved
+    public static final String DOCUMENT_AUDIT_READ = "DOCUMENT_AUDIT_READ";
 }

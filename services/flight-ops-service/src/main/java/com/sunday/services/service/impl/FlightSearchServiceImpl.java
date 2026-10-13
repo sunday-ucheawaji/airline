@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.enums.AirlineStatus;
 import java.util.UUID;
 import com.sunday.common_lib.payload.request.FareSearchRequest;
 import com.sunday.common_lib.payload.request.FareSearchRequest.FlightDeparture;
@@ -117,11 +118,15 @@ public class FlightSearchServiceImpl implements FlightSearchService {
 
         List<FlightInstanceResponse> results = new ArrayList<>(instances.size());
         for (FlightInstance fi : instances) {
+            AirlineResponse airline = airlines.get(fi.getAirlineId());
+            if (isKnownNotSelling(airline)) {
+                continue;
+            }
             try {
                 FlightInstanceResponse response = FlightInstanceMapper.toResponse(
                         fi,
                         aircrafts.get(fi.getAircraftId()),
-                        airlines.get(fi.getAirlineId()),
+                        airline,
                         airports.get(fi.getDepartureAirportId()),
                         airports.get(fi.getArrivalAirportId()));
                 response.setFare(fareMap.get(departureOf(fi)));
@@ -131,6 +136,14 @@ public class FlightSearchServiceImpl implements FlightSearchService {
             }
         }
         return results;
+    }
+
+    /**
+     * A suspended, banned or closed airline's departures are not offered. An airline the lookup could not resolve is
+     * still shown: enrichment is display-only, and booking-service refuses the booking itself.
+     */
+    private static boolean isKnownNotSelling(AirlineResponse airline) {
+        return airline != null && airline.getStatus() != null && airline.getStatus() != AirlineStatus.ACTIVE;
     }
 
     private Pageable applySort(Pageable pageable, String sortBy, String sortOrder) {

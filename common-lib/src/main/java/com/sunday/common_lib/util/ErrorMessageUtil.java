@@ -56,6 +56,19 @@ public class ErrorMessageUtil {
     public static final String AIRLINE_ICAO_CODE_ALREADY_EXISTS = "ICAO code %s is already in use by another airline";
     public static final String AIRLINE_STATUS_UNCHANGED = "Airline %s is already %s";
     public static final String CONCURRENT_MODIFICATION = "The record was changed by someone else at the same time; reload it and try again";
+    public static final String AIRLINE_OF_FLIGHT_UNAVAILABLE = "The airline operating flight %s could not be resolved; try again";
+    public static final String AIRLINE_NOT_ACCEPTING_BOOKINGS = "Airline %s is %s and is not accepting new bookings";
+    public static final String AIRLINE_IDENTITY_CHANGE_NOT_FOUND = "Identity change request %s not found";
+    public static final String AIRLINE_IDENTITY_CHANGE_NOTHING_CHANGED = "The request does not change any identity field";
+    public static final String AIRLINE_IDENTITY_CHANGE_ALREADY_PENDING = "Airline %s already has a pending identity change request";
+    public static final String AIRLINE_IDENTITY_CHANGE_NOT_PENDING = "Identity change request %s is %s, not PENDING";
+    public static final String AIRLINE_IDENTITY_CHANGE_CANCEL_NOT_REQUESTER = "Only the member who made identity change request %s can cancel it";
+    public static final String AIRLINE_IDENTITY_CHANGE_REVIEWER_IS_REQUESTER = "You cannot review an identity change request you made";
+    public static final String AIRLINE_IDENTITY_CHANGE_REJECTION_REASON_MANDATORY = "A reason is required to reject an identity change request";
+    public static final String USER_ACCESS_LOCK_BUSY = "Another change to the access of user %s is in progress; try again";
+    public static final String USER_ACCESS_LOCK_UNAVAILABLE = "Cannot lock the access of user %s right now";
+    public static final String DOCUMENT_SCANNER_DEFINITIONS_STALE = "Virus definitions are out of date (%s); documents will be scanned once they are updated";
+    public static final String DOCUMENT_SCANNER_DEFINITIONS_UNKNOWN = "Could not determine the age of the virus definitions";
     public static final String AIRLINE_CLOSED_STATUS_LOCKED = "Airline %s has been closed and its status can no longer be changed";
 
     // ---------- Aircraft ----------

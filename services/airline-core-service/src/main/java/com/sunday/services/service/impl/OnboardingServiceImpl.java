@@ -3,6 +3,7 @@ package com.sunday.services.service.impl;
 import com.sunday.common_lib.constants.AirlineRoles;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
+import com.sunday.common_lib.lock.UserAccessLock;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.exception.UserException;
 import com.sunday.common_lib.payload.request.OnboardingApplicationRequest;
@@ -64,6 +65,7 @@ public class OnboardingServiceImpl implements OnboardingService {
     private final OnboardingSupport support;
     private final OnboardingDocumentGate documentGate;
     private final RoleClient roleClient;
+    private final UserAccessLock userAccessLock;
 
     // ---------- Applicant side ----------
 
@@ -245,6 +247,7 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new ConflictException(String.format(ErrorMessageUtil.ONBOARDING_SEGREGATION_OF_DUTIES, "owned"));
         }
         support.requireNotApplicantOrNominee(application, actorUserId);
+        userAccessLock.lockForCurrentTransaction(ownerUserId);
         platformUserGuard.requireNotPlatformUser(
                 ownerUserId, String.format(ErrorMessageUtil.ONBOARDING_PLATFORM_USER_CANNOT_OWN, ownerUserId));
         requireAirlineCodesAvailable(application);

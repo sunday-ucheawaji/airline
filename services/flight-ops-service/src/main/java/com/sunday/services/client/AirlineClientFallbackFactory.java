@@ -84,18 +84,6 @@ public class AirlineClientFallbackFactory implements FallbackFactory<AirlineClie
                 log.warn("airline-core-service call failed – aircraft batch lookup returns empty: {}", cause.getMessage(), cause);
                 return Collections.emptyMap();
             }
-
-            @Override
-            public List<AirlineResponse> getAirlinesByIataCodes(List<String> codes) {
-                log.warn("airline-core-service call failed – airline-by-IATA lookup returns empty: {}", cause.getMessage(), cause);
-                return Collections.emptyList();
-            }
-
-            @Override
-            public List<AirlineResponse> getAirlinesByAlliance(String alliance) {
-                log.warn("airline-core-service call failed – airline-by-alliance lookup returns empty: {}", cause.getMessage(), cause);
-                return Collections.emptyList();
-            }
         };
     }
 }

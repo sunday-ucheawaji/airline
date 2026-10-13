@@ -3,6 +3,7 @@ package com.sunday.services.controller;
 import java.util.UUID;
 import com.sunday.common_lib.payload.request.OnboardingActionRequest;
 import com.sunday.common_lib.payload.response.DocumentResponse;
+import com.sunday.common_lib.payload.response.DocumentAccessLogResponse;
 import com.sunday.common_lib.payload.response.DownloadUrlResponse;
 import com.sunday.services.service.OnboardingDocumentService;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +29,14 @@ public class OnboardingDocumentReviewController {
     }
 
     @GetMapping("/{documentId}/download-url")
-    public ResponseEntity<DownloadUrlResponse> getDownloadUrl(@PathVariable UUID applicationId, @PathVariable UUID documentId) {
-        return ResponseEntity.ok(documentService.getDownloadUrlForReview(applicationId, documentId));
+    public ResponseEntity<DownloadUrlResponse> getDownloadUrl(
+            @PathVariable UUID applicationId, @PathVariable UUID documentId, @RequestHeader("X-User-Id") UUID actorUserId) {
+        return ResponseEntity.ok(documentService.getDownloadUrlForReview(applicationId, documentId, actorUserId));
+    }
+
+    @GetMapping("/{documentId}/access-log")
+    public ResponseEntity<List<DocumentAccessLogResponse>> getAccessLog(@PathVariable UUID applicationId, @PathVariable UUID documentId) {
+        return ResponseEntity.ok(documentService.getAccessLog(applicationId, documentId));
     }
 
     @PostMapping("/{documentId}/verify")

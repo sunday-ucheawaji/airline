@@ -56,7 +56,7 @@ spring:
             - id: airline-core-routes
               uri: lb://airline-core-service
               predicates:
-                - Path=/api/airlines/**,/api/aircrafts/**,/api/onboarding/**,/api/admin/onboarding/**
+                - Path=/api/airlines/**,/api/aircrafts/**,/api/onboarding/**,/api/admin/onboarding/**,/api/admin/airlines/**
               filters:
                 - name: RequestRateLimiter
                   args:

@@ -7,6 +7,7 @@ import com.sunday.services.service.AircraftService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,7 +23,7 @@ public class AircraftController {
     public ResponseEntity<AircraftResponse> createAircraft(
             @Valid @RequestBody AircraftRequest request,
             @RequestHeader("X-User-Id") UUID userId) {
-        return ResponseEntity.ok(aircraftService.createAircraft(request, userId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(aircraftService.createAircraft(request, userId));
     }
 
     @GetMapping("/{id}")

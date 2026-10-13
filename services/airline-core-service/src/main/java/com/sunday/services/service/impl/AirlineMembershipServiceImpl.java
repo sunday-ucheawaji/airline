@@ -5,6 +5,7 @@ import com.sunday.common_lib.constants.AirlineRoles;
 import com.sunday.common_lib.dto.RoleDTO;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
+import com.sunday.common_lib.lock.UserAccessLock;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,12 +49,17 @@ import java.util.UUID;
 @Transactional
 public class AirlineMembershipServiceImpl implements AirlineMembershipService {
 
+    /** REMOVED/REVOKED/EXPIRED never became (or stopped being) real membership. */
+    private static final EnumSet<MembershipStatus> COUNTS_AS_MEMBER =
+            EnumSet.of(MembershipStatus.INVITED, MembershipStatus.ACTIVE, MembershipStatus.SUSPENDED);
+
     private final AirlineMembershipRepository membershipRepository;
     private final AirlineRepository airlineRepository;
     private final AirlineService airlineService;
     private final UserClient userClient;
     private final RoleClient roleClient;
     private final PlatformUserGuard platformUserGuard;
+    private final UserAccessLock userAccessLock;
 
     @Value("${airline.invitation-expiry:7d}")
     private Duration invitationExpiry;
@@ -64,6 +71,7 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
         Airline airline = getAirlineOrThrow(airlineId);
 
         UUID invitedUserId = resolveUserByEmail(request.getEmail());
+        userAccessLock.lockForCurrentTransaction(invitedUserId);
         platformUserGuard.requireNotPlatformUser(invitedUserId,
                 String.format(ErrorMessageUtil.MEMBER_INVITE_TARGET_IS_PLATFORM_STAFF, invitedUserId));
 
@@ -85,6 +93,12 @@ public class AirlineMembershipServiceImpl implements AirlineMembershipService {
         membership.setExpiresAt(Instant.now().plus(invitationExpiry));
         membership.setJoinedAt(null);
         return AirlineMembershipMapper.toResponse(membershipRepository.save(membership));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasMembership(UUID userId) {
+        return membershipRepository.existsByUserIdAndStatusIn(userId, COUNTS_AS_MEMBER);
     }
 
     @Override

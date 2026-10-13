@@ -36,12 +36,8 @@ public class AirlineMapper {
     public static void updateEntity(Airline airline, AirlineRequest request) {
         if (airline == null || request == null) return;
 
-        airline.setLegalName(request.getLegalName());
         airline.setName(request.getName());
         airline.setAlias(request.getAlias());
-        airline.setRegistrationNumber(request.getRegistrationNumber());
-        airline.setIataCode(request.getIataCode());
-        airline.setIcaoCode(request.getIcaoCode());
         airline.setCountry(request.getCountry());
         airline.setLogoUrl(request.getLogoUrl());
         airline.setWebsite(request.getWebsite());

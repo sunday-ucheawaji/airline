@@ -98,6 +98,9 @@ services:
       - "3310:3310"          # clamd -> localhost:3310
     volumes:
       - clamav-db:/var/lib/clamav
+      # Dev-only signature that flags a harmless marker string, so the infected-file path can be tested end to end
+      # through a structurally valid PDF (EICAR only matches a file that is nothing but the test string).
+      - ./clamav/gds-test-signatures.ndb:/var/lib/clamav/gds-test-signatures.ndb
     healthcheck:
       test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
       interval: 30s

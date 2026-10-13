@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS airline_identity_change_requests (
+    id                            CHAR(36) PRIMARY KEY,
+    airline_id                    CHAR(36) NOT NULL,
+    requested_by_user_id          CHAR(36) NOT NULL,
+    proposed_legal_name           VARCHAR(255),
+    proposed_registration_number  VARCHAR(100),
+    proposed_iata_code            VARCHAR(2),
+    proposed_icao_code            VARCHAR(3),
+    reason                        TEXT NOT NULL,
+    status                        ENUM('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
+    reviewed_by_user_id           CHAR(36),
+    review_comment                TEXT,
+    reviewed_at                   DATETIME(6),
+    version                       BIGINT NOT NULL DEFAULT 0,
+    created_at                    DATETIME(6) NOT NULL,
+    updated_at                    DATETIME(6) NOT NULL,
+    CONSTRAINT fk_identity_change_airline FOREIGN KEY (airline_id) REFERENCES airlines (id),
+    INDEX idx_identity_change_airline_status (airline_id, status),
+    INDEX idx_identity_change_status_created (status, created_at)
+);

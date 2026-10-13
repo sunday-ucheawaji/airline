@@ -178,6 +178,13 @@ public class SecurityConfig {
                                 .hasAuthority(DOCUMENT_VERIFY)
                         .pathMatchers(HttpMethod.POST, "/api/admin/onboarding/applications/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/documents/{documentId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/reject")
                                 .hasAuthority(DOCUMENT_REJECT)
+                        .pathMatchers(HttpMethod.GET, "/api/admin/onboarding/applications/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/documents/{documentId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/access-log")
+                                .hasAuthority(DOCUMENT_AUDIT_READ)
+                        // --- staff: requests to change an airline's verified identity fields ---
+                        .pathMatchers(HttpMethod.GET, "/api/admin/airlines/identity-change-requests", "/api/admin/airlines/identity-change-requests/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+                                .hasAnyAuthority(AIRLINE_READ, AIRLINE_IDENTITY_CHANGE_REVIEW)
+                        .pathMatchers(HttpMethod.POST, "/api/admin/airlines/identity-change-requests/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/approve", "/api/admin/airlines/identity-change-requests/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/reject")
+                                .hasAuthority(AIRLINE_IDENTITY_CHANGE_REVIEW)
                         .pathMatchers("/api/admin/**").denyAll()
 
                         // --- platform administration ---

@@ -5,6 +5,7 @@ import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
+import com.sunday.common_lib.lock.UserAccessLock;
 import com.sunday.common_lib.payload.request.AssignPermissionsRequest;
 import com.sunday.common_lib.payload.request.RoleRequest;
 import com.sunday.common_lib.payload.response.ReviewerResponse;
@@ -42,6 +43,7 @@ public class RoleServiceImpl implements RoleService {
     private final UserRepository userRepository;
     private final UserPlatformRoleRepository userPlatformRoleRepository;
     private final MembershipClient membershipClient;
+    private final UserAccessLock userAccessLock;
 
     @Override
     public List<Role> getRoles() {
@@ -145,6 +147,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
+    @Transactional
     public void assignPlatformRoleToUser(UUID roleId, UUID userId, UUID grantorUserId, Collection<String> grantorRoles) {
         Role role = getRoleById(roleId);
         if (role.getScope() != RoleScope.PLATFORM) {
@@ -161,6 +164,7 @@ public class RoleServiceImpl implements RoleService {
             return;
         }
 
+        userAccessLock.lockForCurrentTransaction(userId);
         requireNotAirlineMember(userId);
         for (UserPlatformRole held : userPlatformRoleRepository.findByUserId(userId)) {
             if (PlatformRoles.conflicts(role.getName(), held.getRole().getName())) {

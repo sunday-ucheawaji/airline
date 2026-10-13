@@ -10,6 +10,9 @@ import java.util.List;
 
 public interface AirlineMembershipService {
 
+    /** True when the user has a membership that is invited, active or suspended. */
+    boolean hasMembership(UUID userId);
+
     AirlineMembershipResponse invite(UUID airlineId, AirlineInvitationRequest request, UUID actorUserId);
 
     List<AirlineMembershipResponse> listMembers(UUID airlineId, UUID actorUserId);

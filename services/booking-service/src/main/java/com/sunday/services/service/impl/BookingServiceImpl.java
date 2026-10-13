@@ -2,12 +2,14 @@ package com.sunday.services.service.impl;
 
 import java.util.UUID;
 import com.sunday.common_lib.constants.BookingPermissions;
+import com.sunday.common_lib.enums.AirlineStatus;
 import com.sunday.common_lib.enums.BookingStatus;
 import com.sunday.common_lib.enums.PaymentGateway;
 import com.sunday.common_lib.enums.TripType;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
+import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.payload.request.BookingRequest;
 import com.sunday.common_lib.payload.request.PassengerRequest;
 import com.sunday.common_lib.payload.request.PaymentInitiateRequest;
@@ -104,6 +106,7 @@ public class BookingServiceImpl implements BookingService {
             }
             LocalDate departureDate = flightInstanceResponse.getDepartureDateTime().toLocalDate();
             FlightResponse flightResponse = flightClient.getFlightById(flightId);
+            requireAirlineAcceptingBookings(flightResponse);
 
             FareQuoteResponse quote = pricingIntegrationService.quoteFare(
                     request.getFareId(), flightId, request.getCabinClass(), departureDate);
@@ -379,6 +382,18 @@ public class BookingServiceImpl implements BookingService {
                 passenger.setPassportNumber(null);
                 passenger.setDateOfBirth(null);
             });
+        }
+    }
+
+    /** Suspended, banned or closed airlines sell nothing new; existing bookings are untouched. */
+    private static void requireAirlineAcceptingBookings(FlightResponse flight) {
+        AirlineResponse airline = flight.getAirline();
+        if (airline == null || airline.getStatus() == null) {
+            throw new ServiceUnavailableException(String.format(ErrorMessageUtil.AIRLINE_OF_FLIGHT_UNAVAILABLE, flight.getId()));
+        }
+        if (airline.getStatus() != AirlineStatus.ACTIVE) {
+            throw new ConflictException(String.format(
+                    ErrorMessageUtil.AIRLINE_NOT_ACCEPTING_BOOKINGS, airline.getId(), airline.getStatus()));
         }
     }
 

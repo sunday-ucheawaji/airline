@@ -25,6 +25,7 @@ public final class GatewayPermissions {
     public static final String DOCUMENT_READ_OWN = "DOCUMENT_READ_OWN";
     public static final String DOCUMENT_READ = "DOCUMENT_READ";
     public static final String DOCUMENT_VERIFY = "DOCUMENT_VERIFY";
+    public static final String DOCUMENT_AUDIT_READ = "DOCUMENT_AUDIT_READ";
     public static final String DOCUMENT_REJECT = "DOCUMENT_REJECT";
 
     public static final String ONBOARDING_APPLICATION_ASSIGN = "ONBOARDING_APPLICATION_ASSIGN";
@@ -52,6 +53,7 @@ public final class GatewayPermissions {
     public static final String AIRLINE_READ = "AIRLINE_READ";
     public static final String AIRLINE_SUSPEND = "AIRLINE_SUSPEND";
     public static final String AIRLINE_BAN = "AIRLINE_BAN";
+    public static final String AIRLINE_IDENTITY_CHANGE_REVIEW = "AIRLINE_IDENTITY_CHANGE_REVIEW";
 
     public static final String USER_READ = "USER_READ";
     public static final String USER_ROLE_ASSIGN = "USER_ROLE_ASSIGN";

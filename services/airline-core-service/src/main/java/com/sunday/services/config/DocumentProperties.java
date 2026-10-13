@@ -34,6 +34,8 @@ public class DocumentProperties {
         private int port = 3310;
         private Duration connectTimeout = Duration.ofSeconds(3);
         private Duration readTimeout = Duration.ofSeconds(60);
+        /** Scanning is refused while the daemon's virus definitions are older than this. */
+        private Duration maxDefinitionAge = Duration.ofDays(3);
     }
 
     @Getter

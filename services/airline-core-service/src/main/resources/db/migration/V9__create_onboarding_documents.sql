@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS onboarding_documents (
     verified_by_user_id    CHAR(36),
     verified_at            DATETIME(6),
     rejection_reason       TEXT,
+    version                BIGINT NOT NULL DEFAULT 0,
     created_at             DATETIME(6) NOT NULL,
     updated_at             DATETIME(6) NOT NULL,
     CONSTRAINT uk_onboarding_documents_storage_key UNIQUE (storage_key),

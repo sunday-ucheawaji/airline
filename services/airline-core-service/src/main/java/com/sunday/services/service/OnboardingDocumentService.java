@@ -2,6 +2,7 @@ package com.sunday.services.service;
 
 import java.util.UUID;
 import com.sunday.common_lib.payload.response.DocumentResponse;
+import com.sunday.common_lib.payload.response.DocumentAccessLogResponse;
 import com.sunday.common_lib.payload.response.DownloadUrlResponse;
 import com.sunday.services.enums.DocumentType;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,7 +29,10 @@ public interface OnboardingDocumentService {
     // ----- Staff side: only documents that have passed the automatic checks are visible -----
     List<DocumentResponse> getDocumentsForReview(UUID applicationId);
 
-    DownloadUrlResponse getDownloadUrlForReview(UUID applicationId, UUID documentId);
+    DownloadUrlResponse getDownloadUrlForReview(UUID applicationId, UUID documentId, UUID actorUserId);
+
+    /** Every download link issued for the document, oldest first. */
+    List<DocumentAccessLogResponse> getAccessLog(UUID applicationId, UUID documentId);
 
     DocumentResponse verify(UUID applicationId, UUID documentId, UUID actorUserId);
 

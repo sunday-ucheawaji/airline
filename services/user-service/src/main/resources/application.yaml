@@ -18,6 +18,12 @@ spring:
       circuitbreaker:
         enabled: true
 
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 2000ms
+
 auth:
   verification-token-ttl-hours: ${VERIFICATION_TOKEN_TTL_HOURS}
   refresh-token-ttl-days: ${REFRESH_TOKEN_TTL_DAYS}

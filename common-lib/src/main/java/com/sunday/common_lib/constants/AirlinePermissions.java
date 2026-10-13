@@ -13,4 +13,7 @@ public final class AirlinePermissions {
 
     /** Close (soft-delete) the airline. Granted to OWNER only. */
     public static final String CLOSE = "AIRLINE_CLOSE";
+
+    /** Ask platform staff to change the airline's verified identity fields. Granted to OWNER only. */
+    public static final String IDENTITY_CHANGE_REQUEST = "AIRLINE_IDENTITY_CHANGE_REQUEST";
 }

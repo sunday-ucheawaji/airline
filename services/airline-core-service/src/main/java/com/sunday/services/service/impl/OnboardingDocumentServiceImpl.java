@@ -5,10 +5,12 @@ import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.response.DocumentResponse;
+import com.sunday.common_lib.payload.response.DocumentAccessLogResponse;
 import com.sunday.common_lib.payload.response.DownloadUrlResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.config.DocumentProperties;
 import com.sunday.services.enums.DocumentStatus;
+import com.sunday.services.enums.DocumentAccessor;
 import com.sunday.services.enums.DocumentType;
 import com.sunday.services.enums.InformationRequestStatus;
 import com.sunday.services.enums.OnboardingStage;
@@ -16,7 +18,9 @@ import com.sunday.services.enums.OnboardingStatus;
 import com.sunday.services.mapper.DocumentMapper;
 import com.sunday.services.model.AirlineOnboardingApplication;
 import com.sunday.services.model.OnboardingDocument;
+import com.sunday.services.model.OnboardingDocumentAccess;
 import com.sunday.services.repository.OnboardingDocumentRepository;
+import com.sunday.services.repository.OnboardingDocumentAccessRepository;
 import com.sunday.services.repository.OnboardingInformationRequestRepository;
 import com.sunday.services.service.OnboardingDocumentService;
 import com.sunday.services.storage.DocumentStorage;
@@ -46,6 +50,7 @@ public class OnboardingDocumentServiceImpl implements OnboardingDocumentService 
 
     private final OnboardingSupport support;
     private final OnboardingDocumentRepository documentRepository;
+    private final OnboardingDocumentAccessRepository accessRepository;
     private final OnboardingInformationRequestRepository informationRequestRepository;
     private final DocumentStorage storage;
     private final DocumentProperties properties;
@@ -105,10 +110,10 @@ public class OnboardingDocumentServiceImpl implements OnboardingDocumentService 
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public DownloadUrlResponse getMyDownloadUrl(UUID applicationId, UUID documentId, UUID applicantUserId) {
         support.requireOwnedByApplicant(support.getOrThrow(applicationId), applicantUserId);
-        return downloadUrl(requireDocument(applicationId, documentId));
+        return downloadUrl(requireDocument(applicationId, documentId), applicantUserId, DocumentAccessor.APPLICANT);
     }
 
     @Override
@@ -134,10 +139,20 @@ public class OnboardingDocumentServiceImpl implements OnboardingDocumentService 
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public DownloadUrlResponse getDownloadUrlForReview(UUID applicationId, UUID documentId) {
+    @Transactional
+    public DownloadUrlResponse getDownloadUrlForReview(UUID applicationId, UUID documentId, UUID actorUserId) {
         support.getVisibleOrThrow(applicationId);
-        return downloadUrl(requireDocument(applicationId, documentId));
+        return downloadUrl(requireDocument(applicationId, documentId), actorUserId, DocumentAccessor.STAFF);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DocumentAccessLogResponse> getAccessLog(UUID applicationId, UUID documentId) {
+        support.getVisibleOrThrow(applicationId);
+        requireDocument(applicationId, documentId);
+        return accessRepository.findByDocumentIdOrderByAccessedAtAsc(documentId).stream()
+                .map(DocumentMapper::toAccessLogResponse)
+                .toList();
     }
 
     @Override
@@ -191,10 +206,16 @@ public class OnboardingDocumentServiceImpl implements OnboardingDocumentService 
     }
 
     /** Only files that passed the automatic checks can be viewed: never one still being inspected, and never a blocked one. */
-    private DownloadUrlResponse downloadUrl(OnboardingDocument document) {
+    private DownloadUrlResponse downloadUrl(OnboardingDocument document, UUID userId, DocumentAccessor accessor) {
         if (!VIEWABLE.contains(document.getStatus())) {
             throw new ConflictException(String.format(ErrorMessageUtil.DOCUMENT_NOT_AVAILABLE, document.getId(), document.getStatus()));
         }
+        accessRepository.save(OnboardingDocumentAccess.builder()
+                .documentId(document.getId())
+                .applicationId(document.getApplication().getId())
+                .userId(userId)
+                .accessor(accessor)
+                .build());
         DocumentStorage.PresignedDownload link = storage.presignDownload(
                 document.getStorageKey(), document.getOriginalFileName(), document.getDetectedContentType());
         return DownloadUrlResponse.builder()

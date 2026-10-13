@@ -124,7 +124,6 @@ public class AirlineServiceImpl implements AirlineService {
         Airline airline = getAirlineOrThrow(airlineId);
         requireActiveAirline(airline);
         requirePermission(userId, List.of(airlineId), AirlinePermissions.PROFILE_UPDATE);
-        requireUniqueCodes(airlineId, request);
 
         AirlineMapper.updateEntity(airline, request);
         return AirlineMapper.toResponse(airlineRepository.save(airline));
@@ -195,26 +194,6 @@ public class AirlineServiceImpl implements AirlineService {
         if (airline.getStatus() != AirlineStatus.ACTIVE) {
             throw new OperationNotPermittedException(String.format(
                     ErrorMessageUtil.AIRLINE_NOT_ACTIVE, airline.getId(), airline.getStatus()));
-        }
-    }
-
-    /** Pre-check for the DB unique constraints so a clash is a 409 instead of a 500. */
-    private void requireUniqueCodes(UUID airlineId, AirlineRequest request) {
-        if (request.getIataCode() != null) {
-            airlineRepository.findByIataCode(request.getIataCode())
-                    .filter(other -> !other.getId().equals(airlineId))
-                    .ifPresent(other -> {
-                        throw new ConflictException(String.format(
-                                ErrorMessageUtil.AIRLINE_IATA_CODE_ALREADY_EXISTS, request.getIataCode()));
-                    });
-        }
-        if (request.getIcaoCode() != null) {
-            airlineRepository.findByIcaoCode(request.getIcaoCode())
-                    .filter(other -> !other.getId().equals(airlineId))
-                    .ifPresent(other -> {
-                        throw new ConflictException(String.format(
-                                ErrorMessageUtil.AIRLINE_ICAO_CODE_ALREADY_EXISTS, request.getIcaoCode()));
-                    });
         }
     }
 

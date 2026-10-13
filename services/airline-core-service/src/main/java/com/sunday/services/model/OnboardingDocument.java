@@ -95,6 +95,10 @@ public class OnboardingDocument {
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     @CreationTimestamp
     @Column(updatable = false, nullable = false)
     private Instant createdAt;

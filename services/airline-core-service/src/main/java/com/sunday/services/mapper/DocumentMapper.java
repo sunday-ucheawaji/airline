@@ -2,7 +2,9 @@ package com.sunday.services.mapper;
 
 import com.sunday.common_lib.event.OnboardingDocumentUploadedEvent;
 import com.sunday.common_lib.payload.response.DocumentResponse;
+import com.sunday.common_lib.payload.response.DocumentAccessLogResponse;
 import com.sunday.services.model.OnboardingDocument;
+import com.sunday.services.model.OnboardingDocumentAccess;
 
 import java.util.List;
 
@@ -41,6 +43,17 @@ public class DocumentMapper {
                 .declaredFileName(document.getOriginalFileName())
                 .uploadedByUserId(document.getUploadedByUserId())
                 .uploadedAt(document.getCreatedAt())
+                .build();
+    }
+
+    public static DocumentAccessLogResponse toAccessLogResponse(OnboardingDocumentAccess access) {
+        return DocumentAccessLogResponse.builder()
+                .id(access.getId())
+                .documentId(access.getDocumentId())
+                .applicationId(access.getApplicationId())
+                .userId(access.getUserId())
+                .accessor(access.getAccessor().name())
+                .accessedAt(access.getAccessedAt())
                 .build();
     }
 }
