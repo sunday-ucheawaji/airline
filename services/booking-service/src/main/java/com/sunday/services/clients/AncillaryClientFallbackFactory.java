@@ -13,8 +13,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * The price calls must never fall back to 0 — that would let unavailable, unknown or
@@ -25,8 +23,6 @@ import java.util.regex.Pattern;
 @Component
 @Slf4j
 public class AncillaryClientFallbackFactory implements FallbackFactory<AncillaryClient> {
-
-    private static final Pattern MESSAGE_FIELD = Pattern.compile("\"message\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
 
     @Override
     public AncillaryClient create(Throwable cause) {
@@ -58,19 +54,10 @@ public class AncillaryClientFallbackFactory implements FallbackFactory<Ancillary
         if (cause instanceof FeignException fe && fe.status() >= 400 && fe.status() < 500) {
             log.warn("ancillary-service rejected {} selection: {}", what, fe.getMessage());
             return new ResponseStatusException(
-                    HttpStatus.valueOf(fe.status()), extractMessage(fe, "Invalid " + what + " selection"));
+                    HttpStatus.valueOf(fe.status()), FeignFailureUtil.extractMessage(fe, "Invalid " + what + " selection"));
         }
         log.error("Could not price {} via ancillary-service", what, cause);
         return new ResponseStatusException(
                 HttpStatus.SERVICE_UNAVAILABLE, "Pricing for " + what + " is unavailable. Please retry.");
-    }
-
-    private String extractMessage(FeignException fe, String defaultMessage) {
-        String body = fe.contentUTF8();
-        if (body == null) {
-            return defaultMessage;
-        }
-        Matcher matcher = MESSAGE_FIELD.matcher(body);
-        return matcher.find() ? matcher.group(1).replace("\\\"", "\"") : defaultMessage;
     }
 }

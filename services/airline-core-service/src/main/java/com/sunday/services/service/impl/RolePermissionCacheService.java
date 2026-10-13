@@ -2,7 +2,9 @@ package com.sunday.services.service.impl;
 
 import java.util.UUID;
 import com.sunday.common_lib.dto.PermissionDTO;
+import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.util.CacheUtil;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.client.RoleClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -27,7 +29,7 @@ public class RolePermissionCacheService {
     public List<String> getPermissionNamesForRole(UUID roleId) {
         List<PermissionDTO> permissions = roleClient.getPermissionsForRole(roleId);
         if (permissions == null) {
-            throw new RuntimeException("user-service unavailable");
+            throw new ServiceUnavailableException(String.format(ErrorMessageUtil.ROLE_LOOKUP_UNAVAILABLE, roleId));
         }
         return permissions.stream().map(PermissionDTO::getName).toList();
     }

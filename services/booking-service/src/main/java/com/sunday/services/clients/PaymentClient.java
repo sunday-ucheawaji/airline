@@ -11,11 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "payment-service",
-//        fallback = PaymentClientFallback.class,
-        fallbackFactory = PaymentClientFallbackFactory.class
-
-)
+@FeignClient(name = "payment-service", fallbackFactory = PaymentClientFallbackFactory.class)
 public interface PaymentClient {
 
     @PostMapping("/api/payments/initiate")

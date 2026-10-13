@@ -3,6 +3,7 @@ package com.sunday.services.Integration.impl;
 import java.util.UUID;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
+import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.Integration.AirlineIntegrationService;
@@ -27,12 +28,15 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
         List<String> permissions;
         try {
             permissions = airlineClient.getMyPermissions(airlineId, userId);
+        } catch (FeignException.Forbidden e) {
+            throw new OperationNotPermittedException(
+                    String.format(ErrorMessageUtil.NO_PERMISSION_FOR_AIRLINE, permission, airlineId));
         } catch (FeignException e) {
-            throw new RuntimeException(String.format(ErrorMessageUtil.AIRLINE_SERVICE_ERROR, e.getMessage()), e);
+            throw new ServiceUnavailableException(String.format(ErrorMessageUtil.AIRLINE_SERVICE_ERROR, e.getMessage()), e);
         }
         // Fallback returns null when airline-core-service is unreachable
         if (permissions == null) {
-            throw new RuntimeException(ErrorMessageUtil.AIRLINE_SERVICE_UNAVAILABLE);
+            throw new ServiceUnavailableException(ErrorMessageUtil.AIRLINE_SERVICE_UNAVAILABLE);
         }
         if (!permissions.contains(permission)) {
             throw new OperationNotPermittedException(
@@ -51,7 +55,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
             throw new OperationNotPermittedException(
                     String.format(ErrorMessageUtil.NO_PERMISSION_FOR_AIRLINES, permission, airlineIds));
         } catch (FeignException e) {
-            throw new RuntimeException(String.format(ErrorMessageUtil.AIRLINE_SERVICE_ERROR, e.getMessage()), e);
+            throw new ServiceUnavailableException(String.format(ErrorMessageUtil.AIRLINE_SERVICE_ERROR, e.getMessage()), e);
         }
     }
 
@@ -61,8 +65,11 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
             return airlineClient.getAircraftById(aircraftId, userId);
         } catch (FeignException.NotFound e) {
             throw new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRCRAFT_NOT_FOUND_BY_ID, aircraftId));
+        } catch (FeignException.Forbidden e) {
+            throw new OperationNotPermittedException(
+                    String.format(ErrorMessageUtil.NO_PERMISSION_FOR_AIRCRAFT, aircraftId));
         } catch (FeignException e) {
-            throw new RuntimeException(String.format(ErrorMessageUtil.AIRCRAFT_SERVICE_ERROR, e.getMessage()), e);
+            throw new ServiceUnavailableException(String.format(ErrorMessageUtil.AIRCRAFT_SERVICE_ERROR, e.getMessage()), e);
         }
     }
 
@@ -73,7 +80,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
         } catch (FeignException.NotFound e) {
             throw new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRCRAFT_NOT_FOUND_BY_ID, aircraftId));
         } catch (FeignException e) {
-            throw new RuntimeException(String.format(ErrorMessageUtil.AIRCRAFT_SERVICE_ERROR, e.getMessage()), e);
+            throw new ServiceUnavailableException(String.format(ErrorMessageUtil.AIRCRAFT_SERVICE_ERROR, e.getMessage()), e);
         }
     }
 
@@ -85,7 +92,7 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
         try {
             return airlineClient.getAircraftsByIdsInternal(new ArrayList<>(aircraftIds));
         } catch (FeignException e) {
-            throw new RuntimeException(String.format(ErrorMessageUtil.AIRCRAFT_SERVICE_ERROR, e.getMessage()), e);
+            throw new ServiceUnavailableException(String.format(ErrorMessageUtil.AIRCRAFT_SERVICE_ERROR, e.getMessage()), e);
         }
     }
 }

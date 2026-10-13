@@ -49,6 +49,7 @@ public class ErrorMessageUtil {
     public static final String NO_ACTIVE_MEMBERSHIP_FOR_AIRLINE = "You do not have an active membership in airline %s";
     public static final String NO_PERMISSION_FOR_AIRLINE = "You do not have permission %s for airline %s";
     public static final String NO_PERMISSION_FOR_AIRLINES = "You do not have permission %s for airline(s): %s";
+    public static final String NO_PERMISSION_FOR_AIRCRAFT = "You do not have permission to view aircraft %s";
     public static final String AIRLINE_NOT_ACTIVE = "Airline %s is %s and cannot be modified";
     public static final String AIRLINE_IATA_CODE_ALREADY_EXISTS = "IATA code %s is already in use by another airline";
     public static final String AIRLINE_ICAO_CODE_ALREADY_EXISTS = "ICAO code %s is already in use by another airline";

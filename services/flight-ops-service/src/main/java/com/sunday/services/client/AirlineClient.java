@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "airline-core-service", fallback = AirlineClientFallback.class)
+@FeignClient(name = "airline-core-service", fallbackFactory = AirlineClientFallbackFactory.class)
 public interface AirlineClient {
 
     @GetMapping("/api/airlines/{airlineId}/permissions")

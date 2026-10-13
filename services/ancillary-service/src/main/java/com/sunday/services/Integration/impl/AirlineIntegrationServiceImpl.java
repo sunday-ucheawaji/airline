@@ -48,6 +48,9 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
         List<String> permissions;
         try {
             permissions = airlineClient.getMyPermissions(airlineId, userId);
+        } catch (FeignException.Forbidden e) {
+            throw new OperationNotPermittedException(
+                    String.format(ErrorMessageUtil.NO_PERMISSION_FOR_AIRLINE, permission, airlineId));
         } catch (FeignException e) {
             throw new ServiceUnavailableException(String.format(ErrorMessageUtil.AIRLINE_SERVICE_ERROR, e.getMessage()), e);
         }
@@ -83,6 +86,9 @@ public class AirlineIntegrationServiceImpl implements AirlineIntegrationService 
             response = airlineClient.getAircraftById(aircraftId);
         } catch (FeignException.NotFound e) {
             throw new ResourceNotFoundException(String.format(ErrorMessageUtil.AIRCRAFT_NOT_FOUND_BY_ID, aircraftId));
+        } catch (FeignException.Forbidden e) {
+            throw new OperationNotPermittedException(
+                    String.format(ErrorMessageUtil.NO_PERMISSION_FOR_AIRCRAFT, aircraftId));
         } catch (FeignException e) {
             throw new ServiceUnavailableException(String.format(ErrorMessageUtil.AIRCRAFT_SERVICE_ERROR, e.getMessage()), e);
         }

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 /** Internal seat-service endpoints: a booking's own seats are held and shown without a caller airline permission. */
-@FeignClient(name = "seat-service", fallback = SeatClientFallback.class)
+@FeignClient(name = "seat-service", fallbackFactory = SeatClientFallbackFactory.class)
 public interface SeatClient {
 
     @PostMapping("/internal/seat-instances/hold")

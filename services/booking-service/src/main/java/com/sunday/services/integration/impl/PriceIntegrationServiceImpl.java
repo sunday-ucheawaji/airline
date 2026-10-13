@@ -3,6 +3,7 @@ package com.sunday.services.integration.impl;
 import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.exception.ConflictException;
+import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
@@ -27,6 +28,8 @@ public class PriceIntegrationServiceImpl implements PricingIntegrationService {
             quote = pricingClient.quoteFare(fareId, flightId, cabinClass, departureDate);
         } catch (FeignException.Conflict e) {
             throw new ConflictException(ErrorMessageUtil.FARE_UNAVAILABLE_FOR_DEPARTURE);
+        } catch (FeignException.NotFound e) {
+            throw new ResourceNotFoundException(String.format(ErrorMessageUtil.FARE_NOT_FOUND_BY_ID, fareId));
         } catch (FeignException e) {
             throw new ServiceUnavailableException(String.format(ErrorMessageUtil.FARE_SERVICE_ERROR, e.getMessage()), e);
         }

@@ -16,7 +16,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "pricing-service", fallback = PricingClientFallback.class)
+@FeignClient(name = "pricing-service", fallbackFactory = PricingClientFallbackFactory.class)
 public interface PricingClient {
 
     @GetMapping("/internal/fares/{id}")

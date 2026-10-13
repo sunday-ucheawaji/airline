@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "flight-ops-service", fallback = FlightClientFallback.class)
+@FeignClient(name = "flight-ops-service", fallbackFactory = FlightClientFallbackFactory.class)
 public interface FlightClient
 {
     @GetMapping("/api/flights/{id}")

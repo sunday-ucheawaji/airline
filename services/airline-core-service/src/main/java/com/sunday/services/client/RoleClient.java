@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.util.List;
 import java.util.UUID;
 
-@FeignClient(name = "user-service", fallback = RoleClientFallback.class)
+@FeignClient(name = "user-service", fallbackFactory = RoleClientFallbackFactory.class)
 public interface RoleClient {
 
     @GetMapping("/api/roles/{roleId}/permissions")
