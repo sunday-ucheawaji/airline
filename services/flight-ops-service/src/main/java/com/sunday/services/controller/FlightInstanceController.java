@@ -2,6 +2,8 @@ package com.sunday.services.controller;
 
 import java.util.UUID;
 import com.sunday.common_lib.payload.request.FlightInstanceRequest;
+import com.sunday.common_lib.enums.FlightStatus;
+import com.sunday.common_lib.payload.request.FlightInstanceUpdateRequest;
 import com.sunday.common_lib.payload.response.FlightInstanceResponse;
 import com.sunday.services.service.FlightInstanceService;
 import jakarta.validation.Valid;
@@ -65,9 +67,17 @@ public class FlightInstanceController {
     @PutMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<FlightInstanceResponse> updateFlightInstance(
             @PathVariable UUID id,
-            @Valid @RequestBody FlightInstanceRequest request,
+            @Valid @RequestBody FlightInstanceUpdateRequest request,
             @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(flightInstanceService.updateFlightInstance(id, request, userId));
+    }
+
+    @PatchMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/status")
+    public ResponseEntity<FlightInstanceResponse> changeStatus(
+            @PathVariable UUID id,
+            @RequestParam FlightStatus status,
+            @RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(flightInstanceService.changeStatus(id, status, userId));
     }
 
     @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")

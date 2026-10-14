@@ -4,9 +4,9 @@ INSERT INTO airports (id, iata_code, name, street, postal_code, latitude, longit
 SELECT UUID(), a.iata_code, a.name, a.street, a.postal_code, a.latitude, a.longitude, a.time_zone_id, c.id
 FROM (
     SELECT 'LOS' AS iata_code, 'Murtala Muhammed International Airport'            AS name, 'Ikeja'                            AS street, '100271'  AS postal_code, 6.5774  AS latitude, 3.3212   AS longitude, 'Africa/Lagos'     AS time_zone_id, 'LOS' AS city_code UNION ALL
-    SELECT 'QOW', 'Sam Mbakwe Cargo Airport',                          'Cargo Terminal Road',              '100275',  6.6102,  3.2901,   'Africa/Lagos',     'LOS' UNION ALL
     SELECT 'ABV', 'Nnamdi Azikiwe International Airport',              'Airport Road',                     '900107',  9.0068,  7.2632,   'Africa/Lagos',     'ABV' UNION ALL
-    SELECT 'ABX', 'Abuja Executive Airport',                           'Executive Aviation Road',          '900108',  8.9981,  7.2514,   'Africa/Lagos',     'ABV' UNION ALL
+    SELECT 'PHC', 'Port Harcourt International Airport',               'Omagwa',                           NULL,      5.0150,  6.9497,   'Africa/Lagos',     'PHC' UNION ALL
+    SELECT 'QOW', 'Sam Mbakwe International Cargo Airport',            NULL,                               NULL,      5.4272,  7.2061,   'Africa/Lagos',     'QOW' UNION ALL
     SELECT 'LHR', 'London Heathrow Airport',                           'Longford TW6',                     'TW6',     51.47,   -0.4543,  'Europe/London',    'LON' UNION ALL
     SELECT 'LGW', 'London Gatwick Airport',                            'Horley',                           'RH6 0NP', 51.1537, -0.1821,  'Europe/London',    'LON' UNION ALL
     SELECT 'LGA', 'LaGuardia Airport',                                 '94-00 Grand Central Pkwy',         '11371',   40.7769, -73.874,  'America/New_York', 'NYC' UNION ALL

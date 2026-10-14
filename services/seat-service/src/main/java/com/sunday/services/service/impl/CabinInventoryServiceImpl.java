@@ -6,6 +6,7 @@ import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.event.FlightInstanceAircraftChangedEvent;
 import com.sunday.common_lib.event.FlightInstanceCreatedEvent;
 import com.sunday.common_lib.event.FlightInstancesBulkCreatedEvent;
+import com.sunday.common_lib.event.FlightInstancesDeletedEvent;
 import com.sunday.services.model.CabinClass;
 import com.sunday.services.model.FlightInstanceCabin;
 import com.sunday.services.model.Seat;
@@ -75,6 +76,30 @@ public class CabinInventoryServiceImpl implements CabinInventoryService {
         }
 
         materializeCabinsAndSeats(event.getAircraftId(), event.getFlightId(), pendingIds);
+    }
+
+    /**
+     * flight-ops only deletes departures with nothing sold, but it checked before the delete; a seat held in between
+     * keeps that departure's inventory so the booking isn't left pointing at nothing. Redelivery deletes nothing more.
+     */
+    @Override
+    public void removeForFlightInstances(FlightInstancesDeletedEvent event) {
+        List<UUID> ids = event.getFlightInstanceIds();
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        Set<UUID> withSales = seatInstanceRepository.countSoldByFlightInstance(ids).stream()
+                .filter(row -> row.getSoldSeats() > 0)
+                .map(SeatInstanceRepository.SoldSeats::getFlightInstanceId)
+                .collect(Collectors.toSet());
+        withSales.forEach(id -> log.error("Flight instance {} was deleted by flight-ops but has seats sold or held; keeping its inventory", id));
+        List<UUID> removable = ids.stream().filter(id -> !withSales.contains(id)).toList();
+        if (removable.isEmpty()) {
+            return;
+        }
+        int seats = seatInstanceRepository.deleteByFlightInstanceIdIn(removable);
+        int cabins = flightInstanceCabinRepository.deleteByFlightInstanceIdIn(removable);
+        log.info("Removed {} seat instances and {} cabins of {} deleted flight instance(s)", seats, cabins, removable.size());
     }
 
     @Override

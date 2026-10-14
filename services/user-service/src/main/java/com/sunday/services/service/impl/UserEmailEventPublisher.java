@@ -1,6 +1,7 @@
 package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.event.EmailVerificationRequestedEvent;
+import com.sunday.common_lib.event.ExistingAccountSignupAttemptedEvent;
 import com.sunday.common_lib.event.PasswordResetRequestedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,11 @@ public class UserEmailEventPublisher {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPasswordResetRequested(PasswordResetRequestedEvent event) {
         send(PasswordResetRequestedEvent.TOPIC, event.getUserId().toString(), event);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onExistingAccountSignupAttempted(ExistingAccountSignupAttemptedEvent event) {
+        send(ExistingAccountSignupAttemptedEvent.TOPIC, event.getUserId().toString(), event);
     }
 
     private void send(String topic, String key, Object event) {

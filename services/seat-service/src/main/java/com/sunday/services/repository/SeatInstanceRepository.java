@@ -7,10 +7,12 @@ import com.sunday.services.model.SeatInstance;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +20,33 @@ public interface SeatInstanceRepository extends JpaRepository<SeatInstance, UUID
 
     List<SeatInstance> findByFlightId(UUID flightId);
     List<SeatInstance> findByFlightInstanceId(UUID flightInstanceId);
+
+    interface CabinAvailability {
+        UUID getFlightInstanceId();
+        long getAvailableSeats();
+    }
+
+    interface SoldSeats {
+        UUID getFlightInstanceId();
+        long getSoldSeats();
+    }
+
+    /** Seats a passenger has: held in a booking in progress, booked or occupied. Staff-blocked seats are not sales. */
+    @Query("SELECT si.flightInstanceId AS flightInstanceId, COUNT(si) AS soldSeats FROM SeatInstance si " +
+            "WHERE si.flightInstanceId IN :flightInstanceIds AND si.status IN ('HELD', 'BOOKED', 'OCCUPIED') " +
+            "GROUP BY si.flightInstanceId")
+    List<SoldSeats> countSoldByFlightInstance(@Param("flightInstanceIds") Collection<UUID> flightInstanceIds);
+
+    @Modifying
+    @Query("DELETE FROM SeatInstance si WHERE si.flightInstanceId IN :flightInstanceIds")
+    int deleteByFlightInstanceIdIn(@Param("flightInstanceIds") Collection<UUID> flightInstanceIds);
+
+    @Query("SELECT si.flightInstanceId AS flightInstanceId, COUNT(si) AS availableSeats FROM SeatInstance si " +
+            "JOIN si.flightInstanceCabin fc JOIN fc.cabinClass cc " +
+            "WHERE si.flightInstanceId IN :flightInstanceIds AND cc.name = :cabinClass AND si.status = 'AVAILABLE' " +
+            "GROUP BY si.flightInstanceId")
+    List<CabinAvailability> countAvailableInCabin(@Param("flightInstanceIds") Collection<UUID> flightInstanceIds,
+                                                  @Param("cabinClass") CabinClassType cabinClass);
     List<SeatInstance> findByFlightInstanceCabinId(UUID id);
     boolean existsBySeatIdAndFlightInstanceId(UUID seatId, UUID flightInstanceId);
 

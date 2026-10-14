@@ -7,28 +7,32 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
- * Writes the repo-wide error body ({@code timestamp, status, error, message, path}, same shape as
- * common-lib's {@code ErrorResponse}) for rejections produced at the gateway itself. The gateway does
- * not depend on common-lib, and only ever sends fixed messages, so this is hand-built JSON.
+ * Writes the repo-wide RFC 9457 problem ({@code application/problem+json}: {@code type, title, status, detail,
+ * instance, code, timestamp}, same shape as common-lib's {@code GlobalExceptionHandler}) for rejections produced at
+ * the gateway itself. The gateway does not depend on common-lib, and only ever sends fixed messages, so this is
+ * hand-built JSON.
  */
-final class ErrorResponses {
+public final class ErrorResponses {
 
     private ErrorResponses() {
     }
 
-    static Mono<Void> write(ServerWebExchange exchange, HttpStatus status, String message) {
-        String body = String.format(
-                "{\"timestamp\":\"%s\",\"status\":%d,\"error\":\"%s\",\"message\":\"%s\",\"path\":\"%s\"}",
-                LocalDateTime.now(), status.value(), status.getReasonPhrase(), escape(message),
-                escape(exchange.getRequest().getPath().value()));
-
+    public static Mono<Void> write(ServerWebExchange exchange, HttpStatus status, String code, String detail) {
         exchange.getResponse().setStatusCode(status);
-        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_PROBLEM_JSON);
+        String body = body(status, code, detail, exchange.getRequest().getPath().value());
         DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(body.getBytes(StandardCharsets.UTF_8));
         return exchange.getResponse().writeWith(Mono.just(buffer));
+    }
+
+    public static String body(HttpStatus status, String code, String detail, String path) {
+        return String.format(
+                "{\"type\":\"about:blank\",\"title\":\"%s\",\"status\":%d,\"detail\":\"%s\",\"instance\":\"%s\","
+                        + "\"code\":\"%s\",\"timestamp\":\"%s\"}",
+                status.getReasonPhrase(), status.value(), escape(detail), escape(path), code, Instant.now());
     }
 
     private static String escape(String value) {

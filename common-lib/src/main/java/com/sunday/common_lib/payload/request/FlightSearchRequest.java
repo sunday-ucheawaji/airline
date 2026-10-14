@@ -22,7 +22,12 @@ public class FlightSearchRequest {
     private UUID departureAirportId;
     private UUID arrivalAirportId;
     private LocalDate departureDate;
-    private Integer passengers;
+    @Builder.Default
+    private Integer adults = 1;
+    @Builder.Default
+    private Integer children = 0;
+    @Builder.Default
+    private Integer infants = 0;
     private CabinClassType cabinClass;
 
     private List<UUID> airlines;
@@ -35,4 +40,9 @@ public class FlightSearchRequest {
 
     private String sortBy;
     private String sortOrder;
+
+    /** Everyone who needs a seat: adults and children. Infants travel on an adult's lap. */
+    public int seatedPassengers() {
+        return adults + children;
+    }
 }

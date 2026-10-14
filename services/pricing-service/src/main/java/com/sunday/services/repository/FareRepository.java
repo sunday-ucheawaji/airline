@@ -43,7 +43,7 @@ public interface FareRepository extends JpaRepository<Fare, UUID> {
 
     /**
      * Search candidates for a page of flight departures, in one query. Keeps published fares of the cabin and
-     * passenger type whose sales window contains {@code now} and whose travel window overlaps the requested dates. The per-departure
+     * passenger types whose sales window contains {@code now} and whose travel window overlaps the requested dates. The per-departure
      * travel and advance-purchase rules are applied in memory by FareValidityPolicy. Rules and baggage are fetched
      * here, because the search response includes them and loading them per fare would query inside a loop.
      */
@@ -53,7 +53,7 @@ public interface FareRepository extends JpaRepository<Fare, UUID> {
         LEFT JOIN FETCH f.baggagePolicy
         WHERE f.flightId IN :flightIds
           AND f.cabinClass = :cabinClass
-          AND f.passengerType = :passengerType
+          AND f.passengerType IN :passengerTypes
           AND f.status = :status
           AND f.salesFrom <= :now
           AND f.salesTo >= :now
@@ -62,7 +62,7 @@ public interface FareRepository extends JpaRepository<Fare, UUID> {
     """)
     List<Fare> findSearchCandidates(@Param("flightIds") Collection<UUID> flightIds,
                                     @Param("cabinClass") CabinClassType cabinClass,
-                                    @Param("passengerType") PassengerType passengerType,
+                                    @Param("passengerTypes") Collection<PassengerType> passengerTypes,
                                     @Param("status") FareStatus status,
                                     @Param("now") Instant now,
                                     @Param("firstDate") LocalDate firstDate,

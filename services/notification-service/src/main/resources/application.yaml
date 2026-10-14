@@ -67,8 +67,10 @@ notification:
   support-phone: ${SUPPORT_PHONE}
   checkin-url: ${CHECKIN_URL}
   manage-booking-url: ${MANAGE_BOOKING_URL}
-  verify-email-url: ${VERIFY_EMAIL_URL:http://localhost:3000/verify-email}
-  reset-password-url: ${RESET_PASSWORD_URL:http://localhost:3000/reset-password}
+  verify-email-url: ${VERIFY_EMAIL_URL:http://localhost:5173/verify-email}
+  reset-password-url: ${RESET_PASSWORD_URL:http://localhost:5173/reset-password}
+  sign-in-url: ${SIGN_IN_URL:http://localhost:5173/sign-in}
+  forgot-password-url: ${FORGOT_PASSWORD_URL:http://localhost:5173/forgot-password}
 
 # ── Resilience: each channel provider call is circuit-broken and rate-limited so a down/slow
 # provider (SMTP outage, Twilio throttling) degrades to fast failures instead of hanging the

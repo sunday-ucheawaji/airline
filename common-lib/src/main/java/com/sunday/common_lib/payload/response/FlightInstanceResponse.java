@@ -32,6 +32,11 @@ public class FlightInstanceResponse {
 
     private Integer totalSeats;
     private Integer availableSeats;
+    /** Seats held, booked or occupied, from seat-service; set on the staff list, null if it couldn't be read. */
+    private Long seatsSold;
+    private UUID scheduleId;
+    /** Free seats in the searched cabin; set by flight search only. */
+    private Long seatsLeftInCabin;
 
     private FlightStatus status;
 
@@ -44,4 +49,5 @@ public class FlightInstanceResponse {
 
     private Long version;
     private FareResponse fare;
+    private PartyPriceResponse partyPrice;
 }

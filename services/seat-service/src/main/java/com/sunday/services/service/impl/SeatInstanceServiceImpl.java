@@ -5,6 +5,7 @@ import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
+import com.sunday.common_lib.payload.request.CabinAvailabilityRequest;
 import com.sunday.common_lib.payload.request.SeatConfirmRequest;
 import com.sunday.common_lib.payload.request.SeatHoldRequest;
 import com.sunday.common_lib.payload.request.SeatInstanceRequest;
@@ -37,6 +38,7 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -184,6 +186,28 @@ public class SeatInstanceServiceImpl implements SeatInstanceService {
         }
         makeAvailable(si);
         return SeatInstanceMapper.toResponse(seatInstanceRepository.save(si));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, Long> countAvailableSeats(CabinAvailabilityRequest request) {
+        Map<UUID, Long> counts = new HashMap<>();
+        request.getFlightInstanceIds().forEach(id -> counts.put(id, 0L));
+        seatInstanceRepository.countAvailableInCabin(counts.keySet(), request.getCabinClass())
+                .forEach(row -> counts.put(row.getFlightInstanceId(), row.getAvailableSeats()));
+        return counts;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, Long> countSoldSeats(List<UUID> flightInstanceIds) {
+        Map<UUID, Long> counts = new HashMap<>();
+        flightInstanceIds.forEach(id -> counts.put(id, 0L));
+        if (!counts.isEmpty()) {
+            seatInstanceRepository.countSoldByFlightInstance(counts.keySet())
+                    .forEach(row -> counts.put(row.getFlightInstanceId(), row.getSoldSeats()));
+        }
+        return counts;
     }
 
     @Override

@@ -3,16 +3,23 @@ package com.sunday.services.controller;
 import com.sunday.common_lib.payload.request.ResetPasswordRequest;
 import com.sunday.common_lib.payload.request.ForgotPasswordRequest;
 import com.sunday.common_lib.payload.request.LoginRequest;
-import com.sunday.common_lib.payload.request.RefreshTokenRequest;
 import com.sunday.common_lib.payload.request.RegisterRequest;
 import com.sunday.common_lib.payload.request.ResendVerificationRequest;
 import com.sunday.common_lib.payload.request.VerifyEmailRequest;
+import com.sunday.common_lib.exception.AuthError;
+import com.sunday.common_lib.exception.UserException;
+import com.sunday.common_lib.payload.response.ApiResponse;
 import com.sunday.common_lib.payload.response.AuthResponse;
+import com.sunday.common_lib.util.ErrorMessageUtil;
+import com.sunday.services.config.RefreshTokenCookie;
 import com.sunday.services.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,12 +33,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final RefreshTokenCookie refreshTokenCookie;
 
+    /**
+     * 202 with the same body whether the email was new or already registered. A concurrent signup with the same
+     * email loses on the unique constraint; the winner's verification email covers it, so it gets the same answer.
+     */
     @PostMapping("/signup")
-    public ResponseEntity<AuthResponse> signup(
-            @RequestBody @Valid RegisterRequest req) {
-        AuthResponse response = authService.signup(req);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ApiResponse> signup(@RequestBody @Valid RegisterRequest req) {
+        try {
+            authService.signup(req);
+        } catch (DataIntegrityViolationException concurrentSignup) {
+            // Same answer as any other signup.
+        }
+        return ResponseEntity.accepted().body(new ApiResponse(ErrorMessageUtil.SIGNUP_ACCEPTED));
     }
 
     @PostMapping("/login")
@@ -39,55 +54,65 @@ public class AuthController {
             @RequestBody @Valid LoginRequest req, HttpServletRequest request) {
         AuthResponse response = authService.login(
                 req.getEmail(), req.getPassword(), userAgentOf(request), clientIpOf(request));
-        return ResponseEntity.ok(response);
+        return withRefreshCookie(response);
     }
 
     @GetMapping("/verify-email")
-    public ResponseEntity<String> verifyEmail(
-            @RequestParam String token) {
+    public ApiResponse verifyEmail(@RequestParam String token) {
         authService.verifyEmail(token);
-        return ResponseEntity.ok("Email verified successfully");
+        return new ApiResponse(ErrorMessageUtil.EMAIL_VERIFIED);
     }
 
     @PostMapping("/verify-email")
-    public ResponseEntity<String> verifyEmail(
-            @RequestBody @Valid VerifyEmailRequest req) {
+    public ApiResponse verifyEmail(@RequestBody @Valid VerifyEmailRequest req) {
         authService.verifyEmail(req.getToken());
-        return ResponseEntity.ok("Email verified successfully");
+        return new ApiResponse(ErrorMessageUtil.EMAIL_VERIFIED);
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<String> resendVerification(
-            @RequestBody @Valid ResendVerificationRequest req) {
+    public ApiResponse resendVerification(@RequestBody @Valid ResendVerificationRequest req) {
         authService.resendVerification(req.getEmail());
-        return ResponseEntity.ok("If that email is registered and not yet verified, a verification link has been sent");
+        return new ApiResponse(ErrorMessageUtil.VERIFICATION_RESENT);
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(@RequestBody @Valid ForgotPasswordRequest req) {
+    public ApiResponse forgotPassword(@RequestBody @Valid ForgotPasswordRequest req) {
         authService.forgotPassword(req.getEmail());
-        return ResponseEntity.ok("If that email belongs to an active account, a password reset link has been sent");
+        return new ApiResponse(ErrorMessageUtil.PASSWORD_RESET_SENT);
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@RequestBody @Valid ResetPasswordRequest req) {
+    public ApiResponse resetPassword(@RequestBody @Valid ResetPasswordRequest req) {
         authService.resetPassword(req.getToken(), req.getNewPassword());
-        return ResponseEntity.ok("Password reset; please log in again");
+        return new ApiResponse(ErrorMessageUtil.PASSWORD_RESET_DONE);
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
-            @RequestBody @Valid RefreshTokenRequest req, HttpServletRequest request) {
-        AuthResponse response = authService.refresh(
-                req.getRefreshToken(), userAgentOf(request), clientIpOf(request));
-        return ResponseEntity.ok(response);
+            @CookieValue(name = RefreshTokenCookie.NAME, required = false) String refreshToken,
+            HttpServletRequest request) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new UserException(AuthError.INVALID_REFRESH_TOKEN);
+        }
+        AuthResponse response = authService.refresh(refreshToken, userAgentOf(request), clientIpOf(request));
+        return withRefreshCookie(response);
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(
-            @RequestBody @Valid RefreshTokenRequest req) {
-        authService.logout(req.getRefreshToken());
-        return ResponseEntity.ok("Logged out successfully");
+    public ResponseEntity<ApiResponse> logout(
+            @CookieValue(name = RefreshTokenCookie.NAME, required = false) String refreshToken) {
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            authService.logout(refreshToken);
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.clear())
+                .body(new ApiResponse(ErrorMessageUtil.LOGGED_OUT));
+    }
+
+    private ResponseEntity<AuthResponse> withRefreshCookie(AuthResponse response) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.issue(response.getRefreshToken()))
+                .body(response);
     }
 
     private String userAgentOf(HttpServletRequest request) {

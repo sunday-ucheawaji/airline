@@ -9,9 +9,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 public interface FlightInstanceCabinRepository extends JpaRepository<FlightInstanceCabin, UUID> {
@@ -21,6 +23,10 @@ public interface FlightInstanceCabinRepository extends JpaRepository<FlightInsta
     List<FlightInstanceCabin> findAllByFlightInstanceId(UUID flightInstanceId);
 
     List<FlightInstanceCabin> findAllByFlightInstanceIdIn(List<UUID> flightInstanceIds);
+
+    @Modifying
+    @Query("DELETE FROM FlightInstanceCabin fc WHERE fc.flightInstanceId IN :flightInstanceIds")
+    int deleteByFlightInstanceIdIn(@Param("flightInstanceIds") Collection<UUID> flightInstanceIds);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT fc FROM FlightInstanceCabin fc WHERE fc.id = :id")

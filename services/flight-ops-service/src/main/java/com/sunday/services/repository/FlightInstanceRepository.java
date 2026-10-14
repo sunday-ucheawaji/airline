@@ -32,6 +32,12 @@ public interface FlightInstanceRepository extends JpaRepository<
             @Param("dayEnd") LocalDateTime dayEnd,
             Pageable pageable);
 
+    long countByFlightId(UUID flightId);
+
+    List<FlightInstance> findByScheduleIdAndDepartureDateTimeAfter(UUID scheduleId, LocalDateTime after);
+
+    List<FlightInstance> findByScheduleId(UUID scheduleId);
+
     @Query("SELECT fi FROM FlightInstance fi JOIN FETCH fi.flight WHERE fi.id IN :ids")
     List<FlightInstance> findAllByIdInWithFlight(@Param("ids") Collection<UUID> ids);
 }

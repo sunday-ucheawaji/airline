@@ -3,6 +3,7 @@ package com.sunday.services.event;
 import com.sunday.common_lib.event.FlightInstanceAircraftChangedEvent;
 import com.sunday.common_lib.event.FlightInstanceCreatedEvent;
 import com.sunday.common_lib.event.FlightInstancesBulkCreatedEvent;
+import com.sunday.common_lib.event.FlightInstancesDeletedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +25,10 @@ public class FlightInstanceEventProducer {
     /** One event for the whole batch instead of one FlightInstanceCreatedEvent per instance — see FlightInstancesBulkCreatedEvent. */
     public void sendFlightInstancesBulkCreated(FlightInstancesBulkCreatedEvent event) {
         outboxEventPublisher.enqueue("flight-instances-bulk-created", event);
+    }
+
+    public void sendFlightInstancesDeleted(FlightInstancesDeletedEvent event) {
+        outboxEventPublisher.enqueue(FlightInstancesDeletedEvent.TOPIC, event);
     }
 
     public void sendFlightInstanceAircraftChanged(FlightInstanceAircraftChangedEvent event) {

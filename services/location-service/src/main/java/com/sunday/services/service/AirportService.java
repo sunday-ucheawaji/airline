@@ -3,6 +3,7 @@ package com.sunday.services.service;
 import com.sunday.common_lib.payload.request.AirportRequest;
 import com.sunday.common_lib.payload.response.AirportBulkCreateResponse;
 import com.sunday.common_lib.payload.response.AirportResponse;
+import com.sunday.common_lib.payload.response.AirportSearchResult;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -20,6 +21,9 @@ public interface AirportService {
     Map<UUID, AirportResponse> getAirportsByIds(List<UUID> ids);
 
     Page<AirportResponse> getAllAirports(Pageable pageable);
+
+    /** Public typeahead: the airport or city code, the start of a city or country name, or any part of an airport name. */
+    List<AirportSearchResult> searchAirports(String query, int limit);
     AirportResponse updateAirport(UUID id, AirportRequest request);
     void deleteAirport(UUID id);
     List<AirportResponse> getAirportsByCityId(UUID cityId);

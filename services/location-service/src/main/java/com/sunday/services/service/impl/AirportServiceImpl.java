@@ -6,6 +6,7 @@ import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.AirportRequest;
 import com.sunday.common_lib.payload.response.AirportBulkCreateResponse;
 import com.sunday.common_lib.payload.response.AirportResponse;
+import com.sunday.common_lib.payload.response.AirportSearchResult;
 import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.mapper.AirportMapper;
@@ -19,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,8 +30,10 @@ import java.util.UUID;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +42,11 @@ import java.util.stream.Collectors;
 public class AirportServiceImpl implements AirportService {
 
     public static final int MAX_BULK_ROWS = 500;
+    public static final int MIN_SEARCH_QUERY_LENGTH = 2;
+    public static final int MAX_SEARCH_QUERY_LENGTH = 50;
+    public static final int MAX_SEARCH_RESULTS = 20;
+
+    private static final Pattern SEARCH_UNSAFE_CHARACTERS = Pattern.compile("[^\\p{L}\\p{N} .'-]");
 
     private final AirportRepository airportRepository;
     private final CityRepository cityRepository;
@@ -130,6 +139,31 @@ public class AirportServiceImpl implements AirportService {
     @Transactional(readOnly = true)
     public Page<AirportResponse> getAllAirports(Pageable pageable) {
         return airportRepository.findAllWithCity(pageable).map(AirportMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AirportSearchResult> searchAirports(String query, int limit) {
+        String normalized = normalizeSearchQuery(query);
+        if (normalized.length() < MIN_SEARCH_QUERY_LENGTH) {
+            return List.of();
+        }
+        int size = Math.max(1, Math.min(limit, MAX_SEARCH_RESULTS));
+        return airportRepository.search(normalized, Limit.of(size)).stream()
+                .map(AirportMapper::toSearchResult)
+                .toList();
+    }
+
+    /** Drops LIKE wildcards and anything else no airport, city or country name contains. */
+    private static String normalizeSearchQuery(String query) {
+        if (query == null) {
+            return "";
+        }
+        String cleaned = SEARCH_UNSAFE_CHARACTERS.matcher(query).replaceAll("")
+                .trim()
+                .replaceAll("\\s+", " ")
+                .toLowerCase(Locale.ROOT);
+        return cleaned.length() > MAX_SEARCH_QUERY_LENGTH ? cleaned.substring(0, MAX_SEARCH_QUERY_LENGTH) : cleaned;
     }
 
     @Override

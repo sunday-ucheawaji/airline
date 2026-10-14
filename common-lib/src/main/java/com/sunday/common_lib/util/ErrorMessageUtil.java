@@ -18,10 +18,10 @@ public class ErrorMessageUtil {
     public static final String USER_NOT_FOUND_BY_ID = "User not found with id: %s";
     public static final String EMAIL_ALREADY_REGISTERED = "Email already registered";
     public static final String INVALID_CREDENTIALS = "Invalid email or password";
-    public static final String EMAIL_NOT_VERIFIED = "Please verify your email before logging in";
+    public static final String EMAIL_NOT_VERIFIED = "Please verify your email address before signing in";
     public static final String ACCOUNT_LOCKED = "Account is temporarily locked due to repeated failed login attempts. Try again later.";
     public static final String ACCOUNT_NOT_ACTIVE = "Account is not active";
-    public static final String PASSWORD_TOO_LONG = "Password must be at most 72 bytes";
+    public static final String PASSWORD_TOO_LONG = "Use a shorter password: at most 72 bytes (some characters count as more than one)";
     public static final String CURRENT_PASSWORD_INCORRECT = "Current password is incorrect";
     public static final String PASSWORD_UNCHANGED = "The new password must differ from the current one";
     public static final String USER_STATUS_INVALID = "Status must be ACTIVE or SUSPENDED";
@@ -120,11 +120,33 @@ public class ErrorMessageUtil {
     public static final String SCHEDULE_END_DATE_BEFORE_START_DATE = "End date must be after start date";
     public static final String FLIGHT_SCHEDULE_NOT_FOUND_BY_ID = "Flight schedule not found with id: %s";
     public static final String SCHEDULE_OPERATING_DAYS_MANDATORY = "Operating days are required unless recurrenceType is DAILY";
+    public static final String SCHEDULE_END_DATE_IN_PAST = "The schedule's end date has already passed";
+    public static final String SCHEDULE_FLIGHT_IMMUTABLE = "A schedule's flight can't change; create a new schedule for the other flight";
+    public static final String SCHEDULE_TIMES_EQUAL = "Departure and arrival times can't be the same";
+
+    // ---------- Flight ops: staff safety rules ----------
+    public static final String AIRCRAFT_NOT_IN_AIRLINE = "That aircraft belongs to another airline";
+    public static final String FLIGHT_SAME_AIRPORTS = "The departure and arrival airports must be different";
+    public static final String FLIGHT_HAS_DEPARTURES = "Flight %s still has %s departure(s). Remove them before deleting the flight";
+    public static final String FLIGHT_HAS_SCHEDULES = "Flight %s still has %s schedule(s). Delete them before deleting the flight";
+    public static final String FLIGHT_AIRPORTS_LOCKED = "Flight %s already has departures, so its airports can't change. Create a new flight for the new route";
+    public static final String DEPARTURE_HAS_SALES = "This departure has %s seat(s) sold or held, so it can't be deleted";
+    public static final String DEPARTURE_CANCEL_HAS_SALES = "This departure has %s seat(s) sold or held. Cancelling a departure with bookings isn't supported yet: the passengers must be rebooked or refunded first";
+    public static final String DEPARTURE_NOT_EDITABLE = "This departure is %s and can no longer be changed";
+    public static final String DEPARTURE_STATUS_TRANSITION = "A departure can't go from %s to %s";
+    public static final String DEPARTURE_ARRIVAL_NOT_AFTER_DEPARTURE = "Arrival must be after departure";
+    public static final String DEPARTURE_IN_PAST = "A new departure must be in the future";
+    public static final String DEPARTURE_TERMINAL_TOO_LONG = "Terminal must be 20 characters or fewer";
+    public static final String DEPARTURE_GATE_TOO_LONG = "Gate must be 20 characters or fewer";
+    public static final String DEPARTURE_BOOKING_DAYS_NEGATIVE = "Booking window days can't be negative";
+    public static final String DEPARTURE_BOOKING_WINDOW = "The earliest booking day must be before the latest";
 
     // ---------- Flight ops: search ----------
     public static final String SEARCH_DEPARTURE_DATE_MANDATORY = "Departure date is required";
-    public static final String SEARCH_PASSENGERS_MANDATORY = "Number of passengers is required";
-    public static final String SEARCH_PASSENGERS_MIN = "At least 1 passenger is required";
+    public static final String SEARCH_ADULTS_MIN = "A search needs at least one adult";
+    public static final String SEARCH_PASSENGERS_NEGATIVE = "Children and infants cannot be negative";
+    public static final String SEARCH_TOO_MANY_SEATED = "Search for up to %s seated travellers (adults and children) at a time";
+    public static final String SEARCH_TOO_MANY_INFANTS = "Each infant travels on an adult's lap: %s infants for %s adults";
     public static final String SEARCH_CABIN_CLASS_MANDATORY = "Cabin class is required";
 
     // ---------- Flight ops: cross-service integration ----------
@@ -395,7 +417,35 @@ public class ErrorMessageUtil {
     public static final String USER_MANDATORY = "user is mandatory";
     public static final String TOKEN_HASH_MANDATORY = "tokenHash is mandatory";
     public static final String EXPIRES_AT_MANDATORY = "expiresAt is mandatory";
-    public static final String PASSWORD_MIN_LENGTH = "Password must be at least 8 characters";
+    public static final String PASSWORD_MIN_LENGTH = "Use at least 8 characters";
+
+    // ---------- Bean validation: account forms (shown to the user under the field) ----------
+    public static final String EMAIL_REQUIRED = "Enter your email address";
+    public static final String EMAIL_FORMAT = "Enter a valid email address, like name@example.com";
+    public static final String EMAIL_TOO_LONG = "Use an email address of 254 characters or fewer";
+    public static final String PASSWORD_REQUIRED = "Enter your password";
+    public static final String NEW_PASSWORD_REQUIRED = "Enter a new password";
+    public static final String CURRENT_PASSWORD_REQUIRED = "Enter your current password";
+    public static final String FIRST_NAME_REQUIRED = "Enter your first name";
+    public static final String LAST_NAME_REQUIRED = "Enter your last name";
+    public static final String NAME_TOO_LONG = "Use 100 characters or fewer";
+    public static final String NAME_INVALID_CHARACTERS = "Use letters, spaces, hyphens, apostrophes or full stops only";
+    public static final String PHONE_FORMAT = "Enter the number in international format, like +2348012345678";
+    public static final String TOKEN_REQUIRED = "This link is missing its token";
+
+    // ---------- Problem details (RFC 9457) ----------
+    public static final String VALIDATION_FAILED = "Some fields need attention";
+    public static final String MALFORMED_REQUEST = "The request could not be read";
+    public static final String INVALID_PARAMETER = "Invalid value for '%s'";
+    public static final String UNEXPECTED_ERROR = "Something went wrong on our side. Please try again later.";
+
+    // ---------- Auth responses ----------
+    public static final String SIGNUP_ACCEPTED = "If this email address can be used, we've sent a link to verify it. Check your inbox.";
+    public static final String EMAIL_VERIFIED = "Your email address is verified. You can now sign in.";
+    public static final String VERIFICATION_RESENT = "If that email is registered and not yet verified, a verification link has been sent";
+    public static final String PASSWORD_RESET_SENT = "If that email belongs to an active account, a password reset link has been sent";
+    public static final String PASSWORD_RESET_DONE = "Your password has been reset. Please sign in again.";
+    public static final String LOGGED_OUT = "Signed out";
 
     // ---------- Booking ----------
     public static final String FARE_ID_MANDATORY = "Fare ID is required";

@@ -2,6 +2,7 @@ package com.sunday.services.mapper;
 
 import com.sunday.common_lib.payload.request.AirportRequest;
 import com.sunday.common_lib.payload.response.AirportResponse;
+import com.sunday.common_lib.payload.response.AirportSearchResult;
 import com.sunday.services.model.Airport;
 
 public class AirportMapper {
@@ -31,6 +32,19 @@ public class AirportMapper {
                 .city(CityMapper.toResponse(airport.getCity()))
                 .geoCode(airport.getGeoCode())
                 .analytics(airport.getAnalytics())
+                .build();
+    }
+
+    public static AirportSearchResult toSearchResult(Airport airport) {
+        return AirportSearchResult.builder()
+                .id(airport.getId())
+                .iataCode(airport.getIataCode())
+                .name(airport.getName())
+                .cityName(airport.getCityName())
+                .cityCode(airport.getCity().getCityCode())
+                .countryCode(airport.getCountryCode())
+                .countryName(airport.getCountryName())
+                .timeZoneId(airport.getTimeZoneId())
                 .build();
     }
 

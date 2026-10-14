@@ -1,6 +1,7 @@
 package com.sunday.services.service;
 
 import com.sunday.common_lib.enums.SeatAvailabilityStatus;
+import com.sunday.common_lib.payload.request.CabinAvailabilityRequest;
 import com.sunday.common_lib.payload.request.SeatConfirmRequest;
 import com.sunday.common_lib.payload.request.SeatHoldRequest;
 import com.sunday.common_lib.payload.request.SeatInstanceRequest;
@@ -12,6 +13,7 @@ import com.sunday.common_lib.payload.response.SeatInstanceResponse;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface SeatInstanceService {
@@ -39,6 +41,10 @@ public interface SeatInstanceService {
     SeatInstanceResponse releaseSeatInstance(UUID userId, UUID id);
 
     List<CabinSeatStatusResponse> getSeatStatusSummary(UUID flightInstanceId);
+
+    Map<UUID, Long> countAvailableSeats(CabinAvailabilityRequest request);
+
+    Map<UUID, Long> countSoldSeats(List<UUID> flightInstanceIds);
 
     /** Every seat of a flight instance as a customer may see it, for choosing seats. */
     List<CustomerSeatResponse> getCustomerSeatMap(UUID flightInstanceId);

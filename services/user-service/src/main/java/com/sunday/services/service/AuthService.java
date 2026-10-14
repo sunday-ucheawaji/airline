@@ -7,7 +7,8 @@ public interface AuthService {
 
     AuthResponse login(String email, String password, String userAgent, String ipAddress);
 
-    AuthResponse signup(RegisterRequest req);
+    /** Always succeeds from the caller's point of view, so it never reveals whether an account exists. */
+    void signup(RegisterRequest req);
 
     void verifyEmail(String token);
 

@@ -14,6 +14,8 @@ import java.util.List;
 public interface FlightScheduleRepository extends JpaRepository<FlightSchedule, UUID> {
 
     List<FlightSchedule> findByFlightId(UUID flightId);
+
+    long countByFlightId(UUID flightId);
     Page<FlightSchedule> findByFlightId(UUID flightId, Pageable pageable);
 
     List<FlightSchedule> findByFlightAirlineId(UUID airlineId);

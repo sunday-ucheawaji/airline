@@ -29,7 +29,9 @@ public class FlightSearchController {
             @RequestParam UUID departureAirportId,
             @RequestParam UUID arrivalAirportId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate,
-            @RequestParam Integer passengers,
+            @RequestParam(defaultValue = "1") Integer adults,
+            @RequestParam(defaultValue = "0") Integer children,
+            @RequestParam(defaultValue = "0") Integer infants,
             @RequestParam CabinClassType cabinClass,
             @RequestParam(required = false) List<UUID> airlines,
             @RequestParam(required = false) BigDecimal minPrice,
@@ -46,7 +48,9 @@ public class FlightSearchController {
                 .departureAirportId(departureAirportId)
                 .arrivalAirportId(arrivalAirportId)
                 .departureDate(departureDate)
-                .passengers(passengers)
+                .adults(adults)
+                .children(children)
+                .infants(infants)
                 .cabinClass(cabinClass)
                 .airlines(airlines)
                 .minPrice(minPrice)

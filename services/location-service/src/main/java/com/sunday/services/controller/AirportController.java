@@ -5,6 +5,7 @@ import com.sunday.common_lib.payload.request.AirportRequest;
 import com.sunday.common_lib.payload.response.AirportBulkCreateResponse;
 import com.sunday.common_lib.payload.response.ApiResponse;
 import com.sunday.common_lib.payload.response.AirportResponse;
+import com.sunday.common_lib.payload.response.AirportSearchResult;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.service.AirportService;
 import jakarta.validation.Valid;
@@ -13,10 +14,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.UUID;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +75,16 @@ public class AirportController {
         }
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         return ResponseEntity.ok(airportService.getAllAirports(pageable));
+    }
+
+    /** Public at the gateway (no token needed): the traveller-facing airport picker. */
+    @GetMapping("/search")
+    public ResponseEntity<List<AirportSearchResult>> searchAirports(
+            @RequestParam("q") String query,
+            @RequestParam(defaultValue = "8") int limit) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
+                .body(airportService.searchAirports(query, limit));
     }
 
     @GetMapping("/city/{cityId}")

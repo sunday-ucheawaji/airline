@@ -5,6 +5,7 @@ import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
+import com.sunday.common_lib.exception.AuthError;
 import com.sunday.common_lib.exception.UserException;
 import com.sunday.common_lib.payload.request.ChangePasswordRequest;
 import com.sunday.common_lib.payload.request.ProfileUpdateRequest;
@@ -88,7 +89,7 @@ public class UserServiceImpl implements UserService {
         PasswordPolicy.requireHashable(request.getNewPassword());
         User user = getUserById(userId);
         if (!matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new UserException(ErrorMessageUtil.CURRENT_PASSWORD_INCORRECT);
+            throw new UserException(AuthError.CURRENT_PASSWORD_INCORRECT);
         }
         if (matches(request.getNewPassword(), user.getPassword())) {
             throw new BadRequestException(ErrorMessageUtil.PASSWORD_UNCHANGED);

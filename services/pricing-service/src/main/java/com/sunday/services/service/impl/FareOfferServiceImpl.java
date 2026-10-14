@@ -34,7 +34,7 @@ public class FareOfferServiceImpl implements FareOfferService {
                                           PassengerType passengerType) {
         Instant now = Instant.now(clock);
         List<Fare> sellable = fareRepository
-                .findSearchCandidates(List.of(flightId), cabinClass, passengerType, FareStatus.PUBLISHED, now, departureDate, departureDate)
+                .findSearchCandidates(List.of(flightId), cabinClass, List.of(passengerType), FareStatus.PUBLISHED, now, departureDate, departureDate)
                 .stream()
                 .filter(fare -> FareValidityPolicy.isSellable(fare, departureDate, now))
                 .sorted(Comparator.comparing(Fare::getTotalAmount))

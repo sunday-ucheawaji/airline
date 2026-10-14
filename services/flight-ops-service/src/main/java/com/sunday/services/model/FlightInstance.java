@@ -54,7 +54,8 @@ public class FlightInstance {
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID arrivalAirportId;
 
-    @Column(nullable = false)
+    // The schedule that generated this departure; null for a one-off or after its schedule was deleted.
+    @Column(name = "schedule_id")
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID scheduleId;
 

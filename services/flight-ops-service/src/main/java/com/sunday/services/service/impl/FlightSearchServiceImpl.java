@@ -2,6 +2,9 @@ package com.sunday.services.service.impl;
 
 import com.sunday.common_lib.enums.AirlineStatus;
 import java.util.UUID;
+import com.sunday.common_lib.exception.BadRequestException;
+import com.sunday.common_lib.exception.ServiceUnavailableException;
+import com.sunday.common_lib.payload.request.CabinAvailabilityRequest;
 import com.sunday.common_lib.payload.request.FareSearchRequest;
 import com.sunday.common_lib.payload.request.FareSearchRequest.FlightDeparture;
 import com.sunday.common_lib.payload.request.FlightSearchRequest;
@@ -10,6 +13,8 @@ import com.sunday.services.Integration.AirlineIntegrationService;
 import com.sunday.services.client.AirlineClient;
 import com.sunday.services.client.LocationClient;
 import com.sunday.services.client.PricingClient;
+import com.sunday.services.client.SeatClient;
+import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.mapper.FlightInstanceMapper;
 import com.sunday.services.model.FlightInstance;
 import com.sunday.services.repository.FlightInstanceRepository;
@@ -25,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -38,10 +44,14 @@ public class FlightSearchServiceImpl implements FlightSearchService {
     private final AirlineClient airlineClient;
     private final AirlineIntegrationService airlineIntegrationService;
     private final PricingClient pricingClient;
+    private final SeatClient seatClient;
+
+    static final int MAX_SEATED_TRAVELLERS = 9;
 
     @Override
     @Transactional(readOnly = true)
     public Page<FlightInstanceResponse> searchFlights(FlightSearchRequest request, Pageable pageable) {
+        validateParty(request);
         Pageable sortedPageable = applySort(pageable, request.getSortBy(), request.getSortOrder());
         Specification<FlightInstance> spec = FlightInstanceSpecification.buildSearchSpec(request);
         Page<FlightInstance> dbPage = flightInstanceRepository.findAll(spec, sortedPageable);
@@ -51,36 +61,82 @@ public class FlightSearchServiceImpl implements FlightSearchService {
         }
 
         List<FlightInstance> instances = new ArrayList<>(dbPage.getContent());
-        Map<FlightDeparture, FareResponse> fareMap = Collections.emptyMap();
+        Map<FlightDeparture, FareSearchResult> fareMap = Collections.emptyMap();
+        Map<UUID, Long> seatsInCabin = request.getCabinClass() != null
+                ? countSeatsInCabin(instances, request) : Collections.emptyMap();
 
         if (request.getCabinClass() != null) {
+            instances = instances.stream()
+                    .filter(fi -> seatsInCabin.getOrDefault(fi.getId(), 0L) >= request.seatedPassengers())
+                    .toList();
+            if (instances.isEmpty()) {
+                return emptyPageOf(dbPage, sortedPageable);
+            }
             CabinFareResult filterResult = filterByCabinAndPrice(instances, request);
             instances = filterResult.instances();
             fareMap = filterResult.fareMap();
             if (instances.isEmpty()) {
-                return Page.empty(sortedPageable);
+                return emptyPageOf(dbPage, sortedPageable);
             }
         }
 
-        List<FlightInstanceResponse> responses = enrichWithExternalData(instances, fareMap);
+        List<FlightInstanceResponse> responses = enrichWithExternalData(instances, fareMap, seatsInCabin);
         return new PageImpl<>(responses, sortedPageable, dbPage.getTotalElements());
     }
 
-    private record CabinFareResult(List<FlightInstance> instances, Map<FlightDeparture, FareResponse> fareMap) {}
+    /** Filters run after paging, so a page can empty out while later pages still match: keep the totals. */
+    private static Page<FlightInstanceResponse> emptyPageOf(Page<FlightInstance> dbPage, Pageable pageable) {
+        return new PageImpl<>(List.of(), pageable, dbPage.getTotalElements());
+    }
 
-    /** One pricing call for the whole page: the cheapest sellable fare per flight departure in the requested cabin. */
+    private record CabinFareResult(List<FlightInstance> instances, Map<FlightDeparture, FareSearchResult> fareMap) {}
+
+    private static void validateParty(FlightSearchRequest request) {
+        int adults = request.getAdults();
+        int children = request.getChildren();
+        int infants = request.getInfants();
+        if (adults < 1) {
+            throw new BadRequestException(ErrorMessageUtil.SEARCH_ADULTS_MIN);
+        }
+        if (children < 0 || infants < 0) {
+            throw new BadRequestException(ErrorMessageUtil.SEARCH_PASSENGERS_NEGATIVE);
+        }
+        if (adults + children > MAX_SEATED_TRAVELLERS) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.SEARCH_TOO_MANY_SEATED, MAX_SEATED_TRAVELLERS));
+        }
+        if (infants > adults) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.SEARCH_TOO_MANY_INFANTS, infants, adults));
+        }
+    }
+
+    /**
+     * One seat-service call for the whole page: free seats in the requested cabin per departure. A departure needs one
+     * for every adult and child; lap infants need none. Fails closed, since showing unsellable flights misleads.
+     */
+    private Map<UUID, Long> countSeatsInCabin(List<FlightInstance> instances, FlightSearchRequest request) {
+        List<UUID> ids = instances.stream().map(FlightInstance::getId).toList();
+        Map<UUID, Long> available = seatClient.countAvailableSeats(new CabinAvailabilityRequest(request.getCabinClass(), ids));
+        if (available == null) {
+            throw new ServiceUnavailableException(ErrorMessageUtil.SEAT_SERVICE_UNAVAILABLE);
+        }
+        return available;
+    }
+
+    /** One pricing call for the whole page: the fare giving the party's lowest total per flight departure in the requested cabin. */
     private CabinFareResult filterByCabinAndPrice(List<FlightInstance> instances, FlightSearchRequest request) {
         List<FlightDeparture> departures = instances.stream()
                 .map(FlightSearchServiceImpl::departureOf)
                 .distinct()
                 .toList();
 
-        Map<FlightDeparture, FareResponse> fareMap = pricingClient
-                .searchFares(new FareSearchRequest(request.getCabinClass(), departures))
+        FareSearchRequest fareRequest = new FareSearchRequest(request.getCabinClass(), departures,
+                request.getAdults(), request.getChildren(), request.getInfants());
+        Map<FlightDeparture, FareSearchResult> fareMap = pricingClient
+                .searchFares(fareRequest)
                 .stream()
                 .collect(Collectors.toMap(
                         result -> new FlightDeparture(result.getFlightId(), result.getDepartureDate()),
-                        FareSearchResult::getFare));
+                        Function.identity()));
 
         boolean hasPriceFilter = request.getMinPrice() != null || request.getMaxPrice() != null;
         List<FlightInstance> filtered = instances.stream()
@@ -94,8 +150,9 @@ public class FlightSearchServiceImpl implements FlightSearchService {
         return new FlightDeparture(fi.getFlight().getId(), fi.getDepartureDateTime().toLocalDate());
     }
 
-    private boolean passesFareAndPriceFilter(FareResponse fare, FlightSearchRequest request, boolean hasPriceFilter) {
-        if (fare == null) return false;
+    private boolean passesFareAndPriceFilter(FareSearchResult result, FlightSearchRequest request, boolean hasPriceFilter) {
+        if (result == null || result.getFare() == null) return false;
+        FareResponse fare = result.getFare();
         if (!hasPriceFilter) return true;
         BigDecimal price = fare.getTotalPrice();
         if (price == null) return false;
@@ -105,7 +162,8 @@ public class FlightSearchServiceImpl implements FlightSearchService {
 
     private List<FlightInstanceResponse> enrichWithExternalData(
             List<FlightInstance> instances,
-            Map<FlightDeparture, FareResponse> fareMap) {
+            Map<FlightDeparture, FareSearchResult> fareMap,
+            Map<UUID, Long> seatsInCabin) {
 
         List<UUID> distinctAirlineIds = instances.stream().map(FlightInstance::getAirlineId).distinct().toList();
         List<UUID> distinctAircraftIds = instances.stream().map(FlightInstance::getAircraftId).distinct().toList();
@@ -129,7 +187,12 @@ public class FlightSearchServiceImpl implements FlightSearchService {
                         airline,
                         airports.get(fi.getDepartureAirportId()),
                         airports.get(fi.getArrivalAirportId()));
-                response.setFare(fareMap.get(departureOf(fi)));
+                response.setSeatsLeftInCabin(seatsInCabin.get(fi.getId()));
+                FareSearchResult fare = fareMap.get(departureOf(fi));
+                if (fare != null) {
+                    response.setFare(fare.getFare());
+                    response.setPartyPrice(fare.getPartyPrice());
+                }
                 results.add(response);
             } catch (Exception e) {
                 log.error("searchFlights: enrichment failed for FlightInstance id={} – skipping", fi.getId(), e);

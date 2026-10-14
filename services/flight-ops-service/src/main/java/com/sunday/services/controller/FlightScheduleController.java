@@ -3,6 +3,7 @@ package com.sunday.services.controller;
 import java.util.UUID;
 import com.sunday.common_lib.payload.request.FlightScheduleRequest;
 import com.sunday.common_lib.payload.response.FlightScheduleResponse;
+import com.sunday.common_lib.payload.response.ScheduleChangeResponse;
 import com.sunday.services.service.FlightScheduleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -50,7 +51,7 @@ public class FlightScheduleController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<FlightScheduleResponse> updateFlightSchedule(
+    public ResponseEntity<ScheduleChangeResponse> updateFlightSchedule(
             @PathVariable UUID id,
             @Valid @RequestBody FlightScheduleRequest request,
             @RequestHeader("X-User-Id") UUID userId) {
@@ -58,11 +59,10 @@ public class FlightScheduleController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteFlightSchedule(
+    public ResponseEntity<ScheduleChangeResponse> deleteFlightSchedule(
             @PathVariable UUID id,
             @RequestHeader("X-User-Id") UUID userId) {
-        flightScheduleService.deleteFlightSchedule(id, userId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(flightScheduleService.deleteFlightSchedule(id, userId));
     }
 
 }

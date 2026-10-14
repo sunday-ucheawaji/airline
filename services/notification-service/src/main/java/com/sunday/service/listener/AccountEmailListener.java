@@ -1,6 +1,7 @@
 package com.sunday.service.listener;
 
 import com.sunday.common_lib.event.EmailVerificationRequestedEvent;
+import com.sunday.common_lib.event.ExistingAccountSignupAttemptedEvent;
 import com.sunday.common_lib.event.PasswordResetRequestedEvent;
 import com.sunday.service.content.AccountEmailContentBuilder;
 import com.sunday.service.model.NotificationChannel;
@@ -29,5 +30,11 @@ public class AccountEmailListener {
     public void handlePasswordResetRequested(@Payload PasswordResetRequestedEvent event) {
         dispatchService.dispatch(NotificationEventType.PASSWORD_RESET, event.getRequestId().toString(),
                 NotificationChannel.EMAIL, event.getEmail(), content.subjectForPasswordReset(), content.bodyForPasswordReset(event));
+    }
+
+    @KafkaListener(topics = ExistingAccountSignupAttemptedEvent.TOPIC, groupId = "notification-service-group")
+    public void handleExistingAccountSignupAttempted(@Payload ExistingAccountSignupAttemptedEvent event) {
+        dispatchService.dispatch(NotificationEventType.EXISTING_ACCOUNT_SIGNUP, event.getRequestId().toString(),
+                NotificationChannel.EMAIL, event.getEmail(), content.subjectForExistingAccountSignup(), content.bodyForExistingAccountSignup(event));
     }
 }

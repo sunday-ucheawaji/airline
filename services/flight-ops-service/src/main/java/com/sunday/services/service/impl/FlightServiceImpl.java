@@ -17,6 +17,8 @@ import com.sunday.services.client.LocationClient;
 import com.sunday.services.mapper.FlightMapper;
 import com.sunday.services.model.Flight;
 import com.sunday.services.repository.FlightRepository;
+import com.sunday.services.repository.FlightScheduleRepository;
+import com.sunday.services.repository.FlightInstanceRepository;
 import com.sunday.services.service.FlightService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -43,6 +45,8 @@ public class FlightServiceImpl implements FlightService {
     private final AirlineClient airlineClient;
     private final LocationClient locationClient;
     private final AirlineIntegrationService airlineIntegrationService;
+    private final FlightInstanceRepository flightInstanceRepository;
+    private final FlightScheduleRepository flightScheduleRepository;
 
     @Override
     public FlightResponse createFlight(UUID userId, FlightRequest request) {
@@ -55,6 +59,7 @@ public class FlightServiceImpl implements FlightService {
             throw new BadRequestException(ErrorMessageUtil.AIRLINE_ID_REQUIRED);
         }
         airlineIntegrationService.requirePermission(userId, airlineId, FlightOpsPermissions.FLIGHT_MANAGE);
+        requireDifferentAirports(request.getDepartureAirportId(), request.getArrivalAirportId());
 
         Flight flight = FlightMapper.toEntity(request);
         Flight saved = flightRepository.save(flight);
@@ -140,6 +145,15 @@ public class FlightServiceImpl implements FlightService {
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, existing.getAirlineId(), FlightOpsPermissions.FLIGHT_MANAGE);
 
+        requireDifferentAirports(
+                request.getDepartureAirportId() != null ? request.getDepartureAirportId() : existing.getDepartureAirportId(),
+                request.getArrivalAirportId() != null ? request.getArrivalAirportId() : existing.getArrivalAirportId());
+        boolean airportsChange = (request.getDepartureAirportId() != null && !request.getDepartureAirportId().equals(existing.getDepartureAirportId()))
+                || (request.getArrivalAirportId() != null && !request.getArrivalAirportId().equals(existing.getArrivalAirportId()));
+        if (airportsChange && flightInstanceRepository.countByFlightId(id) > 0) {
+            throw new ConflictException(String.format(ErrorMessageUtil.FLIGHT_AIRPORTS_LOCKED, existing.getFlightNumber()));
+        }
+
         if (request.getFlightNumber() != null &&
                 flightRepository.existsByFlightNumberAndIdNot(request.getFlightNumber(), id)) {
             throw new ConflictException(
@@ -165,6 +179,14 @@ public class FlightServiceImpl implements FlightService {
         Flight flight = flightRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, id)));
         airlineIntegrationService.requirePermission(userId, flight.getAirlineId(), FlightOpsPermissions.FLIGHT_MANAGE);
+        long departures = flightInstanceRepository.countByFlightId(id);
+        if (departures > 0) {
+            throw new ConflictException(String.format(ErrorMessageUtil.FLIGHT_HAS_DEPARTURES, flight.getFlightNumber(), departures));
+        }
+        long schedules = flightScheduleRepository.countByFlightId(id);
+        if (schedules > 0) {
+            throw new ConflictException(String.format(ErrorMessageUtil.FLIGHT_HAS_SCHEDULES, flight.getFlightNumber(), schedules));
+        }
         flightRepository.delete(flight);
     }
 
@@ -198,5 +220,11 @@ public class FlightServiceImpl implements FlightService {
         AirportResponse departureAirport = locationClient.getAirportById(flight.getDepartureAirportId());
         AirportResponse arrivalAirport = locationClient.getAirportById(flight.getArrivalAirportId());
         return FlightMapper.toResponse(flight, airline, departureAirport, arrivalAirport);
+    }
+
+    private static void requireDifferentAirports(UUID departureAirportId, UUID arrivalAirportId) {
+        if (departureAirportId != null && departureAirportId.equals(arrivalAirportId)) {
+            throw new BadRequestException(ErrorMessageUtil.FLIGHT_SAME_AIRPORTS);
+        }
     }
 }

@@ -2,11 +2,12 @@ package com.sunday.services.service.impl;
 
 import java.nio.charset.StandardCharsets;
 import com.sunday.common_lib.event.EmailVerificationRequestedEvent;
+import com.sunday.common_lib.event.ExistingAccountSignupAttemptedEvent;
 import com.sunday.common_lib.event.PasswordResetRequestedEvent;
+import com.sunday.common_lib.exception.AuthError;
 import com.sunday.common_lib.exception.UserException;
 import com.sunday.common_lib.payload.request.RegisterRequest;
 import com.sunday.common_lib.payload.response.AuthResponse;
-import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.config.JwtProvider;
 import com.sunday.services.enums.UserStatus;
 import com.sunday.services.mapper.UserMapper;
@@ -24,7 +25,6 @@ import com.sunday.services.util.TokenHasher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -66,39 +66,52 @@ public class AuthServiceImpl implements AuthService {
     private final CustomUserDetailsService customUserDetailsService;
     private final ApplicationEventPublisher eventPublisher;
     private final AccessTokenRevoker accessTokenRevoker;
+    private final SignupNoticeThrottle signupNoticeThrottle;
 
+    /**
+     * Answers the same way whether or not the email is taken, so signup cannot be used to find out who has an
+     * account. A new address gets a verification email. For an existing active account the owner is emailed instead:
+     * a fresh verification link if they never verified, otherwise a notice that someone tried to sign up. Both are
+     * throttled. The password is hashed on every path so the response time gives nothing away either.
+     */
     @Override
     @Transactional
-    public AuthResponse signup(RegisterRequest req) {
+    public void signup(RegisterRequest req) {
         PasswordPolicy.requireHashable(req.getPassword());
+        String passwordHash = passwordEncoder.encode(req.getPassword());
         String email = normalizeEmail(req.getEmail());
-        if (userRepository.findByEmail(email) != null) {
-            throw new UserException(ErrorMessageUtil.EMAIL_ALREADY_REGISTERED);
+        User existing = userRepository.findByEmail(email);
+        if (existing != null) {
+            notifyExistingAccount(existing);
+            return;
         }
 
         User createdUser = new User();
         createdUser.setEmail(email);
-        createdUser.setPassword(passwordEncoder.encode(req.getPassword()));
-        createdUser.setFirstName(req.getFirstName());
-        createdUser.setLastName(req.getLastName());
-        createdUser.setMiddleName(req.getMiddleName());
-        createdUser.setPhoneNumber(req.getPhoneNumber());
-
-        User savedUser;
-        try {
-            savedUser = userRepository.save(createdUser);
-        } catch (DataIntegrityViolationException e) {
-            // Loser of a concurrent signup race on the same email.
-            throw new UserException(ErrorMessageUtil.EMAIL_ALREADY_REGISTERED);
-        }
+        createdUser.setPassword(passwordHash);
+        createdUser.setFirstName(req.getFirstName().trim());
+        createdUser.setLastName(req.getLastName().trim());
+        createdUser.setMiddleName(blankToNull(req.getMiddleName()));
+        createdUser.setPhoneNumber(blankToNull(req.getPhoneNumber()));
+        User savedUser = userRepository.saveAndFlush(createdUser);
 
         issueVerificationToken(savedUser);
+    }
 
-        AuthResponse response = new AuthResponse();
-        response.setTitle("Welcome " + savedUser.getFirstName() + " " + savedUser.getLastName());
-        response.setMessage("Registration successful. Please check your email to verify your account before logging in.");
-        response.setUser(UserMapper.toAuthUserDTO(savedUser));
-        return response;
+    private void notifyExistingAccount(User user) {
+        if (user.getStatus() != UserStatus.ACTIVE || !signupNoticeThrottle.tryAcquire(user.getId())) {
+            return;
+        }
+        if (Boolean.TRUE.equals(user.getEmailVerified())) {
+            eventPublisher.publishEvent(ExistingAccountSignupAttemptedEvent.builder()
+                    .requestId(UUID.randomUUID())
+                    .userId(user.getId())
+                    .email(user.getEmail())
+                    .firstName(user.getFirstName())
+                    .build());
+        } else {
+            issueVerificationToken(user);
+        }
     }
 
     @Override
@@ -109,10 +122,10 @@ public class AuthServiceImpl implements AuthService {
         if (user != null) {
             clearExpiredLock(user);
             if (user.getLockedUntil() != null) {
-                throw new UserException(ErrorMessageUtil.ACCOUNT_LOCKED);
+                throw new UserException(AuthError.ACCOUNT_LOCKED);
             }
             if (user.getStatus() != UserStatus.ACTIVE) {
-                throw new UserException(ErrorMessageUtil.ACCOUNT_NOT_ACTIVE);
+                throw new UserException(AuthError.ACCOUNT_NOT_ACTIVE);
             }
         }
 
@@ -127,7 +140,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (Boolean.FALSE.equals(user.getEmailVerified())) {
-            throw new UserException(ErrorMessageUtil.EMAIL_NOT_VERIFIED);
+            throw new UserException(AuthError.EMAIL_NOT_VERIFIED);
         }
 
         String token = jwtProvider.generateToken(userDetails, user.getId());
@@ -152,13 +165,13 @@ public class AuthServiceImpl implements AuthService {
     public void verifyEmail(String token) {
         EmailVerificationToken verificationToken = emailVerificationTokenRepository
                 .findByTokenHash(TokenHasher.sha256Hex(token))
-                .orElseThrow(() -> new UserException(ErrorMessageUtil.INVALID_VERIFICATION_TOKEN));
+                .orElseThrow(() -> new UserException(AuthError.INVALID_VERIFICATION_TOKEN));
 
         if (verificationToken.getUsedAt() != null) {
-            throw new UserException(ErrorMessageUtil.VERIFICATION_TOKEN_ALREADY_USED);
+            throw new UserException(AuthError.VERIFICATION_TOKEN_USED);
         }
         if (verificationToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new UserException(ErrorMessageUtil.VERIFICATION_TOKEN_EXPIRED);
+            throw new UserException(AuthError.VERIFICATION_TOKEN_EXPIRED);
         }
 
         verificationToken.setUsedAt(LocalDateTime.now());
@@ -187,23 +200,23 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(noRollbackFor = UserException.class)
     public AuthResponse refresh(String rawRefreshToken, String userAgent, String ipAddress) {
         RefreshToken existingToken = refreshTokenRepository.findByTokenHash(TokenHasher.sha256Hex(rawRefreshToken))
-                .orElseThrow(() -> new UserException(ErrorMessageUtil.INVALID_REFRESH_TOKEN));
+                .orElseThrow(() -> new UserException(AuthError.INVALID_REFRESH_TOKEN));
         User user = existingToken.getUser();
 
         if (existingToken.getRevokedAt() != null) {
             rejectReuse(user);
         }
         if (existingToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new UserException(ErrorMessageUtil.REFRESH_TOKEN_EXPIRED);
+            throw new UserException(AuthError.REFRESH_TOKEN_EXPIRED);
         }
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
-            throw new UserException(ErrorMessageUtil.ACCOUNT_LOCKED);
+            throw new UserException(AuthError.ACCOUNT_LOCKED);
         }
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new UserException(ErrorMessageUtil.ACCOUNT_NOT_ACTIVE);
+            throw new UserException(AuthError.ACCOUNT_NOT_ACTIVE);
         }
         if (Boolean.FALSE.equals(user.getEmailVerified())) {
-            throw new UserException(ErrorMessageUtil.EMAIL_NOT_VERIFIED);
+            throw new UserException(AuthError.EMAIL_NOT_VERIFIED);
         }
 
         if (refreshTokenRepository.revokeIfActive(existingToken.getId(), LocalDateTime.now()) == 0) {
@@ -274,7 +287,7 @@ public class AuthServiceImpl implements AuthService {
         PasswordPolicy.requireHashable(newPassword);
         PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenHash(TokenHasher.sha256Hex(rawToken))
                 .filter(token -> token.getUsedAt() == null && token.getExpiresAt().isAfter(LocalDateTime.now()))
-                .orElseThrow(() -> new UserException(ErrorMessageUtil.INVALID_PASSWORD_RESET_TOKEN));
+                .orElseThrow(() -> new UserException(AuthError.INVALID_RESET_TOKEN));
 
         resetToken.setUsedAt(LocalDateTime.now());
         passwordResetTokenRepository.save(resetToken);
@@ -295,7 +308,7 @@ public class AuthServiceImpl implements AuthService {
     private void rejectReuse(User user) {
         revokeAllSessions(user.getId());
         accessTokenRevoker.revokeAllQuietly(user.getId());
-        throw new UserException(ErrorMessageUtil.REFRESH_TOKEN_REUSE_DETECTED);
+        throw new UserException(AuthError.REFRESH_TOKEN_REUSE);
     }
 
     /** A lock that has run out starts the count afresh, so one wrong password afterwards does not lock again. */
@@ -364,12 +377,16 @@ public class AuthServiceImpl implements AuthService {
             userDetails = customUserDetailsService.loadUserByUsername(email);
         } catch (UsernameNotFoundException e) {
             passwordEncoder.matches(truncateForBcrypt(password), DUMMY_PASSWORD_HASH);
-            throw new UserException(ErrorMessageUtil.INVALID_CREDENTIALS);
+            throw new UserException(AuthError.INVALID_CREDENTIALS);
         }
         if (!passwordEncoder.matches(truncateForBcrypt(password), userDetails.getPassword())) {
-            throw new UserException(ErrorMessageUtil.INVALID_CREDENTIALS);
+            throw new UserException(AuthError.INVALID_CREDENTIALS);
         }
         return userDetails;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     /** A password longer than BCrypt accepts can never match a stored hash; compare a harmless stand-in instead of throwing. */

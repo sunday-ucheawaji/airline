@@ -1,6 +1,13 @@
 package com.sunday.services.service.impl;
 
 import java.util.UUID;
+import java.util.Set;
+import java.util.LinkedHashMap;
+import java.util.EnumSet;
+import com.sunday.common_lib.payload.request.FlightInstanceUpdateRequest;
+import com.sunday.common_lib.exception.BadRequestException;
+import com.sunday.common_lib.event.FlightInstancesDeletedEvent;
+import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.common_lib.constants.FlightOpsPermissions;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.event.FlightInstanceAircraftChangedEvent;
@@ -56,6 +63,20 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
     private final FlightInstanceEventProducer flightInstanceEventProducer;
     private final AirlineIntegrationService airlineIntegrationService;
     private final LocationClient locationClient;
+    private final DepartureSales departureSales;
+
+    /** Where a departure may go next. A cancelled or completed departure is final. */
+    private static final Map<FlightStatus, Set<FlightStatus>> NEXT_STATUSES = Map.of(
+            FlightStatus.SCHEDULED, EnumSet.of(FlightStatus.DELAYED, FlightStatus.BOARDING, FlightStatus.CANCELLED),
+            FlightStatus.DELAYED, EnumSet.of(FlightStatus.SCHEDULED, FlightStatus.BOARDING, FlightStatus.CANCELLED),
+            FlightStatus.BOARDING, EnumSet.of(FlightStatus.DEPARTED, FlightStatus.DELAYED, FlightStatus.CANCELLED),
+            FlightStatus.DEPARTED, EnumSet.of(FlightStatus.IN_AIR),
+            FlightStatus.IN_AIR, EnumSet.of(FlightStatus.LANDED, FlightStatus.DIVERTED),
+            FlightStatus.DIVERTED, EnumSet.of(FlightStatus.LANDED),
+            FlightStatus.LANDED, EnumSet.of(FlightStatus.ARRIVED),
+            FlightStatus.ARRIVED, EnumSet.of(FlightStatus.COMPLETED));
+
+    private static final Set<FlightStatus> EDITABLE_STATUSES = EnumSet.of(FlightStatus.SCHEDULED, FlightStatus.DELAYED);
 
     @Override
     @Transactional
@@ -68,8 +89,13 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
                         String.format(ErrorMessageUtil.FLIGHT_NOT_FOUND_BY_ID, request.getFlightId())));
         airlineIntegrationService.requirePermission(userId, flight.getAirlineId(), FlightOpsPermissions.INSTANCE_MANAGE);
 
+        requireValidTimes(request.getDepartureDateTime(), request.getArrivalDateTime());
+        requireBookingWindow(request.getMinAdvanceBookingDays(), request.getMaxAdvanceBookingDays());
         AircraftResponse aircraft = airlineIntegrationService.getAircraftById(request.getAircraftId(), userId);
+        requireSameAirline(aircraft, flight.getAirlineId());
 
+        request.setScheduleId(null);
+        request.setStatus(FlightStatus.SCHEDULED);
         FlightInstance flightInstance = flightInstanceRepository.save(buildInstanceEntity(request, flight, aircraft));
         publishInstanceCreated(flightInstance, flight.getId());
 
@@ -123,58 +149,80 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
         LocalDateTime start = onDate != null ? onDate.atStartOfDay() : null;
         LocalDateTime end   = onDate != null ? onDate.plusDays(1).atStartOfDay() : null;
 
-        return flightInstanceRepository.findByAirlineIdWithFilters(
-                airlineId, departureAirportId, arrivalAirportId, flightId, start, end, pageable
-        ).map(this::getFlightInstance);
+        Page<FlightInstance> page = flightInstanceRepository.findByAirlineIdWithFilters(
+                airlineId, departureAirportId, arrivalAirportId, flightId, start, end, pageable);
+        Map<UUID, FlightInstanceResponse> responses = toResponses(page.getContent());
+        Map<UUID, Long> sold = departureSales.soldByDepartureForDisplay(responses.keySet());
+        return page.map(fi -> {
+            FlightInstanceResponse response = responses.get(fi.getId());
+            response.setSeatsSold(sold.get(fi.getId()));
+            return response;
+        });
     }
 
     @Override
     @CacheEvict(cacheNames = CacheUtil.FLIGHT_INSTANCES, key = "#id")
-    public FlightInstanceResponse updateFlightInstance(UUID id, FlightInstanceRequest request, UUID userId) {
-        FlightInstance existing = flightInstanceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
+    public FlightInstanceResponse updateFlightInstance(UUID id, FlightInstanceUpdateRequest request, UUID userId) {
+        FlightInstance existing = findInstance(id);
         airlineIntegrationService.requirePermission(userId, existing.getAirlineId(), FlightOpsPermissions.INSTANCE_MANAGE);
+        if (!EDITABLE_STATUSES.contains(existing.getStatus())) {
+            throw new ConflictException(String.format(ErrorMessageUtil.DEPARTURE_NOT_EDITABLE, describe(existing.getStatus())));
+        }
+        requireValidTimes(request.getDepartureDateTime(), request.getArrivalDateTime());
+        requireBookingWindow(request.getMinAdvanceBookingDays(), request.getMaxAdvanceBookingDays());
         FlightInstanceMapper.updateEntity(request, existing);
         return getFlightInstance(flightInstanceRepository.save(existing));
     }
 
     @Override
     @CacheEvict(cacheNames = CacheUtil.FLIGHT_INSTANCES, key = "#id")
+    public FlightInstanceResponse changeStatus(UUID id, FlightStatus status, UUID userId) {
+        FlightInstance existing = findInstance(id);
+        airlineIntegrationService.requirePermission(userId, existing.getAirlineId(), FlightOpsPermissions.INSTANCE_MANAGE);
+        if (!NEXT_STATUSES.getOrDefault(existing.getStatus(), Set.of()).contains(status)) {
+            throw new ConflictException(String.format(ErrorMessageUtil.DEPARTURE_STATUS_TRANSITION,
+                    describe(existing.getStatus()), describe(status)));
+        }
+        if (status == FlightStatus.CANCELLED) {
+            long sold = departureSales.soldFor(id);
+            if (sold > 0) {
+                throw new ConflictException(String.format(ErrorMessageUtil.DEPARTURE_CANCEL_HAS_SALES, sold));
+            }
+        }
+        existing.setStatus(status);
+        return getFlightInstance(flightInstanceRepository.save(existing));
+    }
+
+    @Override
+    @CacheEvict(cacheNames = CacheUtil.FLIGHT_INSTANCES, key = "#id")
     public void deleteFlightInstance(UUID id, UUID userId) {
-        FlightInstance fi = flightInstanceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
+        FlightInstance fi = findInstance(id);
         airlineIntegrationService.requirePermission(userId, fi.getAirlineId(), FlightOpsPermissions.INSTANCE_MANAGE);
-        flightInstanceRepository.delete(fi);
+        long sold = departureSales.soldFor(id);
+        if (sold > 0) {
+            throw new ConflictException(String.format(ErrorMessageUtil.DEPARTURE_HAS_SALES, sold));
+        }
+        removeDepartures(List.of(fi));
+    }
+
+    @Override
+    @CacheEvict(cacheNames = CacheUtil.FLIGHT_INSTANCES, allEntries = true)
+    public void removeDepartures(List<FlightInstance> departures) {
+        if (departures.isEmpty()) {
+            return;
+        }
+        flightInstanceRepository.deleteAll(departures);
+        flightInstanceRepository.flush();
+        flightInstanceEventProducer.sendFlightInstancesDeleted(FlightInstancesDeletedEvent.builder()
+                .flightInstanceIds(departures.stream().map(FlightInstance::getId).toList())
+                .build());
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<UUID, FlightInstanceResponse> getFlightInstancesByIds(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) return Map.of();
-        List<FlightInstance> instances = flightInstanceRepository.findAllByIdInWithFlight(ids);
-
-        // One round trip per external service instead of one per distinct id.
-        List<UUID> distinctAirlineIds = instances.stream().map(FlightInstance::getAirlineId).distinct().toList();
-        List<UUID> distinctAircraftIds = instances.stream().map(FlightInstance::getAircraftId).distinct().toList();
-        List<UUID> distinctAirportIds = instances.stream()
-                .flatMap(fi -> Stream.of(fi.getDepartureAirportId(), fi.getArrivalAirportId()))
-                .distinct().toList();
-        Map<UUID, AirlineResponse> airlines = airlineClient.getAirlinesByIdsInternal(distinctAirlineIds);
-        Map<UUID, AircraftResponse> aircrafts = airlineIntegrationService.getAircraftsByIdsInternal(distinctAircraftIds);
-        Map<UUID, AirportResponse> airports = locationClient.getAirportsByIds(distinctAirportIds);
-
-        Map<UUID, FlightInstanceResponse> result = new HashMap<>();
-        for (FlightInstance fi : instances) {
-            result.put(fi.getId(), FlightInstanceMapper.toResponse(
-                    fi,
-                    aircrafts.get(fi.getAircraftId()),
-                    airlines.get(fi.getAirlineId()),
-                    airports.get(fi.getDepartureAirportId()),
-                    airports.get(fi.getArrivalAirportId())));
-        }
-        return result;
+        return toResponses(flightInstanceRepository.findAllByIdInWithFlight(ids));
     }
 
     @Override
@@ -186,6 +234,7 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
         airlineIntegrationService.requirePermission(userId, instance.getAirlineId(), FlightOpsPermissions.INSTANCE_AIRCRAFT_ASSIGN);
 
         AircraftResponse newAircraft = airlineIntegrationService.getAircraftById(newAircraftId, userId);
+        requireSameAirline(newAircraft, instance.getAirlineId());
 
         List<CabinSeatStatusResponse> soldSummary = seatClient.getSeatStatusSummary(id);
         if (soldSummary == null) {
@@ -236,8 +285,66 @@ public class FlightInstanceServiceImpl implements FlightInstanceService {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
+    /** One round trip per external service for the whole list, not one per departure. */
+    private Map<UUID, FlightInstanceResponse> toResponses(List<FlightInstance> instances) {
+        if (instances.isEmpty()) return Map.of();
+        List<UUID> distinctAirlineIds = instances.stream().map(FlightInstance::getAirlineId).distinct().toList();
+        List<UUID> distinctAircraftIds = instances.stream().map(FlightInstance::getAircraftId).distinct().toList();
+        List<UUID> distinctAirportIds = instances.stream()
+                .flatMap(fi -> Stream.of(fi.getDepartureAirportId(), fi.getArrivalAirportId()))
+                .distinct().toList();
+        Map<UUID, AirlineResponse> airlines = airlineClient.getAirlinesByIdsInternal(distinctAirlineIds);
+        Map<UUID, AircraftResponse> aircrafts = airlineIntegrationService.getAircraftsByIdsInternal(distinctAircraftIds);
+        Map<UUID, AirportResponse> airports = locationClient.getAirportsByIds(distinctAirportIds);
+
+        Map<UUID, FlightInstanceResponse> result = new LinkedHashMap<>();
+        for (FlightInstance fi : instances) {
+            result.put(fi.getId(), FlightInstanceMapper.toResponse(
+                    fi,
+                    aircrafts.get(fi.getAircraftId()),
+                    airlines.get(fi.getAirlineId()),
+                    airports.get(fi.getDepartureAirportId()),
+                    airports.get(fi.getArrivalAirportId())));
+        }
+        return result;
+    }
+
+    private FlightInstance findInstance(UUID id) {
+        return flightInstanceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format(ErrorMessageUtil.FLIGHT_INSTANCE_NOT_FOUND_BY_ID, id)));
+    }
+
+    private static void requireValidTimes(LocalDateTime departure, LocalDateTime arrival) {
+        if (!arrival.isAfter(departure)) {
+            throw new BadRequestException(ErrorMessageUtil.DEPARTURE_ARRIVAL_NOT_AFTER_DEPARTURE);
+        }
+        if (!departure.isAfter(LocalDateTime.now())) {
+            throw new BadRequestException(ErrorMessageUtil.DEPARTURE_IN_PAST);
+        }
+    }
+
+    private static void requireBookingWindow(Integer minDays, Integer maxDays) {
+        if (minDays != null && maxDays != null && minDays > maxDays) {
+            throw new BadRequestException(ErrorMessageUtil.DEPARTURE_BOOKING_WINDOW);
+        }
+    }
+
+    static void requireSameAirline(AircraftResponse aircraft, UUID airlineId) {
+        if (aircraft.getAirlineId() != null && !aircraft.getAirlineId().equals(airlineId)) {
+            throw new BadRequestException(ErrorMessageUtil.AIRCRAFT_NOT_IN_AIRLINE);
+        }
+    }
+
+    private static String describe(FlightStatus status) {
+        return status.name().toLowerCase().replace('_', ' ');
+    }
+
+    /** A departure always flies its route's airports; they are never taken from the request. */
     private FlightInstance buildInstanceEntity(FlightInstanceRequest request, Flight flight, AircraftResponse aircraft) {
         FlightInstance instance = FlightInstanceMapper.toEntity(request, flight);
+        instance.setDepartureAirportId(flight.getDepartureAirportId());
+        instance.setArrivalAirportId(flight.getArrivalAirportId());
         instance.setTotalSeats(aircraft.getTotalSeats());
         instance.setAvailableSeats(aircraft.getTotalSeats());
         return instance;

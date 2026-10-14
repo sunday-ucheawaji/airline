@@ -1,7 +1,9 @@
 package com.sunday.services.service;
 
 import java.util.UUID;
+import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.common_lib.payload.request.FlightInstanceRequest;
+import com.sunday.common_lib.payload.request.FlightInstanceUpdateRequest;
 import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.common_lib.payload.response.FlightInstanceResponse;
 import com.sunday.services.model.Flight;
@@ -38,12 +40,17 @@ public interface FlightInstanceService {
                                                 LocalDate onDate,
                                                 Pageable pageable);
 
-    FlightInstanceResponse updateFlightInstance(
-            UUID id,
-            FlightInstanceRequest request,
-            UUID userId);
+    /** Times and operational details only, while the departure is still SCHEDULED or DELAYED. */
+    FlightInstanceResponse updateFlightInstance(UUID id, FlightInstanceUpdateRequest request, UUID userId);
 
+    /** Moves along the departure lifecycle; cancelling one with seats sold or held is refused. */
+    FlightInstanceResponse changeStatus(UUID id, FlightStatus status, UUID userId);
+
+    /** Refused while any seat is sold or held. */
     void deleteFlightInstance(UUID id, UUID userId);
+
+    /** Deletes departures the caller has already checked have no sales, and tells seat-service to drop their seats. */
+    void removeDepartures(List<FlightInstance> departures);
 
     Map<UUID, FlightInstanceResponse> getFlightInstancesByIds(List<UUID> ids);
 

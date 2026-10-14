@@ -22,7 +22,7 @@ import java.util.Set;
  *   <li>departureDateTime strictly in the future</li>
  *   <li>Origin / destination airport IDs</li>
  *   <li>Departure date range (startOfDay … endOfDay)</li>
- *   <li>Total available seats &ge; requested passengers (general guard)</li>
+ *   <li>Total available seats &ge; seated passengers (cheap pre-filter)</li>
  *   <li>Airline IDs (pre-resolved from IATA codes / alliance in the service layer)</li>
  *   <li>Departure / arrival time-range buckets (MORNING, AFTERNOON, EVENING, NIGHT)</li>
  *   <li>Maximum flight duration in minutes</li>
@@ -33,7 +33,7 @@ import java.util.Set;
  *   <li><b>Price filtering</b> – fare data lives in pricing-service; handled in
  *       the service layer via a single batch Feign call after the DB query.</li>
  *   <li><b>Per-cabin-class seat count</b> – FlightInstanceCabin lives in
- *       seat-service; the {@code availableSeats} guard here is aggregate.</li>
+ *       seat-service; checked in the service layer with one batch call.</li>
  * </ul>
  *
  * <p><b>DB assumption:</b> {@code TIMESTAMPDIFF} and {@code HOUR} are MySQL functions.
@@ -98,11 +98,11 @@ public class FlightInstanceSpecification {
                 predicates.add(cb.between(root.get("departureDateTime"), startOfDay, endOfDay));
             }
 
-            // 7. Seat availability guard – total available seats >= passengers
-            //    (per-cabin availability is checked at booking time via seat-service)
-            if (request.getPassengers() != null) {
+            // 7. Seat availability pre-filter – total available seats >= seated passengers
+            //    (the requested cabin's own count comes from seat-service in the service layer)
+            if (request.seatedPassengers() > 0) {
                 predicates.add(cb.greaterThanOrEqualTo(
-                        root.get("availableSeats"), request.getPassengers()));
+                        root.get("availableSeats"), request.seatedPassengers()));
             }
 
             // 8. Airline IDs (optional – pass a non-empty list to restrict results)

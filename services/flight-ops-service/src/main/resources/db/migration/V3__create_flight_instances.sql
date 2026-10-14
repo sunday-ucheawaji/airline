@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS flight_instances (
     aircraft_id              CHAR(36),
     departure_airport_id     CHAR(36) NOT NULL,
     arrival_airport_id       CHAR(36) NOT NULL,
-    schedule_id              CHAR(36) NOT NULL,
+    schedule_id              CHAR(36),
     departure_date_time      DATETIME NOT NULL,
     arrival_date_time        DATETIME NOT NULL,
     total_seats              INT NOT NULL,

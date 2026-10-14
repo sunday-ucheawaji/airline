@@ -17,4 +17,9 @@ public class FareSearchResult {
     private UUID flightId;
     private LocalDate departureDate;
     private FareResponse fare;
+    private PartyPriceResponse partyPrice;
+
+    public FareSearchResult(UUID flightId, LocalDate departureDate, FareResponse fare) {
+        this(flightId, departureDate, fare, null);
+    }
 }

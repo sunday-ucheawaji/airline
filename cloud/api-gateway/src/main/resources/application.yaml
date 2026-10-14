@@ -21,6 +21,11 @@ spring:
             connect-timeout: 2000
             response-timeout: 10s
 
+          # Authentication happens here, never at a service: a downstream WWW-Authenticate (e.g. Basic from a
+          # misconfigured service) would make browsers pop up a native sign-in dialog, so it never reaches the client.
+          default-filters:
+            - RemoveResponseHeader=WWW-Authenticate
+
           # Routing only — who may call what is decided in SecurityConfig (default-deny), not here.
           # Circuit-breaker instance names (*-cb) are configured under resilience4j.* in the Config Server repo.
           routes:

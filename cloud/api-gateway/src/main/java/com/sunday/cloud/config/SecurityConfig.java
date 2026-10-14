@@ -52,11 +52,11 @@ public class SecurityConfig {
 
         ServerAuthenticationEntryPoint unauthorized = (exchange, ex) -> {
             exchange.getResponse().getHeaders().set(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
-            return ErrorResponses.write(exchange, HttpStatus.UNAUTHORIZED,
-                    "Authentication is required, or the access token is missing, invalid or expired");
+            return ErrorResponses.write(exchange, HttpStatus.UNAUTHORIZED, "UNAUTHORIZED",
+                    "Your session has ended or you are not signed in. Please sign in and try again.");
         };
         ServerAccessDeniedHandler forbidden = (exchange, ex) ->
-                ErrorResponses.write(exchange, HttpStatus.FORBIDDEN, "You do not have permission to access this resource");
+                ErrorResponses.write(exchange, HttpStatus.FORBIDDEN, "FORBIDDEN", "You don't have permission to do this.");
 
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
@@ -78,6 +78,8 @@ public class SecurityConfig {
                         // --- public ---
                         .pathMatchers(HttpMethod.OPTIONS).permitAll()
                         .pathMatchers("/auth/**", "/fallback").permitAll()
+                        // The traveller-facing airport picker: searching and booking need no account.
+                        .pathMatchers(HttpMethod.GET, "/api/airports/search", "/api/flights/search").permitAll()
 
                         // Payment provider webhooks: Razorpay/Stripe/Paystack carry no platform JWT, so these must
                         // be reachable without one. Signature verification inside payment-service IS the

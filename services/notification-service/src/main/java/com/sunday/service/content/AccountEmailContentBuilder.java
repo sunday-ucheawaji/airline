@@ -1,6 +1,7 @@
 package com.sunday.service.content;
 
 import com.sunday.common_lib.event.EmailVerificationRequestedEvent;
+import com.sunday.common_lib.event.ExistingAccountSignupAttemptedEvent;
 import com.sunday.common_lib.event.PasswordResetRequestedEvent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,13 +22,19 @@ public class AccountEmailContentBuilder {
     private final TemplateEngine templateEngine;
     private final String verifyEmailUrl;
     private final String resetPasswordUrl;
+    private final String signInUrl;
+    private final String forgotPasswordUrl;
 
     public AccountEmailContentBuilder(TemplateEngine templateEngine,
                                       @Value("${notification.verify-email-url}") String verifyEmailUrl,
-                                      @Value("${notification.reset-password-url}") String resetPasswordUrl) {
+                                      @Value("${notification.reset-password-url}") String resetPasswordUrl,
+                                      @Value("${notification.sign-in-url}") String signInUrl,
+                                      @Value("${notification.forgot-password-url}") String forgotPasswordUrl) {
         this.templateEngine = templateEngine;
         this.verifyEmailUrl = verifyEmailUrl;
         this.resetPasswordUrl = resetPasswordUrl;
+        this.signInUrl = signInUrl;
+        this.forgotPasswordUrl = forgotPasswordUrl;
     }
 
     public String subjectForEmailVerification() {
@@ -46,6 +53,18 @@ public class AccountEmailContentBuilder {
     public String bodyForPasswordReset(PasswordResetRequestedEvent event) {
         return render("email/password-reset", event.getFirstName(), link(resetPasswordUrl, event.getToken()),
                 event.getExpiresAt() != null ? event.getExpiresAt().format(EXPIRY_FMT) : null);
+    }
+
+    public String subjectForExistingAccountSignup() {
+        return "Someone tried to create an account with your email";
+    }
+
+    public String bodyForExistingAccountSignup(ExistingAccountSignupAttemptedEvent event) {
+        Context ctx = new Context(Locale.ENGLISH);
+        ctx.setVariable("firstName", event.getFirstName());
+        ctx.setVariable("signInLink", signInUrl);
+        ctx.setVariable("forgotPasswordLink", forgotPasswordUrl);
+        return templateEngine.process("email/existing-account-signup", ctx);
     }
 
     private String render(String template, String firstName, String link, String expiresAt) {

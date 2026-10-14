@@ -2,6 +2,7 @@ package com.sunday.common_lib.payload.request;
 
 import com.sunday.common_lib.enums.CabinClassType;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -23,6 +24,20 @@ public class FareSearchRequest {
     @NotEmpty(message = "At least one flight departure is required")
     @Valid
     private List<FlightDeparture> flights;
+
+    /** The travelling party. Children are priced as {@code CHD}, infants as lap infants ({@code INF}). */
+    @Min(value = 1, message = "A search needs at least one adult")
+    private int adults = 1;
+
+    @Min(value = 0, message = "Children cannot be negative")
+    private int children;
+
+    @Min(value = 0, message = "Infants cannot be negative")
+    private int infants;
+
+    public FareSearchRequest(CabinClassType cabinClass, List<FlightDeparture> flights) {
+        this(cabinClass, flights, 1, 0, 0);
+    }
 
     @Data
     @NoArgsConstructor

@@ -2,6 +2,7 @@ package com.sunday.services.mapper;
 
 import com.sunday.common_lib.enums.FlightStatus;
 import com.sunday.common_lib.payload.request.FlightInstanceRequest;
+import com.sunday.common_lib.payload.request.FlightInstanceUpdateRequest;
 import com.sunday.common_lib.payload.response.AircraftResponse;
 import com.sunday.common_lib.payload.response.AirlineResponse;
 import com.sunday.common_lib.payload.response.AirportResponse;
@@ -44,6 +45,7 @@ public class FlightInstanceMapper {
         if (fi == null) return null;
         return FlightInstanceResponse.builder()
                 .id(fi.getId())
+                .scheduleId(fi.getScheduleId())
                 .flightId(fi.getFlight() != null ? fi.getFlight().getId() : null)
                 .flightNumber(fi.getFlight() != null ? fi.getFlight().getFlightNumber() : null)
                 .aircraftId(fi.getAircraftId())
@@ -69,19 +71,16 @@ public class FlightInstanceMapper {
                 .build();
     }
 
-    public static void updateEntity(FlightInstanceRequest request, FlightInstance existing) {
-        if (request == null || existing == null) return;
-        if (request.getDepartureAirportId() != null) existing.setDepartureAirportId(request.getDepartureAirportId());
-        if (request.getArrivalAirportId() != null) existing.setArrivalAirportId(request.getArrivalAirportId());
-        if (request.getDepartureDateTime() != null) existing.setDepartureDateTime(request.getDepartureDateTime());
-        if (request.getArrivalDateTime() != null) existing.setArrivalDateTime(request.getArrivalDateTime());
-        if (request.getTotalSeats() != null) existing.setTotalSeats(request.getTotalSeats());
-        if (request.getAvailableSeats() != null) existing.setAvailableSeats(request.getAvailableSeats());
-        if (request.getStatus() != null) existing.setStatus(request.getStatus());
-        if (request.getMinAdvanceBookingDays() != null) existing.setMinAdvanceBookingDays(request.getMinAdvanceBookingDays());
-        if (request.getMaxAdvanceBookingDays() != null) existing.setMaxAdvanceBookingDays(request.getMaxAdvanceBookingDays());
-        if (request.getIsActive() != null) existing.setIsActive(request.getIsActive());
-        if (request.getTerminal() != null) existing.setTerminal(request.getTerminal());
-        if (request.getGate() != null) existing.setGate(request.getGate());
+    public static void updateEntity(FlightInstanceUpdateRequest request, FlightInstance existing) {
+        existing.setDepartureDateTime(request.getDepartureDateTime());
+        existing.setArrivalDateTime(request.getArrivalDateTime());
+        existing.setTerminal(blankToNull(request.getTerminal()));
+        existing.setGate(blankToNull(request.getGate()));
+        existing.setMinAdvanceBookingDays(request.getMinAdvanceBookingDays());
+        existing.setMaxAdvanceBookingDays(request.getMaxAdvanceBookingDays());
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }
