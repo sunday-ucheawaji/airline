@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/** What payment-service needs to check a payment request against a booking: its owner, its stored total and status. */
+/**
+ * What payment-service needs to check a payment request against what is being paid for: its owner, total, currency
+ * and status. The id is a booking, a trip (all its flights in one payment) or an extras order.
+ */
 @Data
 @Builder
 @NoArgsConstructor

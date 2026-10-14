@@ -7,6 +7,6 @@ import java.util.List;
 
 public interface FareSearchService {
 
-    /** Cheapest sellable fare for each requested flight departure, in one database query per call. */
+    /** Cheapest sellable adult fare for each requested flight departure, in one database query per call. */
     List<FareSearchResult> search(FareSearchRequest request);
 }

@@ -7,6 +7,7 @@ import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -80,6 +81,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponse> handleOptimisticLock(
             OptimisticLockingFailureException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ErrorMessageUtil.CONCURRENT_MODIFICATION, request);
+    }
+
+    /** A unique or foreign key rejected the write, e.g. two requests creating the same row at once. */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.warn("Data integrity violation on {} {}: {}", request.getMethod(), request.getRequestURI(),
+                ex.getMostSpecificCause().getMessage());
+        return build(HttpStatus.CONFLICT, ErrorMessageUtil.DATA_INTEGRITY_CONFLICT, request);
     }
 
     /** A required downstream service is unreachable; the request fails closed. */

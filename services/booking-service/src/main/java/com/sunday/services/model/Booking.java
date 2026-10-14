@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -77,8 +78,26 @@ public class Booking {
     private Boolean fareRefundable;
     private BigDecimal fareCancellationFee;
     private Integer fareRefundDeadlineDays;
+    private Boolean fareChangeable;
+    private BigDecimal fareChangeFee;
+    private Integer fareChangeDeadlineHours;
+
+    // The trip this flight belongs to; null for a one-way booking.
+    @Column(name = "trip_id")
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID tripId;
+
+    @Column(name = "exchanged_from_booking_id")
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID exchangedFromBookingId;
+
+    @Column(name = "exchanged_to_booking_id")
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private UUID exchangedToBookingId;
 
     private BigDecimal totalAmount;
+
+    private BigDecimal changeFeeAmount;
 
     private BigDecimal refundAmount;
 
@@ -130,4 +149,30 @@ public class Booking {
 
     @Version
     private Long version;
+
+    /** What a refund can return: everything paid, except a change fee paid to create this booking. */
+    public BigDecimal refundableValue() {
+        if (totalAmount == null) {
+            return BigDecimal.ZERO;
+        }
+        return totalAmount.subtract(changeFeeAmount != null ? changeFeeAmount : BigDecimal.ZERO);
+    }
+
+    /** The fee to change this booking: each passenger's own fare's change fee (the booking's, if priced before that). */
+    public BigDecimal changeFees() {
+        return passengers.stream()
+                .map(passenger -> passenger.getFareId() != null ? passenger.getFareChangeFee() : fareChangeFee)
+                .map(fee -> fee != null ? fee : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * The refund when this booking is exchanged for a replacement worth {@code replacementValue}: its whole value
+     * if its fare is refundable; otherwise only what the replacement uses, and the rest is forfeited.
+     */
+    public BigDecimal exchangeRefund(BigDecimal replacementValue) {
+        BigDecimal value = refundableValue();
+        BigDecimal refund = Boolean.TRUE.equals(fareRefundable) ? value : value.min(replacementValue);
+        return refund.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_EVEN);
+    }
 }

@@ -7,7 +7,7 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 
-/** Evicts a cached fare when one of its children (rules, baggage policy) changes. */
+/** Evicts a cached fare when one of its children (rules, baggage policy) changes. Deferred to after commit. */
 @Component
 @RequiredArgsConstructor
 public class FareCacheEvictor {
@@ -17,7 +17,7 @@ public class FareCacheEvictor {
     public void evict(UUID fareId) {
         Cache cache = cacheManager.getCache(CacheUtil.FARES);
         if (cache != null) {
-            cache.evictIfPresent(fareId);
+            cache.evict(fareId);
         }
     }
 }

@@ -222,9 +222,15 @@ public class FlightMealServiceImpl implements FlightMealService {
 
     @Override
     @Transactional(readOnly = true)
-    public BigDecimal calculateMealPrice(UUID flightId, List<UUID> mealIds) {
+    public BigDecimal calculateMealPrice(UUID flightId, int passengers, List<UUID> mealIds) {
+        if (passengers < 1) {
+            throw new BadRequestException(ErrorMessageUtil.PASSENGER_COUNT_INVALID);
+        }
         if (mealIds == null || mealIds.isEmpty()) {
             return BigDecimal.ZERO;
+        }
+        if (mealIds.size() > passengers) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.MEALS_EXCEED_PASSENGERS, mealIds.size(), passengers));
         }
 
         List<FlightMeal> meals = flightMealRepository.findAllById(mealIds);

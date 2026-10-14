@@ -9,7 +9,7 @@ public final class PricingPermissions {
 
     private PricingPermissions() {}
 
-    /** Read fares, fare rules and baggage policies for an airline. Granted to OWNER+ADMIN+REVENUE_MANAGER+VIEWER. */
+    /** Read fares, fare rules and baggage policies for an airline. Granted to OWNER+ADMIN+REVENUE_MANAGER. */
     public static final String FARE_READ = "FARE_READ";
 
     /** Create, update, publish, withdraw and delete fares and baggage policies. Granted to OWNER+ADMIN+REVENUE_MANAGER. */

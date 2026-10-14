@@ -1,5 +1,6 @@
 package com.sunday.common_lib.payload.response;
 
+import com.sunday.common_lib.enums.PassengerType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +17,7 @@ import java.util.UUID;
 public class FareQuoteResponse {
 
     private UUID fareId;
+    private PassengerType passengerType;
     private Long version;
     private LocalDate departureDate;
     private String currency;
@@ -28,4 +30,7 @@ public class FareQuoteResponse {
     private Boolean refundable;
     private BigDecimal cancellationFee;
     private Integer refundDeadlineDays;
+    private Boolean changeable;
+    private BigDecimal changeFee;
+    private Integer changeDeadlineHours;
 }

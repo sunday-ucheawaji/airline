@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -42,6 +43,12 @@ public class SeatClientFallbackFactory implements FallbackFactory<SeatClient> {
             public SeatConfirmResponse confirmSeats(SeatConfirmRequest request) {
                 log.warn("seat-service call failed – seats of booking {} could not be confirmed: {}",
                         request.getBookingReference(), cause.getMessage(), cause);
+                throw new ServiceUnavailableException(ErrorMessageUtil.SEAT_SERVICE_UNAVAILABLE, cause);
+            }
+
+            @Override
+            public BigDecimal calculateSeatPrice(List<UUID> seatInstanceIds) {
+                log.warn("seat-service call failed – seat premiums could not be priced: {}", cause.getMessage(), cause);
                 throw new ServiceUnavailableException(ErrorMessageUtil.SEAT_SERVICE_UNAVAILABLE, cause);
             }
 

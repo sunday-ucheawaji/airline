@@ -15,6 +15,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class PaymentRefundedEvent {
     private UUID paymentId;
+    // One per refund (a payment can be refunded in parts); notifications are deduplicated on it.
+    private UUID refundId;
     private UUID bookingId;
     private UUID userId;
     private BigDecimal amount;

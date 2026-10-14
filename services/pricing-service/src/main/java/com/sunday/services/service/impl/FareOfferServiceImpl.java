@@ -3,7 +3,9 @@ package com.sunday.services.service.impl;
 import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.enums.FareStatus;
+import com.sunday.common_lib.enums.PassengerType;
 import com.sunday.common_lib.payload.response.FareOfferResponse;
+import com.sunday.services.integration.PricingIntegrationService;
 import com.sunday.services.model.Fare;
 import com.sunday.services.repository.FareRepository;
 import com.sunday.services.service.FareOfferService;
@@ -24,18 +26,23 @@ import java.util.List;
 public class FareOfferServiceImpl implements FareOfferService {
 
     private final FareRepository fareRepository;
+    private final PricingIntegrationService pricingIntegrationService;
     private final Clock clock;
 
     @Override
-    public List<FareOfferResponse> offers(UUID flightId, LocalDate departureDate, CabinClassType cabinClass) {
+    public List<FareOfferResponse> offers(UUID flightId, LocalDate departureDate, CabinClassType cabinClass,
+                                          PassengerType passengerType) {
         Instant now = Instant.now(clock);
-        return fareRepository
-                .findSearchCandidates(List.of(flightId), cabinClass, FareStatus.PUBLISHED, now, departureDate, departureDate)
+        List<Fare> sellable = fareRepository
+                .findSearchCandidates(List.of(flightId), cabinClass, passengerType, FareStatus.PUBLISHED, now, departureDate, departureDate)
                 .stream()
                 .filter(fare -> FareValidityPolicy.isSellable(fare, departureDate, now))
                 .sorted(Comparator.comparing(Fare::getTotalAmount))
-                .map(FareOfferServiceImpl::toOffer)
                 .toList();
+        if (sellable.isEmpty() || pricingIntegrationService.isAirlineKnownInactive(sellable.get(0).getAirlineId())) {
+            return List.of();
+        }
+        return sellable.stream().map(FareOfferServiceImpl::toOffer).toList();
     }
 
     private static FareOfferResponse toOffer(Fare fare) {

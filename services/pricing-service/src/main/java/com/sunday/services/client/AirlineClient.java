@@ -1,6 +1,7 @@
 package com.sunday.services.client;
 
 import java.util.UUID;
+import com.sunday.common_lib.payload.response.AirlineResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +19,9 @@ public interface AirlineClient {
 
     @GetMapping("/api/airlines/{airlineId}/permissions")
     List<String> getMyPermissions(@PathVariable UUID airlineId, @RequestHeader("X-User-Id") UUID userId);
+
+    @GetMapping("/internal/airlines/{id}")
+    AirlineResponse getAirlineByIdInternal(@PathVariable UUID id);
 
     @GetMapping("/api/airlines/permissions/check")
     void requirePermission(

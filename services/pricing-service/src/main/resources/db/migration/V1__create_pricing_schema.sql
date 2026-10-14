@@ -8,8 +8,6 @@ CREATE TABLE IF NOT EXISTS fares (
     airline_id                  CHAR(36) NOT NULL,
     -- Cross-service ref: Flight is in flight-ops-service, no FK. The route template, not a departure.
     flight_id                   CHAR(36) NOT NULL,
-    -- Cross-service ref: CabinClass is in seat-service, no FK. Informational only (changes with the aircraft).
-    cabin_class_id              CHAR(36) NOT NULL,
     cabin_class                 ENUM('ECONOMY','PREMIUM_ECONOMY','BUSINESS','FIRST') NOT NULL,
     passenger_type              ENUM('ADT','CHD','INF') NOT NULL,
     rbd_code                    VARCHAR(1) NOT NULL,
@@ -39,9 +37,6 @@ CREATE TABLE IF NOT EXISTS fares (
     in_flight_internet          BIT(1) NOT NULL,
     in_flight_entertainment     BIT(1) NOT NULL,
     complimentary_beverages     BIT(1) NOT NULL,
-    free_date_change            BIT(1) NOT NULL,
-    partial_refund              BIT(1) NOT NULL,
-    full_refund                 BIT(1) NOT NULL,
     lounge_access               BIT(1) NOT NULL,
     airport_transfer            BIT(1) NOT NULL,
     version                     BIGINT NOT NULL DEFAULT 0,

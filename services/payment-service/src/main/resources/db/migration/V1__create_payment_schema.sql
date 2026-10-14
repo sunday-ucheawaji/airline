@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS payments (
     provider_payment_id VARCHAR(255),
     transaction_id      VARCHAR(255),
     method              VARCHAR(255),
-    status              ENUM('PENDING','SUCCESS','FAILED','CANCELLED','REFUNDED','PROCESSING'),
+    status              ENUM('PENDING','SUCCESS','FAILED','CANCELLED','REFUNDED','PARTIALLY_REFUNDED','PROCESSING'),
     failure_reason      VARCHAR(255),
     paid_at             DATETIME(6),
     refund_id           VARCHAR(255),
@@ -26,6 +26,20 @@ CREATE TABLE IF NOT EXISTS payments (
     version                 BIGINT,
     created_at          DATETIME(6) NOT NULL,
     updated_at          DATETIME(6)
+);
+
+-- One row per refund. A payment can be refunded in parts (a trip's legs are cancelled one by one) up to what was
+-- paid; refunded_amount on payments is the running total. A caller passes a reference ("cancel:<bookingId>") so a
+-- retried refund returns the first one instead of paying out twice.
+CREATE TABLE IF NOT EXISTS payment_refunds (
+    id                  CHAR(36) PRIMARY KEY,
+    payment_id          CHAR(36) NOT NULL,
+    reference           VARCHAR(100) NOT NULL,
+    amount              DECIMAL(12,2) NOT NULL,
+    provider_refund_id  VARCHAR(255),
+    created_at          DATETIME(6) NOT NULL,
+    CONSTRAINT uq_payment_refunds_reference UNIQUE (payment_id, reference),
+    CONSTRAINT fk_payment_refunds_payment FOREIGN KEY (payment_id) REFERENCES payments (id)
 );
 
 -- Inbox-pattern dedup for the Razorpay webhook: a redelivered event can never double-transition a

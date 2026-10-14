@@ -24,8 +24,10 @@ public class InternalPaymentController {
     }
 
     @PostMapping("/{paymentId}/refund")
-    public PaymentDTO refundPayment(@PathVariable UUID paymentId, @RequestParam(required = false) BigDecimal amount) {
-        return paymentService.refundPaymentAsSystem(paymentId, amount);
+    public PaymentDTO refundPayment(@PathVariable UUID paymentId,
+                                    @RequestParam(required = false) BigDecimal amount,
+                                    @RequestParam(required = false) String reference) {
+        return paymentService.refundPaymentAsSystem(paymentId, amount, reference);
     }
 
     @PostMapping("/batch/bookings")

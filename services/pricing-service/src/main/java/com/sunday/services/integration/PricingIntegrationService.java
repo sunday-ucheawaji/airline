@@ -23,4 +23,10 @@ public interface PricingIntegrationService {
      * written against a flight that does not exist.
      */
     Map<UUID, UUID> resolveAirlineIdsByFlightIds(Collection<UUID> flightIds);
+
+    /**
+     * True when airline-core says the airline is not ACTIVE (or doesn't exist). An outage answers false: customer
+     * reads stay up, and booking-service refuses an inactive airline anyway.
+     */
+    boolean isAirlineKnownInactive(UUID airlineId);
 }

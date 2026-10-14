@@ -15,10 +15,8 @@ import com.sunday.services.repository.FareRepository;
 import com.sunday.services.repository.FareRulesRepository;
 import com.sunday.services.service.FareLifecycleService;
 import com.sunday.common_lib.util.CacheUtil;
-import com.sunday.services.config.FareCacheEvictor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

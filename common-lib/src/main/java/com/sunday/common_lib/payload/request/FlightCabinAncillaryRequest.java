@@ -1,5 +1,6 @@
 package com.sunday.common_lib.payload.request;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -18,8 +19,8 @@ public class FlightCabinAncillaryRequest {
     @NotNull(message = "Flight ID is required")
     private UUID flightId;
 
-    @NotNull(message = "Cabin Class ID is required")
-    private UUID cabinClassId;
+    @NotNull(message = "Cabin class is required")
+    private CabinClassType cabinClass;
 
     @NotNull(message = "Ancillary ID is required")
     private UUID ancillaryId;

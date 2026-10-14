@@ -1,11 +1,13 @@
 package com.sunday.common_lib.payload.response;
 
 import com.sunday.common_lib.enums.Gender;
+import com.sunday.common_lib.enums.PassengerType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -28,6 +30,10 @@ public class PassengerResponse {
     private String nationality;
     private String frequentFlyerNumber;
     private UUID seatInstanceId;
+    private PassengerType passengerType;
+    private Boolean lapInfant;
+    private UUID fareId;
+    private BigDecimal fareAmount;
 
     private UUID primaryUserId;
     private String primaryUserName;

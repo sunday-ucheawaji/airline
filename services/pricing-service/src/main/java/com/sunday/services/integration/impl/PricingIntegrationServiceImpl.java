@@ -1,9 +1,11 @@
 package com.sunday.services.integration.impl;
 
 import java.util.UUID;
+import com.sunday.common_lib.enums.AirlineStatus;
 import com.sunday.common_lib.exception.OperationNotPermittedException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
+import com.sunday.common_lib.payload.response.AirlineResponse;
 import com.sunday.common_lib.payload.response.FlightResponse;
 import com.sunday.common_lib.util.ErrorMessageUtil;
 import com.sunday.services.client.AirlineClient;
@@ -11,6 +13,7 @@ import com.sunday.services.client.FlightClient;
 import com.sunday.services.integration.PricingIntegrationService;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -19,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PricingIntegrationServiceImpl implements PricingIntegrationService {
@@ -97,5 +101,19 @@ public class PricingIntegrationServiceImpl implements PricingIntegrationService 
             }
         }
         return airlineByFlight;
+    }
+
+    @Override
+    public boolean isAirlineKnownInactive(UUID airlineId) {
+        AirlineResponse airline;
+        try {
+            airline = airlineClient.getAirlineByIdInternal(airlineId);
+        } catch (FeignException.NotFound e) {
+            return true;
+        } catch (FeignException e) {
+            log.warn("Airline {} status unknown, fares are shown: {}", airlineId, e.getMessage());
+            return false;
+        }
+        return airline != null && airline.getStatus() != null && airline.getStatus() != AirlineStatus.ACTIVE;
     }
 }

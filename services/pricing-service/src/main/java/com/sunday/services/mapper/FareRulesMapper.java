@@ -43,15 +43,16 @@ public class FareRulesMapper {
                 .build();
     }
 
+    /** Full replace: a field left out of the request is cleared, as on create. The fare is never changed. */
     public static void updateEntity(FareRulesRequest request, FareRules existing, UUID userId) {
         if (request == null || existing == null) return;
-        if (request.getRuleName() != null) existing.setRuleName(request.getRuleName());
+        existing.setRuleName(request.getRuleName());
         existing.setUpdatedBy(userId);
-        if (request.getIsRefundable() != null) existing.setIsRefundable(request.getIsRefundable());
-        if (request.getChangeFee() != null) existing.setChangeFee(request.getChangeFee());
-        if (request.getCancellationFee() != null) existing.setCancellationFee(request.getCancellationFee());
-        if (request.getRefundDeadlineDays() != null) existing.setRefundDeadlineDays(request.getRefundDeadlineDays());
-        if (request.getChangeDeadlineHours() != null) existing.setChangeDeadlineHours(request.getChangeDeadlineHours());
-        if (request.getIsChangeable() != null) existing.setIsChangeable(request.getIsChangeable());
+        existing.setIsRefundable(request.getIsRefundable());
+        existing.setChangeFee(request.getChangeFee());
+        existing.setCancellationFee(request.getCancellationFee());
+        existing.setRefundDeadlineDays(request.getRefundDeadlineDays());
+        existing.setChangeDeadlineHours(request.getChangeDeadlineHours());
+        existing.setIsChangeable(request.getIsChangeable() != null ? request.getIsChangeable() : false);
     }
 }

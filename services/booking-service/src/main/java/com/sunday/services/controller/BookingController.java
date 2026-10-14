@@ -2,11 +2,18 @@ package com.sunday.services.controller;
 
 import java.util.UUID;
 import com.sunday.common_lib.enums.BookingStatus;
+import com.sunday.common_lib.payload.request.BookingChangeRequest;
+import com.sunday.common_lib.payload.response.ExtrasOrderResponse;
+import com.sunday.common_lib.payload.response.TripResponse;
+import com.sunday.common_lib.payload.request.ExtrasOrderRequest;
+import com.sunday.common_lib.payload.request.TripRequest;
+import com.sunday.common_lib.payload.response.BookingChangeQuoteResponse;
 import com.sunday.common_lib.payload.request.BookingRequest;
 import com.sunday.common_lib.payload.response.BookingResponse;
 import com.sunday.common_lib.payload.response.BookingStatisticsResponse;
 import com.sunday.common_lib.payload.response.PaymentInitiateResponse;
 import com.sunday.services.service.BookingService;
+import com.sunday.services.service.ExtrasOrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final ExtrasOrderService extrasOrderService;
 
     @PostMapping
     public ResponseEntity<PaymentInitiateResponse> createBooking(
@@ -74,6 +82,51 @@ public class BookingController {
             @RequestParam(defaultValue = "20") int size,
             @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(bookingService.getBookingsByUser(userId, page, size));
+    }
+
+    @PostMapping("/trips")
+    public ResponseEntity<PaymentInitiateResponse> createTrip(
+            @Valid @RequestBody TripRequest request,
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(bookingService.createTrip(request, userId, idempotencyKey));
+    }
+
+    @GetMapping("/trips/{id}")
+    public ResponseEntity<TripResponse> getTrip(@PathVariable UUID id, @RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(bookingService.getTrip(id, userId));
+    }
+
+    @PatchMapping("/trips/{id}/cancel")
+    public ResponseEntity<TripResponse> cancelTrip(@PathVariable UUID id, @RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(bookingService.cancelTrip(id, userId));
+    }
+
+    @PostMapping("/{id}/extras")
+    public ResponseEntity<ExtrasOrderResponse> orderExtras(
+            @PathVariable UUID id,
+            @RequestBody ExtrasOrderRequest request,
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(extrasOrderService.orderExtras(id, request, userId, idempotencyKey));
+    }
+
+    @PostMapping("/{id}/change")
+    public ResponseEntity<PaymentInitiateResponse> changeBooking(
+            @PathVariable UUID id,
+            @Valid @RequestBody BookingChangeRequest request,
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        PaymentInitiateResponse response = bookingService.changeBooking(id, request, userId, idempotencyKey);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{id}/change/quote")
+    public ResponseEntity<BookingChangeQuoteResponse> quoteChange(
+            @PathVariable UUID id,
+            @Valid @RequestBody BookingChangeRequest request,
+            @RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(bookingService.quoteChange(id, request, userId));
     }
 
     @PatchMapping("/{id}/cancel")

@@ -3,6 +3,8 @@ package com.sunday.services.service.impl;
 
 import java.util.UUID;
 import com.sunday.common_lib.constants.PricingPermissions;
+import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.enums.FareStatus;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
@@ -20,7 +22,6 @@ import com.sunday.services.validation.FareRequestValidator;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import com.sunday.common_lib.util.CacheUtil;
-import com.sunday.services.config.FareCacheEvictor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -169,8 +170,8 @@ public class FareServiceImpl implements FareService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<FareResponse> getFaresByFlightIdAndCabinClassId(UUID userId, UUID flightId, UUID cabinClassId) {
-        List<Fare> fares = fareRepository.findByFlightIdAndCabinClassId(flightId, cabinClassId);
+    public List<FareResponse> getFaresByFlightIdAndCabinClass(UUID userId, UUID flightId, CabinClassType cabinClass) {
+        List<Fare> fares = fareRepository.findByFlightIdAndCabinClass(flightId, cabinClass);
         if (!fares.isEmpty()) {
             Set<UUID> airlineIds = fares.stream().map(Fare::getAirlineId).collect(Collectors.toSet());
             pricingIntegrationService.requirePermission(userId, airlineIds, PricingPermissions.FARE_READ);
@@ -190,6 +191,9 @@ public class FareServiceImpl implements FareService {
     public FareResponse updateFare(UUID userId, UUID id, FareRequest request) {
         Fare existing = findFareOrThrow(id);
         pricingIntegrationService.requirePermission(userId, existing.getAirlineId(), PricingPermissions.FARE_MANAGE);
+        if (existing.getStatus() == FareStatus.PUBLISHED) {
+            throw new ConflictException(String.format(ErrorMessageUtil.FARE_LOCKED_WHILE_PUBLISHED, id));
+        }
 
         FareRequestValidator.validate(request);
         if (fareRepository.existsByAirlineIdAndFlightIdAndCabinClassAndRbdCodeAndPassengerTypeAndNameAndIdNot(
@@ -207,6 +211,9 @@ public class FareServiceImpl implements FareService {
     public void deleteFare(UUID userId, UUID id) {
         Fare fare = findFareOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fare.getAirlineId(), PricingPermissions.FARE_MANAGE);
+        if (fare.getStatus() != FareStatus.DRAFT) {
+            throw new ConflictException(ErrorMessageUtil.FARE_DELETE_NOT_DRAFT);
+        }
         fareRepository.delete(fare);
     }
 
@@ -221,7 +228,7 @@ public class FareServiceImpl implements FareService {
     @Transactional(readOnly = true)
     public Map<UUID, FareResponse> getFaresByIds(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) return Map.of();
-        return fareRepository.findAllById(ids).stream()
+        return fareRepository.findByIdIn(ids).stream()
                 .collect(Collectors.toMap(Fare::getId, FareMapper::toResponse));
     }
 

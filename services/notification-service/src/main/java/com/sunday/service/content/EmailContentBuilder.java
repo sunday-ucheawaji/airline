@@ -2,6 +2,7 @@ package com.sunday.service.content;
 
 import com.sunday.common_lib.event.BookingCancelledEvent;
 import com.sunday.common_lib.event.BookingConfirmedEvent;
+import com.sunday.common_lib.event.ExtrasConfirmedEvent;
 import com.sunday.common_lib.event.PaymentFailedEvent;
 import com.sunday.common_lib.event.PaymentRefundedEvent;
 import lombok.RequiredArgsConstructor;
@@ -118,6 +119,22 @@ public class EmailContentBuilder {
         ctx.setVariable("amount", event.getAmount() != null ? fmt(event.getAmount().doubleValue()) : "N/A");
         ctx.setVariable("currency", event.getCurrency());
         return templateEngine.process("email/payment-refunded", ctx);
+    }
+
+    // ── Extras confirmed ─────────────────────────────────────────────────────────
+
+    public String subjectForExtrasConfirmed(ExtrasConfirmedEvent event) {
+        return "Extras Confirmed | Booking #" + event.getBookingReference();
+    }
+
+    public String bodyForExtrasConfirmed(ExtrasConfirmedEvent event) {
+        Context ctx = new Context(Locale.ENGLISH);
+        ctx.setVariable("bookingReference", event.getBookingReference());
+        ctx.setVariable("ancillaryCount", event.getAncillaryCount());
+        ctx.setVariable("mealCount", event.getMealCount());
+        ctx.setVariable("amount", event.getTotalAmount() != null ? fmt(event.getTotalAmount().doubleValue()) : "0.00");
+        ctx.setVariable("currency", event.getCurrency());
+        return templateEngine.process("email/extras-confirmed", ctx);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

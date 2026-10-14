@@ -24,7 +24,9 @@ public interface PaymentClient {
     PaymentDTO getPaymentByBookingId(@PathVariable UUID bookingId);
 
     @PostMapping("/internal/payments/{paymentId}/refund")
-    PaymentDTO refundPaymentAsSystem(@PathVariable UUID paymentId, @RequestParam(value = "amount", required = false) BigDecimal amount);
+    PaymentDTO refundPaymentAsSystem(@PathVariable UUID paymentId,
+                                     @RequestParam(value = "amount", required = false) BigDecimal amount,
+                                     @RequestParam(value = "reference") String reference);
 
     @PostMapping("/internal/payments/batch/bookings")
     Map<UUID, PaymentDTO> getPaymentsByBookingIds(@RequestBody List<UUID> bookingIds);

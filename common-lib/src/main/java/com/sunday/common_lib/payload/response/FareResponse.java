@@ -22,7 +22,6 @@ public class FareResponse {
     private UUID airlineId;
     private FareStatus status;
     private UUID flightId;
-    private UUID cabinClassId;
     private CabinClassType cabinClass;
     private PassengerType passengerType;
     private String fareBasisCode;
@@ -61,6 +60,7 @@ public class FareResponse {
     private Boolean complimentaryBeverages;
 
     // Flexibility benefits
+    // Derived from the fare rules, never stored separately
     private Boolean freeDateChange;
     private Boolean partialRefund;
     private Boolean fullRefund;

@@ -1,5 +1,6 @@
 package com.sunday.services.service.impl;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import java.util.UUID;
 import com.sunday.common_lib.constants.AncillaryPermissions;
 import com.sunday.common_lib.enums.AncillaryType;
@@ -71,8 +72,8 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
                 .collect(Collectors.toList());
     }
 
-    private static String duplicateKey(UUID flightId, UUID cabinClassId, UUID ancillaryId) {
-        return flightId + ":" + cabinClassId + ":" + ancillaryId;
+    private static String duplicateKey(UUID flightId, CabinClassType cabinClass, UUID ancillaryId) {
+        return flightId + ":" + cabinClass + ":" + ancillaryId;
     }
 
     @Override
@@ -82,14 +83,14 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
                         String.format(ErrorMessageUtil.ANCILLARY_NOT_FOUND_BY_ID, req.getAncillaryId())));
         airlineIntegrationService.requirePermission(userId, ancillary.getAirlineId(), AncillaryPermissions.MANAGE);
 
-        if (repository.existsByFlightIdAndCabinClassIdAndAncillary_Id(req.getFlightId(), req.getCabinClassId(), req.getAncillaryId())) {
+        if (repository.existsByFlightIdAndCabinClassAndAncillary_Id(req.getFlightId(), req.getCabinClass(), req.getAncillaryId())) {
             throw new ConflictException(String.format(ErrorMessageUtil.FLIGHT_CABIN_ANCILLARY_ALREADY_ASSIGNED,
-                    req.getAncillaryId(), req.getFlightId(), req.getCabinClassId()));
+                    req.getAncillaryId(), req.getFlightId(), req.getCabinClass()));
         }
 
         FlightCabinAncillary entity = FlightCabinAncillary.builder()
                 .flightId(req.getFlightId())
-                .cabinClassId(req.getCabinClassId())
+                .cabinClass(req.getCabinClass())
                 .ancillary(ancillary)
                 .available(req.getAvailable())
                 .maxQuantity(req.getMaxQuantity())
@@ -127,10 +128,10 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
         airlineIntegrationService.requirePermission(userId, airlineIds, AncillaryPermissions.MANAGE);
 
         List<UUID> flightIds = requests.stream().map(FlightCabinAncillaryRequest::getFlightId).distinct().toList();
-        List<UUID> cabinClassIds = requests.stream().map(FlightCabinAncillaryRequest::getCabinClassId).distinct().toList();
+        List<CabinClassType> cabinClasses = requests.stream().map(FlightCabinAncillaryRequest::getCabinClass).distinct().toList();
         Set<String> existingKeys = repository
-                .findByFlightIdInAndCabinClassIdInAndAncillary_IdIn(flightIds, cabinClassIds, ancillaryIds).stream()
-                .map(e -> duplicateKey(e.getFlightId(), e.getCabinClassId(), e.getAncillary().getId()))
+                .findByFlightIdInAndCabinClassInAndAncillary_IdIn(flightIds, cabinClasses, ancillaryIds).stream()
+                .map(e -> duplicateKey(e.getFlightId(), e.getCabinClass(), e.getAncillary().getId()))
                 .collect(Collectors.toSet());
 
         List<FlightCabinAncillaryBulkCreateResponse.SkippedRequest> skipped = new ArrayList<>();
@@ -146,12 +147,12 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
                         .build());
                 continue;
             }
-            String key = duplicateKey(req.getFlightId(), req.getCabinClassId(), req.getAncillaryId());
+            String key = duplicateKey(req.getFlightId(), req.getCabinClass(), req.getAncillaryId());
             if (existingKeys.contains(key)) {
                 skipped.add(FlightCabinAncillaryBulkCreateResponse.SkippedRequest.builder()
                         .request(req)
                         .reason(String.format(ErrorMessageUtil.FLIGHT_CABIN_ANCILLARY_ALREADY_ASSIGNED,
-                                req.getAncillaryId(), req.getFlightId(), req.getCabinClassId()))
+                                req.getAncillaryId(), req.getFlightId(), req.getCabinClass()))
                         .build());
                 continue;
             }
@@ -159,13 +160,13 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
                 skipped.add(FlightCabinAncillaryBulkCreateResponse.SkippedRequest.builder()
                         .request(req)
                         .reason(String.format(ErrorMessageUtil.FLIGHT_CABIN_ANCILLARY_DUPLICATE_IN_REQUEST,
-                                req.getAncillaryId(), req.getFlightId(), req.getCabinClassId()))
+                                req.getAncillaryId(), req.getFlightId(), req.getCabinClass()))
                         .build());
                 continue;
             }
             toInsert.add(FlightCabinAncillary.builder()
                     .flightId(req.getFlightId())
-                    .cabinClassId(req.getCabinClassId())
+                    .cabinClass(req.getCabinClass())
                     .ancillary(ancillary)
                     .available(req.getAvailable())
                     .maxQuantity(req.getMaxQuantity())
@@ -192,8 +193,8 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
     }
 
     @Override
-    public List<FlightCabinAncillaryResponse> getAllByFlightAndCabinClass(UUID flightId, UUID cabinClassId) {
-        return mapWithCoverages(repository.findByFlightIdAndCabinClassId(flightId, cabinClassId));
+    public List<FlightCabinAncillaryResponse> getAllByFlightAndCabinClass(UUID flightId, CabinClassType cabinClass) {
+        return mapWithCoverages(repository.findByFlightIdAndCabinClass(flightId, cabinClass));
     }
 
     @Override
@@ -203,9 +204,9 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
 
     @Override
     public FlightCabinAncillaryResponse getByFlightIdAndCabinClassAndType(
-            UUID flightId, UUID cabinClassId, AncillaryType type) {
+            UUID flightId, CabinClassType cabinClass, AncillaryType type) {
         FlightCabinAncillary entity = repository
-                .findByFlightIdAndCabinClassIdAndAncillary_Type(flightId, cabinClassId, type)
+                .findByFlightIdAndCabinClassAndAncillary_Type(flightId, cabinClass, type)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         String.format(ErrorMessageUtil.FLIGHT_CABIN_ANCILLARY_NOT_FOUND_FOR_TYPE, type)));
         return mapWithCoverages(entity);
@@ -213,9 +214,9 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
 
     @Override
     public List<FlightCabinAncillaryResponse> getAllByFlightIdAndCabinClassAndType(
-            UUID flightId, UUID cabinClassId, AncillaryType type) {
-        return mapWithCoverages(repository.findAllByFlightIdAndCabinClassIdAndAncillary_Type(
-                flightId, cabinClassId, type));
+            UUID flightId, CabinClassType cabinClass, AncillaryType type) {
+        return mapWithCoverages(repository.findAllByFlightIdAndCabinClassAndAncillary_Type(
+                flightId, cabinClass, type));
     }
 
     @Override
@@ -247,7 +248,10 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
 
     @Override
     @Transactional(readOnly = true)
-    public BigDecimal calculateAncillaryPrice(UUID flightId, List<UUID> ancillaryIds) {
+    public BigDecimal calculateAncillaryPrice(UUID flightId, CabinClassType cabinClass, int passengers, List<UUID> ancillaryIds) {
+        if (passengers < 1) {
+            throw new BadRequestException(ErrorMessageUtil.PASSENGER_COUNT_INVALID);
+        }
         if (ancillaryIds == null || ancillaryIds.isEmpty()) {
             return BigDecimal.ZERO;
         }
@@ -274,6 +278,13 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
         if (!wrongFlight.isEmpty()) {
             throw new ConflictException(String.join("; ", wrongFlight));
         }
+        List<String> wrongCabin = ancillaries.stream()
+                .filter(item -> item.getCabinClass() != cabinClass)
+                .map(item -> String.format(ErrorMessageUtil.FLIGHT_CABIN_ANCILLARY_WRONG_CABIN, item.getId(), item.getCabinClass(), cabinClass))
+                .toList();
+        if (!wrongCabin.isEmpty()) {
+            throw new ConflictException(String.join("; ", wrongCabin));
+        }
 
         Map<UUID, Long> quantities = ancillaryIds.stream()
                 .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
@@ -285,9 +296,9 @@ public class FlightCabinAncillaryServiceImpl implements FlightCabinAncillaryServ
             if (!Boolean.TRUE.equals(item.getAvailable())) {
                 throw new BadRequestException(String.format(ErrorMessageUtil.ANCILLARY_NOT_AVAILABLE, label));
             }
-            if (item.getMaxQuantity() != null && quantity > item.getMaxQuantity()) {
-                throw new BadRequestException(String.format(
-                        ErrorMessageUtil.ANCILLARY_MAX_QUANTITY_EXCEEDED, label, item.getMaxQuantity(), quantity));
+            if (item.getMaxQuantity() != null && quantity > (long) item.getMaxQuantity() * passengers) {
+                throw new BadRequestException(String.format(ErrorMessageUtil.ANCILLARY_MAX_QUANTITY_EXCEEDED,
+                        label, item.getMaxQuantity(), (long) item.getMaxQuantity() * passengers, quantity));
             }
             if (Boolean.TRUE.equals(item.getIncludedInFare())) {
                 continue;

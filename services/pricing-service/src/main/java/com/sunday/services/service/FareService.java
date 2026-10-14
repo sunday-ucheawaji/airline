@@ -2,6 +2,7 @@ package com.sunday.services.service;
 
 
 import java.util.UUID;
+import com.sunday.common_lib.enums.CabinClassType;
 import com.sunday.common_lib.payload.request.FareRequest;
 import com.sunday.common_lib.payload.response.FareBulkCreateResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
@@ -21,7 +22,7 @@ public interface FareService {
     FareResponse createFare(UUID userId, FareRequest request);
     FareBulkCreateResponse createFares(UUID userId, List<FareRequest> requests);
     FareResponse getFareById(UUID userId, UUID id);
-    List<FareResponse> getFaresByFlightIdAndCabinClassId(UUID userId, UUID flightId, UUID cabinClassId);
+    List<FareResponse> getFaresByFlightIdAndCabinClass(UUID userId, UUID flightId, CabinClassType cabinClass);
     Page<FareResponse> getFaresByAirline(UUID userId, UUID airlineId, Pageable pageable);
     FareResponse updateFare(UUID userId, UUID id, FareRequest request);
     void deleteFare(UUID userId, UUID id);

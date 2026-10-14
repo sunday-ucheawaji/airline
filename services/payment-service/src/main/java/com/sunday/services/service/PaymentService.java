@@ -34,9 +34,11 @@ public interface PaymentService {
 
     /**
      * A refund the platform itself owes, with no staff decision behind it (booking-service: seats gone, late or
-     * duplicate payments, cancellations within fare rules). amount null means a full refund. Idempotent: an already refunded payment is returned as it is.
+     * duplicate payments, cancellations within fare rules). amount null means whatever is still refundable. A payment
+     * can be refunded in parts up to what was paid. Idempotent per {@code reference}: a refund already made under
+     * the same reference is not made again; a fully refunded payment is returned as it is.
      */
-    PaymentDTO refundPaymentAsSystem(UUID paymentId, BigDecimal amount);
+    PaymentDTO refundPaymentAsSystem(UUID paymentId, BigDecimal amount, String reference);
 
     PaymentDTO getPaymentByBookingId(UUID bookingId);
 

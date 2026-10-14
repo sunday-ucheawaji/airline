@@ -10,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -57,12 +59,14 @@ public class PaymentEventProducer {
                 payment.getId(), payment.getFailureReason());
     }
 
-    public void sendPaymentRefunded(Payment payment, UserDTO user) {
+    /** {@code amount} is this refund, not the payment's running refunded total. */
+    public void sendPaymentRefunded(Payment payment, UserDTO user, BigDecimal amount, UUID refundId) {
         PaymentRefundedEvent event = PaymentRefundedEvent.builder()
                 .paymentId(payment.getId())
+                .refundId(refundId)
                 .bookingId(payment.getBookingId())
                 .userId(payment.getUserId())
-                .amount(payment.getRefundedAmount() != null ? payment.getRefundedAmount() : payment.getAmount())
+                .amount(amount)
                 .currency(payment.getCurrency())
                 .providerRefundId(payment.getRefundId())
                 .refundedAt(LocalDateTime.now())

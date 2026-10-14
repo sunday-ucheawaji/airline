@@ -1,5 +1,6 @@
 package com.sunday.common_lib.payload.response;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -12,7 +13,7 @@ import java.util.UUID;
 public class FlightCabinAncillaryResponse {
     private UUID id;
     private UUID flightId;
-    private UUID cabinClassId;
+    private CabinClassType cabinClass;
     private AncillaryResponse ancillary;
     private Boolean available;
     private Integer maxQuantity;

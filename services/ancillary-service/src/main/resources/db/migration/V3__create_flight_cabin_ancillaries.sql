@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS flight_cabin_ancillaries (
     id               CHAR(36) PRIMARY KEY,
     flight_id        CHAR(36) NOT NULL,
-    cabin_class_id   CHAR(36) NOT NULL,
+    cabin_class      ENUM('ECONOMY','PREMIUM_ECONOMY','BUSINESS','FIRST') NOT NULL,
     ancillary_id     CHAR(36) NOT NULL,
     available        BIT(1) NOT NULL,
     max_quantity     INT,

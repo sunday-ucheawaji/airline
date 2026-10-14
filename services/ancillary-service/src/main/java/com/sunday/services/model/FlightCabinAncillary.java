@@ -1,5 +1,6 @@
 package com.sunday.services.model;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,7 +12,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "flight_cabin_ancillaries", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_flight_cabin_ancillary", columnNames = {"flight_id", "cabin_class_id", "ancillary_id"})
+        @UniqueConstraint(name = "uk_flight_cabin_ancillary", columnNames = {"flight_id", "cabin_class", "ancillary_id"})
 })
 @Getter
 @Setter
@@ -30,10 +31,11 @@ public class FlightCabinAncillary {
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID flightId;
 
-    // Cross-service reference: CabinClass lives in seat-service
-    @Column(name = "cabin_class_id", nullable = false)
-    @JdbcTypeCode(SqlTypes.CHAR)
-    private UUID cabinClassId;
+    // A cabin type, not seat-service's per-aircraft cabin class id: bookings know the type, and an aircraft swap
+    // changes the id but not the type.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cabin_class", nullable = false, length = 20)
+    private CabinClassType cabinClass;
 
     // Same bounded context: Ancillary lives in this service
     @ManyToOne(fetch = FetchType.LAZY)

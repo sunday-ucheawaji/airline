@@ -25,7 +25,12 @@ CREATE TABLE IF NOT EXISTS bookings (
     fare_refundable         BIT(1),
     fare_cancellation_fee   DECIMAL(12,2),
     fare_refund_deadline_days INT,
+    fare_changeable         BIT(1),
+    fare_change_fee         DECIMAL(12,2),
+    fare_change_deadline_hours INT,
     total_amount            DECIMAL(12,2),
+    -- The change fee included in total_amount when this booking replaced another; never refunded.
+    change_fee_amount       DECIMAL(12,2),
     refund_amount           DECIMAL(12,2),
     flexible_ticket         BIT(1) NOT NULL,
     ticket_time_limit       DATETIME(6),
@@ -37,7 +42,65 @@ CREATE TABLE IF NOT EXISTS bookings (
     last_modified           DATETIME(6),
     email                   VARCHAR(255),
     phone                   VARCHAR(255),
-    version                 BIGINT
+    -- A voluntary change is a new booking: the replacement points at the original, and the original, once
+    -- exchanged, at its replacement.
+    -- The trip this flight belongs to (round trip or multi-city); null for a one-way booking.
+    trip_id                 CHAR(36),
+    exchanged_from_booking_id CHAR(36),
+    exchanged_to_booking_id CHAR(36),
+    version                 BIGINT,
+    INDEX idx_bookings_exchanged_from (exchanged_from_booking_id),
+    INDEX idx_bookings_trip (trip_id)
+);
+
+-- A round trip or multi-city journey: one booking per flight, paid with one payment whose payable id is the trip's.
+CREATE TABLE IF NOT EXISTS trips (
+    id              CHAR(36) PRIMARY KEY,
+    trip_reference  VARCHAR(255) NOT NULL UNIQUE,
+    user_id         CHAR(36) NOT NULL,
+    -- Cross-service ref: Airline is in airline-core-service, no FK.
+    airline_id      CHAR(36),
+    trip_type       VARCHAR(20) NOT NULL,
+    status          VARCHAR(20) NOT NULL,
+    currency        VARCHAR(3),
+    total_amount    DECIMAL(12,2),
+    -- Cross-service ref: Payment is in payment-service, no FK.
+    payment_id      CHAR(36),
+    version         BIGINT,
+    created_at      DATETIME(6),
+    updated_at      DATETIME(6)
+);
+
+-- Extras bought after a booking's purchase, each with its own payment whose payable id is the order's.
+CREATE TABLE IF NOT EXISTS extras_orders (
+    id              CHAR(36) PRIMARY KEY,
+    booking_id      CHAR(36) NOT NULL,
+    user_id         CHAR(36) NOT NULL,
+    airline_id      CHAR(36) NOT NULL,
+    status          VARCHAR(20) NOT NULL,
+    currency        VARCHAR(3) NOT NULL,
+    total_amount    DECIMAL(12,2) NOT NULL,
+    refund_amount   DECIMAL(12,2),
+    idempotency_key VARCHAR(255),
+    payment_id      CHAR(36),
+    version         BIGINT,
+    created_at      DATETIME(6),
+    updated_at      DATETIME(6),
+    INDEX idx_extras_orders_booking (booking_id),
+    CONSTRAINT uq_extras_orders_idempotency UNIQUE (booking_id, idempotency_key),
+    CONSTRAINT fk_extras_orders_booking FOREIGN KEY (booking_id) REFERENCES bookings (id)
+);
+
+CREATE TABLE IF NOT EXISTS extras_order_ancillaries (
+    order_id        CHAR(36) NOT NULL,
+    ancillary_id    CHAR(36),
+    CONSTRAINT fk_extras_order_ancillaries_order FOREIGN KEY (order_id) REFERENCES extras_orders (id)
+);
+
+CREATE TABLE IF NOT EXISTS extras_order_meals (
+    order_id        CHAR(36) NOT NULL,
+    meal_id         CHAR(36),
+    CONSTRAINT fk_extras_order_meals_order FOREIGN KEY (order_id) REFERENCES extras_orders (id)
 );
 
 CREATE TABLE IF NOT EXISTS passengers (
@@ -56,6 +119,12 @@ CREATE TABLE IF NOT EXISTS passengers (
     frequent_flyer_number           VARCHAR(255),
     -- Cross-service ref: SeatInstance is in seat-service, no FK.
     seat_instance_id                CHAR(36),
+    -- Age band on the day of travel, and the fare that priced this passenger (pricing-service, no FK).
+    passenger_type                  ENUM('ADT','CHD','INF') NOT NULL,
+    fare_id                         CHAR(36),
+    fare_amount                     DECIMAL(12,2),
+    fare_cancellation_fee           DECIMAL(12,2),
+    fare_change_fee                 DECIMAL(12,2),
     dietary_preferences             VARCHAR(255),
     medical_conditions              VARCHAR(255),
     requires_wheelchair_assistance  BIT(1),

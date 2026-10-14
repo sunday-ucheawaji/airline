@@ -39,8 +39,9 @@ public class FlightMealController {
     @PostMapping("/price/total")
     public ResponseEntity<BigDecimal> calculateMealPrice(
             @RequestParam UUID flightId,
+            @RequestParam int passengers,
             @RequestBody List<UUID> requests) {
-        BigDecimal responses = flightMealService.calculateMealPrice(flightId, requests);
+        BigDecimal responses = flightMealService.calculateMealPrice(flightId, passengers, requests);
         return ResponseEntity.status(HttpStatus.OK).body(responses);
     }
 

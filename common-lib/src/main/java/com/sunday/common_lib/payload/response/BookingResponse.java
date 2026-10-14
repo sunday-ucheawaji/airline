@@ -60,6 +60,14 @@ public class BookingResponse {
     private Integer totalPassengers;
     private BigDecimal totalAmount;
     private BigDecimal refundAmount;
+    private Boolean fareChangeable;
+    private BigDecimal fareChangeFee;
+    private Integer fareChangeDeadlineHours;
+    private BigDecimal changeFeeAmount;
+    private UUID tripId;
+    private List<ExtrasOrderResponse> extrasOrders;
+    private UUID exchangedFromBookingId;
+    private UUID exchangedToBookingId;
     private String currency;
 
     private String specialRequests;

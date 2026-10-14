@@ -36,7 +36,8 @@ public class RedisConfig implements CachingConfigurer {
                 .disableCachingNullValues()
                 .entryTtl(Duration.ofMinutes(2));
 
-        // Typed to the response class: nothing about the stored type is read from the payload itself.
+        // Transaction-aware: puts and evictions happen after commit, so a read racing an update can't re-cache
+        // the old fare. Typed to the response class: nothing about the stored type is read from the payload itself.
         RedisCacheConfiguration fares = defaults.serializeValuesWith(
                 RedisSerializationContext.SerializationPair.fromSerializer(
                         new Jackson2JsonRedisSerializer<>(mapper, FareResponse.class)));
@@ -44,6 +45,7 @@ public class RedisConfig implements CachingConfigurer {
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(defaults)
                 .withInitialCacheConfigurations(Map.of(CacheUtil.FARES, fares))
+                .transactionAware()
                 .build();
     }
 

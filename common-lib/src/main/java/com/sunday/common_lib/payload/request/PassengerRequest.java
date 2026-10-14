@@ -17,6 +17,9 @@ import java.util.UUID;
 @AllArgsConstructor
 public class PassengerRequest {
 
+    /** Ignored on create. On update, identifies the passenger; required for a lap infant, who has no seat. */
+    private UUID id;
+
     @NotBlank(message = ErrorMessageUtil.PASSENGER_FIRST_NAME_MANDATORY)
     @Size(min = 2, max = 50, message = ErrorMessageUtil.PASSENGER_FIRST_NAME_SIZE)
     private String firstName;
@@ -42,7 +45,7 @@ public class PassengerRequest {
 
     private String seatNumber;
 
-    @NotNull(message = ErrorMessageUtil.PASSENGER_SEAT_INSTANCE_ID_MANDATORY)
+    /** Required except for an infant travelling on an adult's lap. */
     private UUID seatInstanceId;
 
     private String passportNumber;

@@ -7,6 +7,9 @@ import com.sunday.common_lib.enums.PassengerType;
 import com.sunday.common_lib.payload.request.FareRequest;
 import com.sunday.common_lib.payload.response.FareResponse;
 import com.sunday.services.model.Fare;
+import com.sunday.services.model.FareRules;
+
+import java.math.BigDecimal;
 
 public class FareMapper {
 
@@ -34,12 +37,6 @@ public class FareMapper {
                 .complimentaryBeverages(bool(request.getComplimentaryBeverages()))
                 .build();
 
-        FlexibilityBenefits flexibilityBenefits = FlexibilityBenefits.builder()
-                .freeDateChange(bool(request.getFreeDateChange()))
-                .partialRefund(bool(request.getPartialRefund()))
-                .fullRefund(bool(request.getFullRefund()))
-                .build();
-
         PremiumServiceBenefits premiumServiceBenefits = PremiumServiceBenefits.builder()
                 .loungeAccess(bool(request.getLoungeAccess()))
                 .airportTransfer(bool(request.getAirportTransfer()))
@@ -49,7 +46,6 @@ public class FareMapper {
                 .name(request.getName())
                 .rbdCode(request.getRbdCode())
                 .flightId(request.getFlightId())
-                .cabinClassId(request.getCabinClassId())
                 .cabinClass(request.getCabinClass())
                 .passengerType(passengerTypeOf(request))
                 .fareBasisCode(request.getFareBasisCode())
@@ -71,7 +67,6 @@ public class FareMapper {
                 .seatBenefits(seatBenefits)
                 .boardingBenefits(boardingBenefits)
                 .inFlightBenefits(inFlightBenefits)
-                .flexibilityBenefits(flexibilityBenefits)
                 .premiumServiceBenefits(premiumServiceBenefits)
                 .build();
         fare.recalculateTotal();
@@ -80,6 +75,9 @@ public class FareMapper {
 
     public static FareResponse toResponse(Fare fare) {
         if (fare == null) return null;
+        FareRules rules = fare.getFareRules();
+        boolean refundable = rules != null && Boolean.TRUE.equals(rules.getIsRefundable());
+        boolean changeable = rules != null && Boolean.TRUE.equals(rules.getIsChangeable());
         return FareResponse.builder()
                 .id(fare.getId())
                 .airlineId(fare.getAirlineId())
@@ -87,7 +85,6 @@ public class FareMapper {
                 .name(fare.getName())
                 .rbdCode(fare.getRbdCode())
                 .flightId(fare.getFlightId())
-                .cabinClassId(fare.getCabinClassId())
                 .cabinClass(fare.getCabinClass())
                 .passengerType(fare.getPassengerType())
                 .fareBasisCode(fare.getFareBasisCode())
@@ -118,10 +115,10 @@ public class FareMapper {
                 .inFlightInternet(fare.getInFlightBenefits() != null ? fare.getInFlightBenefits().getInFlightInternet() : false)
                 .inFlightEntertainment(fare.getInFlightBenefits() != null ? fare.getInFlightBenefits().getInFlightEntertainment() : false)
                 .complimentaryBeverages(fare.getInFlightBenefits() != null ? fare.getInFlightBenefits().getComplimentaryBeverages() : false)
-                // Flexibility benefits
-                .freeDateChange(fare.getFlexibilityBenefits() != null ? fare.getFlexibilityBenefits().getFreeDateChange() : false)
-                .partialRefund(fare.getFlexibilityBenefits() != null ? fare.getFlexibilityBenefits().getPartialRefund() : false)
-                .fullRefund(fare.getFlexibilityBenefits() != null ? fare.getFlexibilityBenefits().getFullRefund() : false)
+                // Flexibility, from the fare rules
+                .freeDateChange(changeable && isZero(rules.getChangeFee()))
+                .partialRefund(refundable && !isZero(rules.getCancellationFee()))
+                .fullRefund(refundable && isZero(rules.getCancellationFee()))
                 // Premium service benefits
                 .loungeAccess(fare.getPremiumServiceBenefits() != null ? fare.getPremiumServiceBenefits().getLoungeAccess() : false)
                 .airportTransfer(fare.getPremiumServiceBenefits() != null ? fare.getPremiumServiceBenefits().getAirportTransfer() : false)
@@ -138,7 +135,6 @@ public class FareMapper {
         if (request == null || existing == null) return;
         existing.setName(request.getName());
         existing.setRbdCode(request.getRbdCode());
-        existing.setCabinClassId(request.getCabinClassId());
         existing.setCabinClass(request.getCabinClass());
         existing.setPassengerType(passengerTypeOf(request));
         existing.setFareBasisCode(request.getFareBasisCode());
@@ -175,11 +171,6 @@ public class FareMapper {
         if (request.getInFlightEntertainment() != null) ifb.setInFlightEntertainment(request.getInFlightEntertainment());
         if (request.getComplimentaryBeverages() != null) ifb.setComplimentaryBeverages(request.getComplimentaryBeverages());
 
-        FlexibilityBenefits fb = existing.getFlexibilityBenefits();
-        if (request.getFreeDateChange() != null) fb.setFreeDateChange(request.getFreeDateChange());
-        if (request.getPartialRefund() != null) fb.setPartialRefund(request.getPartialRefund());
-        if (request.getFullRefund() != null) fb.setFullRefund(request.getFullRefund());
-
         PremiumServiceBenefits psb = existing.getPremiumServiceBenefits();
         if (request.getLoungeAccess() != null) psb.setLoungeAccess(request.getLoungeAccess());
         if (request.getAirportTransfer() != null) psb.setAirportTransfer(request.getAirportTransfer());
@@ -187,6 +178,10 @@ public class FareMapper {
 
     public static PassengerType passengerTypeOf(FareRequest request) {
         return request.getPassengerType() != null ? request.getPassengerType() : PassengerType.ADT;
+    }
+
+    private static boolean isZero(BigDecimal amount) {
+        return amount == null || amount.signum() == 0;
     }
 
     private static boolean bool(Boolean value) {

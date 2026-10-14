@@ -2,6 +2,7 @@ package com.sunday.services.controller;
 
 import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.enums.PassengerType;
 import com.sunday.common_lib.payload.request.FareSearchRequest;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
@@ -46,8 +47,9 @@ public class InternalFareController {
             @PathVariable UUID id,
             @RequestParam UUID flightId,
             @RequestParam CabinClassType cabinClass,
+            @RequestParam(defaultValue = "ADT") PassengerType passengerType,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate) {
-        return fareQuoteService.quote(id, flightId, cabinClass, departureDate);
+        return fareQuoteService.quote(id, flightId, cabinClass, passengerType, departureDate);
     }
 
     @PostMapping("/search")

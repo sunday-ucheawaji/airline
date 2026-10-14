@@ -20,13 +20,19 @@ import java.util.Optional;
 
 public interface FareRepository extends JpaRepository<Fare, UUID> {
 
-    List<Fare> findByFlightId(UUID flightId);
-    Page<Fare> findByFlightId(UUID flightId, Pageable pageable);
-
     @EntityGraph(attributePaths = {"fareRules", "baggagePolicy"})
     Page<Fare> findByAirlineId(UUID airlineId, Pageable pageable);
 
-    List<Fare> findByFlightIdAndCabinClassId(UUID flightId, UUID cabinClassId);
+    @EntityGraph(attributePaths = {"fareRules", "baggagePolicy"})
+    List<Fare> findByFlightIdAndCabinClass(UUID flightId, CabinClassType cabinClass);
+
+    /** The fare filed alongside another under the same airline, flight, cabin, RBD and name, for another passenger type. */
+    @EntityGraph(attributePaths = {"fareRules", "baggagePolicy"})
+    Optional<Fare> findByAirlineIdAndFlightIdAndCabinClassAndRbdCodeAndPassengerTypeAndName(
+            UUID airlineId, UUID flightId, CabinClassType cabinClass, Character rbdCode, PassengerType passengerType, String name);
+
+    @EntityGraph(attributePaths = {"fareRules", "baggagePolicy"})
+    List<Fare> findByIdIn(Collection<UUID> ids);
 
     boolean existsByAirlineIdAndFlightIdAndCabinClassAndRbdCodeAndPassengerTypeAndName(
             UUID airlineId, UUID flightId, CabinClassType cabinClass, Character rbdCode, PassengerType passengerType, String name);
@@ -36,8 +42,8 @@ public interface FareRepository extends JpaRepository<Fare, UUID> {
             String name, UUID id);
 
     /**
-     * Search candidates for a page of flight departures, in one query. Keeps published fares of the cabin whose
-     * sales window contains {@code now} and whose travel window overlaps the requested dates. The per-departure
+     * Search candidates for a page of flight departures, in one query. Keeps published fares of the cabin and
+     * passenger type whose sales window contains {@code now} and whose travel window overlaps the requested dates. The per-departure
      * travel and advance-purchase rules are applied in memory by FareValidityPolicy. Rules and baggage are fetched
      * here, because the search response includes them and loading them per fare would query inside a loop.
      */
@@ -47,6 +53,7 @@ public interface FareRepository extends JpaRepository<Fare, UUID> {
         LEFT JOIN FETCH f.baggagePolicy
         WHERE f.flightId IN :flightIds
           AND f.cabinClass = :cabinClass
+          AND f.passengerType = :passengerType
           AND f.status = :status
           AND f.salesFrom <= :now
           AND f.salesTo >= :now
@@ -55,6 +62,7 @@ public interface FareRepository extends JpaRepository<Fare, UUID> {
     """)
     List<Fare> findSearchCandidates(@Param("flightIds") Collection<UUID> flightIds,
                                     @Param("cabinClass") CabinClassType cabinClass,
+                                    @Param("passengerType") PassengerType passengerType,
                                     @Param("status") FareStatus status,
                                     @Param("now") Instant now,
                                     @Param("firstDate") LocalDate firstDate,
@@ -64,5 +72,6 @@ public interface FareRepository extends JpaRepository<Fare, UUID> {
      * All fares on the given flights, in one query. Bulk create compares natural keys in memory against this,
      * so duplicate detection costs one database round trip per batch, not one per row.
      */
+    @EntityGraph(attributePaths = {"fareRules", "baggagePolicy"})
     List<Fare> findByFlightIdIn(Collection<UUID> flightIds);
 }

@@ -20,7 +20,7 @@ public class FlightCabinAncillaryMapper {
         return FlightCabinAncillaryResponse.builder()
                 .id(entity.getId())
                 .flightId(entity.getFlightId())
-                .cabinClassId(entity.getCabinClassId())
+                .cabinClass(entity.getCabinClass())
                 .ancillary(AncillaryMapper.toResponse(entity.getAncillary(), coverages))
                 .available(entity.getAvailable())
                 .maxQuantity(entity.getMaxQuantity())

@@ -19,6 +19,8 @@ spring:
         enabled: true
 
   jpa:
+    # Off so a request holds a database connection only inside a transaction, never while waiting on another service.
+    open-in-view: false
     hibernate:
       ddl-auto: validate
 
@@ -31,9 +33,14 @@ spring:
       group-id: booking-service-group
 
 booking:
+  # Daily: confirmed bookings whose departure date has passed become COMPLETED
+  completion-cron: "0 30 2 * * *"
   payment:
-    default-gateway: STRIPE
+    # The accepted currencies and the gateway that takes each; any other currency is refused (no conversion).
     gateways:
+      USD: STRIPE
+      EUR: STRIPE
+      GBP: STRIPE
       INR: RAZORPAY
       NGN: PAYSTACK
       GHS: PAYSTACK

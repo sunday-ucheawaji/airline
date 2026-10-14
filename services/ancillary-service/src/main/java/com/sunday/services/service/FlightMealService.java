@@ -26,5 +26,6 @@ public interface FlightMealService {
 
     FlightMealResponse updateAvailability(UUID userId, UUID id, Boolean available);
 
-    BigDecimal calculateMealPrice(UUID flightId, List<UUID> mealIds);
+    /** Prices the meals for one booking: each on this flight, a repeated id means "buy N", at most one per passenger. */
+    BigDecimal calculateMealPrice(UUID flightId, int passengers, List<UUID> mealIds);
 }

@@ -24,10 +24,10 @@ public class BookingStatisticsResponse {
 
     private String currency;
 
-    // Daily trend data (for the last 30 days)
+    // Sold (confirmed or completed) bookings per day for the last 30 days, oldest first, including empty days
     private List<DailyBookingData> dailyTrend;
 
-    // Monthly revenue and bookings chart
+    // The same per month for the last 12 months, oldest first
     private List<MonthlyData> monthlyData;
 
     @Data
@@ -37,7 +37,9 @@ public class BookingStatisticsResponse {
     public static class DailyBookingData {
         private String date; // Format: yyyy-MM-dd
         private Long bookingCount;
+        // Null when the series spans more than one currency; see revenueByCurrency
         private BigDecimal revenue;
+        private Map<String, BigDecimal> revenueByCurrency;
     }
 
     @Data
@@ -47,6 +49,8 @@ public class BookingStatisticsResponse {
     public static class MonthlyData {
         private String month; // Format: yyyy-MM
         private Long bookingCount;
+        // Null when the series spans more than one currency; see revenueByCurrency
         private BigDecimal revenue;
+        private Map<String, BigDecimal> revenueByCurrency;
     }
 }

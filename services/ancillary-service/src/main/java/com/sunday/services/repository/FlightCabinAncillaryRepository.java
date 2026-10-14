@@ -1,5 +1,6 @@
 package com.sunday.services.repository;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import java.util.UUID;
 import com.sunday.common_lib.enums.AncillaryType;
 import com.sunday.services.model.FlightCabinAncillary;
@@ -12,24 +13,24 @@ public interface FlightCabinAncillaryRepository extends JpaRepository<FlightCabi
 
     List<FlightCabinAncillary> findByFlightId(UUID flightId);
 
-    List<FlightCabinAncillary> findByFlightIdAndCabinClassId(UUID flightId, UUID cabinClassId);
+    List<FlightCabinAncillary> findByFlightIdAndCabinClass(UUID flightId, CabinClassType cabinClass);
 
-    List<FlightCabinAncillary> findByCabinClassId(UUID cabinClassId);
+    List<FlightCabinAncillary> findByCabinClass(CabinClassType cabinClass);
 
-    Optional<FlightCabinAncillary> findByFlightIdAndCabinClassIdAndAncillary_Type(
-            UUID flightId, UUID cabinClassId, AncillaryType type);
+    Optional<FlightCabinAncillary> findByFlightIdAndCabinClassAndAncillary_Type(
+            UUID flightId, CabinClassType cabinClass, AncillaryType type);
 
-    List<FlightCabinAncillary> findAllByFlightIdAndCabinClassIdAndAncillary_Type(
-            UUID flightId, UUID cabinClassId, AncillaryType type);
+    List<FlightCabinAncillary> findAllByFlightIdAndCabinClassAndAncillary_Type(
+            UUID flightId, CabinClassType cabinClass, AncillaryType type);
 
-    boolean existsByFlightIdAndCabinClassIdAndAncillary_Id(UUID flightId, UUID cabinClassId, UUID ancillaryId);
+    boolean existsByFlightIdAndCabinClassAndAncillary_Id(UUID flightId, CabinClassType cabinClass, UUID ancillaryId);
 
     /**
-     * Over-fetches: a safe superset of rows whose flightId/cabinClassId/ancillaryId each appear
+     * Over-fetches: a safe superset of rows whose flightId/cabinClass/ancillaryId each appear
      * somewhere in the batch, not necessarily the same combination. Callers must re-check the exact
-     * (flightId, cabinClassId, ancillaryId) triple in memory — same pattern as
+     * (flightId, cabinClass, ancillaryId) triple in memory — same pattern as
      * {@code MealRepository.findByAirlineIdInAndCodeIn}.
      */
-    List<FlightCabinAncillary> findByFlightIdInAndCabinClassIdInAndAncillary_IdIn(
-            List<UUID> flightIds, List<UUID> cabinClassIds, List<UUID> ancillaryIds);
+    List<FlightCabinAncillary> findByFlightIdInAndCabinClassInAndAncillary_IdIn(
+            List<UUID> flightIds, List<CabinClassType> cabinClasses, List<UUID> ancillaryIds);
 }

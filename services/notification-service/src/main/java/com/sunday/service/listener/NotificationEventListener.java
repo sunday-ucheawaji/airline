@@ -2,6 +2,7 @@ package com.sunday.service.listener;
 
 import com.sunday.common_lib.event.BookingCancelledEvent;
 import com.sunday.common_lib.event.BookingConfirmedEvent;
+import com.sunday.common_lib.event.ExtrasConfirmedEvent;
 import com.sunday.common_lib.event.PaymentFailedEvent;
 import com.sunday.common_lib.event.PaymentRefundedEvent;
 import com.sunday.service.content.EmailContentBuilder;
@@ -63,9 +64,19 @@ public class NotificationEventListener {
     @KafkaListener(topics = "payment.refunded", groupId = "notification-service-group")
     public void handlePaymentRefunded(@Payload PaymentRefundedEvent event) {
         log.info("Received PaymentRefundedEvent: paymentId={}", event.getPaymentId());
-        dispatchBoth(NotificationEventType.PAYMENT_REFUNDED, String.valueOf(event.getPaymentId()),
+        // One notification per refund: a payment refunded in parts sends one for each part.
+        String reference = String.valueOf(event.getRefundId() != null ? event.getRefundId() : event.getPaymentId());
+        dispatchBoth(NotificationEventType.PAYMENT_REFUNDED, reference,
                 event.getContactEmail(), emailContent.subjectForPaymentRefunded(event), () -> emailContent.bodyForPaymentRefunded(event),
                 event.getContactPhone(), () -> smsContent.bodyForPaymentRefunded(event));
+    }
+
+    @KafkaListener(topics = ExtrasConfirmedEvent.TOPIC, groupId = "notification-service-group")
+    public void handleExtrasConfirmed(@Payload ExtrasConfirmedEvent event) {
+        log.info("Received ExtrasConfirmedEvent: orderId={}", event.getOrderId());
+        dispatchBoth(NotificationEventType.EXTRAS_CONFIRMED, String.valueOf(event.getOrderId()),
+                event.getContactEmail(), emailContent.subjectForExtrasConfirmed(event), () -> emailContent.bodyForExtrasConfirmed(event),
+                event.getContactPhone(), () -> smsContent.bodyForExtrasConfirmed(event));
     }
 
     private void dispatchBoth(NotificationEventType eventType, String reference,

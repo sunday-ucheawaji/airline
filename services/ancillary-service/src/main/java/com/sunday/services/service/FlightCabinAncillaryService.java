@@ -1,5 +1,6 @@
 package com.sunday.services.service;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import java.util.UUID;
 import com.sunday.common_lib.enums.AncillaryType;
 import com.sunday.common_lib.payload.request.FlightCabinAncillaryRequest;
@@ -18,19 +19,23 @@ public interface FlightCabinAncillaryService {
     FlightCabinAncillaryResponse getById(UUID id);
 
     List<FlightCabinAncillaryResponse> getAllByFlightAndCabinClass(
-            UUID flightId, UUID cabinClassId);
+            UUID flightId, CabinClassType cabinClass);
 
     List<FlightCabinAncillaryResponse> getAllByIds(List<UUID> ids);
 
     FlightCabinAncillaryResponse getByFlightIdAndCabinClassAndType(
-            UUID flightId, UUID cabinClassId, AncillaryType type);
+            UUID flightId, CabinClassType cabinClass, AncillaryType type);
 
     List<FlightCabinAncillaryResponse> getAllByFlightIdAndCabinClassAndType(
-            UUID flightId, UUID cabinClassId, AncillaryType type);
+            UUID flightId, CabinClassType cabinClass, AncillaryType type);
 
     FlightCabinAncillaryResponse update(UUID userId, UUID id, FlightCabinAncillaryRequest request);
 
     void delete(UUID userId, UUID id);
 
-    BigDecimal calculateAncillaryPrice(UUID flightId, List<UUID> ancillaryIds);
+    /**
+     * Prices the offerings for one booking: each must be on this flight and cabin, and a repeated id means "buy N",
+     * at most {@code maxQuantity} per passenger.
+     */
+    BigDecimal calculateAncillaryPrice(UUID flightId, CabinClassType cabinClass, int passengers, List<UUID> ancillaryIds);
 }

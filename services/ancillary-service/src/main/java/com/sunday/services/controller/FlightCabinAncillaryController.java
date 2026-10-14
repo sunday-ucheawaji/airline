@@ -1,5 +1,6 @@
 package com.sunday.services.controller;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import java.util.UUID;
 import com.sunday.common_lib.enums.AncillaryType;
 import com.sunday.common_lib.payload.request.FlightCabinAncillaryRequest;
@@ -45,29 +46,29 @@ public class FlightCabinAncillaryController {
         return ResponseEntity.ok(service.getAllByIds(Ids));
     }
 
-    @GetMapping("/flight/{flightId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/cabin/{cabinClassId}")
+    @GetMapping("/flight/{flightId:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/cabin/{cabinClass}")
     public ResponseEntity<List<FlightCabinAncillaryResponse>> getAllByFlightAndCabinClass(
             @PathVariable UUID flightId,
-            @PathVariable UUID cabinClassId) {
-        return ResponseEntity.ok(service.getAllByFlightAndCabinClass(flightId, cabinClassId));
+            @PathVariable CabinClassType cabinClass) {
+        return ResponseEntity.ok(service.getAllByFlightAndCabinClass(flightId, cabinClass));
     }
 
-    @GetMapping("/flight/{flightId}/cabin/{cabinClassId}/type/{type}")
+    @GetMapping("/flight/{flightId}/cabin/{cabinClass}/type/{type}")
     public ResponseEntity<FlightCabinAncillaryResponse> getByFlightAndCabinClassAndType(
             @PathVariable UUID flightId,
-            @PathVariable UUID cabinClassId,
+            @PathVariable CabinClassType cabinClass,
             @PathVariable AncillaryType type) {
         return ResponseEntity.ok(
-                service.getByFlightIdAndCabinClassAndType(flightId, cabinClassId, type));
+                service.getByFlightIdAndCabinClassAndType(flightId, cabinClass, type));
     }
 
-    @GetMapping("/flight/{flightId}/cabin/{cabinClassId}/type/{type}/all")
+    @GetMapping("/flight/{flightId}/cabin/{cabinClass}/type/{type}/all")
     public ResponseEntity<?> getAllByFlightAndCabinClassAndType(
             @PathVariable UUID flightId,
-            @PathVariable UUID cabinClassId,
+            @PathVariable CabinClassType cabinClass,
             @PathVariable AncillaryType type) {
         return ResponseEntity.ok(
-                service.getAllByFlightIdAndCabinClassAndType(flightId, cabinClassId, type));
+                service.getAllByFlightIdAndCabinClassAndType(flightId, cabinClass, type));
     }
 
     @PutMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
@@ -89,7 +90,9 @@ public class FlightCabinAncillaryController {
     @PostMapping("/price/total")
     public ResponseEntity<?> calculateAncillariesPrice(
             @RequestParam UUID flightId,
+            @RequestParam CabinClassType cabinClass,
+            @RequestParam int passengers,
             @RequestBody List<UUID> flightCabinAncillaryIds) {
-        return ResponseEntity.ok(service.calculateAncillaryPrice(flightId, flightCabinAncillaryIds));
+        return ResponseEntity.ok(service.calculateAncillaryPrice(flightId, cabinClass, passengers, flightCabinAncillaryIds));
     }
 }

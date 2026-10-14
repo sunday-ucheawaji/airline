@@ -2,6 +2,7 @@ package com.sunday.services.service.impl;
 
 import java.util.UUID;
 import com.sunday.common_lib.constants.PricingPermissions;
+import com.sunday.common_lib.enums.FareStatus;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.payload.request.FareRulesRequest;
@@ -18,7 +19,6 @@ import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.services.config.FareCacheEvictor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -78,6 +78,7 @@ public class FareRulesServiceImpl implements FareRulesService {
     public FareRulesResponse updateFareRules(UUID userId, UUID id, FareRulesRequest request) {
         FareRules existing = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, existing.getAirlineId(), PricingPermissions.FARE_RULES_MANAGE);
+        requireNotPublished(existing.getFare());
         FareRulesMapper.updateEntity(request, existing, userId);
         FareRulesResponse saved = FareRulesMapper.toResponse(fareRulesRepository.save(existing));
         fareCacheEvictor.evict(existing.getFare().getId());
@@ -88,8 +89,17 @@ public class FareRulesServiceImpl implements FareRulesService {
     public void deleteFareRules(UUID userId, UUID id) {
         FareRules fareRules = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, fareRules.getAirlineId(), PricingPermissions.FARE_RULES_MANAGE);
+        Fare fare = fareRules.getFare();
+        requireNotPublished(fare);
+        fare.setFareRules(null);
         fareRulesRepository.delete(fareRules);
-        fareCacheEvictor.evict(fareRules.getFare().getId());
+        fareCacheEvictor.evict(fare.getId());
+    }
+
+    private static void requireNotPublished(Fare fare) {
+        if (fare.getStatus() == FareStatus.PUBLISHED) {
+            throw new ConflictException(String.format(ErrorMessageUtil.FARE_LOCKED_WHILE_PUBLISHED, fare.getId()));
+        }
     }
 
     private FareRules findOrThrow(UUID id) {

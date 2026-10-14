@@ -21,6 +21,8 @@ import com.sunday.services.client.UserClient;
 import com.sunday.services.event.PaymentEventProducer;
 import com.sunday.services.mapper.PaymentMapper;
 import com.sunday.services.model.Payment;
+import com.sunday.services.repository.PaymentRefundRepository;
+import com.sunday.services.model.PaymentRefund;
 import com.sunday.services.model.ProcessedWebhookEvent;
 import com.sunday.services.repository.PaymentRepository;
 import com.sunday.services.repository.ProcessedWebhookEventRepository;
@@ -63,6 +65,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentAccessService paymentAccessService;
     private final UserClient userClient;
     private final BookingClient bookingClient;
+    private final PaymentRefundRepository paymentRefundRepository;
 
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
@@ -96,7 +99,8 @@ public class PaymentServiceImpl implements PaymentService {
         }
         MoneyUtil.requireSupported(request.getCurrency());
         paymentRepository.findFirstByBookingIdOrderByIdDesc(request.getBookingId())
-                .filter(existing -> existing.getStatus() == PaymentStatus.SUCCESS)
+                .filter(existing -> existing.getStatus() == PaymentStatus.SUCCESS
+                        || existing.getStatus() == PaymentStatus.PARTIALLY_REFUNDED)
                 .ifPresent(existing -> {
                     throw new ConflictException(ErrorMessageUtil.PAYMENT_ALREADY_COMPLETED);
                 });
@@ -247,52 +251,73 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentDTO refundPayment(UUID paymentId, UUID userId, BigDecimal amount) {
-        Payment payment = paymentRepository.findById(paymentId)
+        Payment payment = paymentRepository.lockById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_BY_ID, paymentId)));
 
         // Never owner-or-permission: a customer must never execute their own refund.
         paymentAccessService.requireAirlinePermission(payment.getAirlineId(), userId, PaymentPermissions.PAYMENT_REFUND_EXECUTE);
 
-        if (payment.getStatus() != PaymentStatus.SUCCESS) {
+        if (!isRefundable(payment)) {
             throw new ConflictException(String.format(ErrorMessageUtil.PAYMENT_NOT_REFUNDABLE, paymentId, payment.getStatus()));
         }
-        return executeRefund(payment, refundAmount(payment, amount));
+        return executeRefund(payment, refundAmount(payment, amount), null);
     }
 
     @Override
     @Transactional
-    public PaymentDTO refundPaymentAsSystem(UUID paymentId, BigDecimal amount) {
-        Payment payment = paymentRepository.findById(paymentId)
+    public PaymentDTO refundPaymentAsSystem(UUID paymentId, BigDecimal amount, String reference) {
+        Payment payment = paymentRepository.lockById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageUtil.PAYMENT_NOT_FOUND_BY_ID, paymentId)));
+        if (reference != null && paymentRefundRepository.existsByPaymentIdAndReference(paymentId, reference)) {
+            return PaymentMapper.toDTO(payment);
+        }
         if (payment.getStatus() == PaymentStatus.REFUNDED) {
             return PaymentMapper.toDTO(payment);
         }
-        if (payment.getStatus() != PaymentStatus.SUCCESS) {
+        if (!isRefundable(payment)) {
             throw new ConflictException(String.format(ErrorMessageUtil.PAYMENT_NOT_REFUNDABLE, paymentId, payment.getStatus()));
         }
-        return executeRefund(payment, refundAmount(payment, amount));
+        return executeRefund(payment, refundAmount(payment, amount), reference);
     }
 
+    private static boolean isRefundable(Payment payment) {
+        return payment.getStatus() == PaymentStatus.SUCCESS || payment.getStatus() == PaymentStatus.PARTIALLY_REFUNDED;
+    }
+
+    private static BigDecimal alreadyRefunded(Payment payment) {
+        return payment.getRefundedAmount() != null ? payment.getRefundedAmount() : BigDecimal.ZERO;
+    }
+
+    /** {@code requested}, or everything still refundable when null; never more than what is left. */
     private static BigDecimal refundAmount(Payment payment, BigDecimal requested) {
+        BigDecimal remaining = payment.getAmount().subtract(alreadyRefunded(payment));
         if (requested == null) {
-            return payment.getAmount();
+            return remaining;
         }
-        if (requested.signum() <= 0 || requested.compareTo(payment.getAmount()) > 0) {
-            throw new BadRequestException(String.format(ErrorMessageUtil.PAYMENT_REFUND_AMOUNT_INVALID, requested, payment.getAmount()));
+        if (requested.signum() <= 0 || requested.compareTo(remaining) > 0) {
+            throw new BadRequestException(String.format(ErrorMessageUtil.PAYMENT_REFUND_AMOUNT_INVALID, requested, remaining));
         }
         return requested;
     }
 
-    private PaymentDTO executeRefund(Payment payment, BigDecimal refundAmount) {
+    private PaymentDTO executeRefund(Payment payment, BigDecimal refundAmount, String reference) {
         UUID paymentId = payment.getId();
         PaymentGatewayProvider provider = gatewayRegistry.resolve(payment.getProvider());
         try {
             ProviderRefundResult result = provider.initiateRefund(payment, refundAmount);
-            payment.setStatus(PaymentStatus.REFUNDED);
+            BigDecimal refunded = alreadyRefunded(payment).add(refundAmount);
+            payment.setStatus(refunded.compareTo(payment.getAmount()) >= 0 ? PaymentStatus.REFUNDED : PaymentStatus.PARTIALLY_REFUNDED);
             payment.setRefundId(result.providerRefundId());
-            payment.setRefundedAmount(refundAmount);
+            payment.setRefundedAmount(refunded);
             payment = paymentRepository.save(payment);
-            paymentEventProducer.sendPaymentRefunded(payment, userClient.getUserById(payment.getUserId()));
+            PaymentRefund refund = paymentRefundRepository.save(PaymentRefund.builder()
+                    .paymentId(paymentId)
+                    .reference(reference != null ? reference : "staff:" + UUID.randomUUID())
+                    .amount(refundAmount)
+                    .providerRefundId(result.providerRefundId())
+                    .build());
+            paymentEventProducer.sendPaymentRefunded(payment, userClient.getUserById(payment.getUserId()), refundAmount,
+                    refund != null ? refund.getId() : null);
             log.info("Payment {} refunded via {} (provider refund id {})", paymentId, payment.getProvider(), result.providerRefundId());
             return PaymentMapper.toDTO(payment);
         } catch (PaymentException e) {

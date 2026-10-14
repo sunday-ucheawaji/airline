@@ -3,6 +3,7 @@ package com.sunday.services.controller;
 import java.util.UUID;
 import com.sunday.common_lib.payload.request.FareRequest;
 import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.enums.PassengerType;
 import com.sunday.common_lib.payload.response.FareBulkCreateResponse;
 import com.sunday.common_lib.payload.response.FareOfferResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
@@ -59,8 +60,9 @@ public class FareController {
     public ResponseEntity<List<FareOfferResponse>> offers(
             @RequestParam UUID flightId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate departureDate,
-            @RequestParam CabinClassType cabinClass) {
-        return ResponseEntity.ok(fareOfferService.offers(flightId, departureDate, cabinClass));
+            @RequestParam CabinClassType cabinClass,
+            @RequestParam(defaultValue = "ADT") PassengerType passengerType) {
+        return ResponseEntity.ok(fareOfferService.offers(flightId, departureDate, cabinClass, passengerType));
     }
 
     @GetMapping("/{id}")
@@ -70,12 +72,12 @@ public class FareController {
         return ResponseEntity.ok(fareService.getFareById(userId, id));
     }
 
-    @GetMapping("/flight/{flightId}/cabin-class/{cabinClassId}")
+    @GetMapping("/flight/{flightId}")
     public ResponseEntity<List<FareResponse>> getFaresByFlightAndCabinClass(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable UUID flightId,
-            @PathVariable UUID cabinClassId) {
-        return ResponseEntity.ok(fareService.getFaresByFlightIdAndCabinClassId(userId, flightId, cabinClassId));
+            @RequestParam CabinClassType cabinClass) {
+        return ResponseEntity.ok(fareService.getFaresByFlightIdAndCabinClass(userId, flightId, cabinClass));
     }
 
     @PutMapping("/{id}")

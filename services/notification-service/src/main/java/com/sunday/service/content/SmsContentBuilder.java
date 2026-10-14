@@ -3,6 +3,7 @@ package com.sunday.service.content;
 import com.sunday.common_lib.event.BookingCancelledEvent;
 import com.sunday.common_lib.event.BookingConfirmedEvent;
 import com.sunday.common_lib.event.PaymentFailedEvent;
+import com.sunday.common_lib.event.ExtrasConfirmedEvent;
 import com.sunday.common_lib.event.PaymentRefundedEvent;
 import org.springframework.stereotype.Service;
 
@@ -46,5 +47,12 @@ public class SmsContentBuilder {
         String currency = event.getCurrency() != null ? event.getCurrency() : "";
         return String.format("ZoshAir: A refund of %s %s has been processed for booking #%s. It may take a few business " +
                 "days to reflect in your account. Queries: support@zoshair.com", currency, amount, event.getBookingId());
+    }
+
+    public String bodyForExtrasConfirmed(ExtrasConfirmedEvent event) {
+        String amount = event.getTotalAmount() != null ? event.getTotalAmount().toPlainString() : "0";
+        String currency = event.getCurrency() != null ? event.getCurrency() : "";
+        return String.format("ZoshAir: Your extras for booking %s are confirmed (%d ancillaries, %d meals, %s %s). " +
+                "Queries: support@zoshair.com", event.getBookingReference(), event.getAncillaryCount(), event.getMealCount(), currency, amount);
     }
 }

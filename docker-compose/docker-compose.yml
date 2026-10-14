@@ -270,6 +270,69 @@ services:
       - zosh
 
   # ===========================================================================
+  # DOCUMENT STORAGE (SeaweedFS, S3-compatible) + MALWARE SCANNER (ClamAV)
+  # airline-core-service keeps onboarding documents in two private buckets, "quarantine" and "clean",
+  # and scans every upload with clamd. Neither is published; override the storage keys in production.
+  # ClamAV downloads its definitions on first start (a few minutes); uploads wait in PROCESSING meanwhile.
+  # ===========================================================================
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: gds-seaweedfs
+    mem_limit: 512m
+    command: mini -dir=/data
+    # NO PORTS EXPOSED - Internal only
+    environment:
+      AWS_ACCESS_KEY_ID: "${DOCUMENT_STORAGE_ACCESS_KEY:-gdsdevkey}"
+      AWS_SECRET_ACCESS_KEY: "${DOCUMENT_STORAGE_SECRET_KEY:-gdsdevsecret-change-me}"
+      S3_BUCKET: quarantine
+    volumes:
+      - seaweed-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9333/cluster/status || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks:
+      - zosh
+
+  # One-shot job: creates both buckets, then exits. Safe to re-run.
+  seaweedfs-init:
+    image: amazon/aws-cli:latest
+    container_name: gds-seaweedfs-init
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      AWS_ACCESS_KEY_ID: "${DOCUMENT_STORAGE_ACCESS_KEY:-gdsdevkey}"
+      AWS_SECRET_ACCESS_KEY: "${DOCUMENT_STORAGE_SECRET_KEY:-gdsdevsecret-change-me}"
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: >
+      /bin/sh -c "
+      (aws --endpoint-url http://seaweedfs:8333 s3 mb s3://quarantine || true) &&
+      (aws --endpoint-url http://seaweedfs:8333 s3 mb s3://clean || true)"
+    networks:
+      - zosh
+
+  clamav:
+    image: clamav/clamav:stable
+    container_name: gds-clamav
+    mem_limit: 2g
+    # NO PORTS EXPOSED - Internal only. No test signatures here: those are mounted by the dev compose only.
+    volumes:
+      - clamav-db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 300s
+    networks:
+      - zosh
+
+  # ===========================================================================
   # CONFIG SERVER
   # ===========================================================================
 
@@ -417,6 +480,10 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      seaweedfs-init:
+        condition: service_completed_successfully
+      clamav:
+        condition: service_started
     environment:
       SPRING_APPLICATION_NAME: "airline-core-service"
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
@@ -428,10 +495,10 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_KAFKA_URL: kafka:9092
-      DOCUMENT_STORAGE_ENDPOINT: "${DOCUMENT_STORAGE_ENDPOINT:-}"
+      DOCUMENT_STORAGE_ENDPOINT: "${DOCUMENT_STORAGE_ENDPOINT:-http://seaweedfs:8333}"
       DOCUMENT_STORAGE_REGION: "${DOCUMENT_STORAGE_REGION:-us-east-1}"
-      DOCUMENT_STORAGE_ACCESS_KEY: "${DOCUMENT_STORAGE_ACCESS_KEY:-}"
-      DOCUMENT_STORAGE_SECRET_KEY: "${DOCUMENT_STORAGE_SECRET_KEY:-}"
+      DOCUMENT_STORAGE_ACCESS_KEY: "${DOCUMENT_STORAGE_ACCESS_KEY:-gdsdevkey}"
+      DOCUMENT_STORAGE_SECRET_KEY: "${DOCUMENT_STORAGE_SECRET_KEY:-gdsdevsecret-change-me}"
       DOCUMENT_SCANNER_HOST: "${DOCUMENT_SCANNER_HOST:-clamav}"
       DOCUMENT_SCANNER_PORT: "${DOCUMENT_SCANNER_PORT:-3310}"
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
@@ -707,3 +774,7 @@ services:
 networks:
   zosh:
     driver: bridge
+
+volumes:
+  seaweed-data:
+  clamav-db:

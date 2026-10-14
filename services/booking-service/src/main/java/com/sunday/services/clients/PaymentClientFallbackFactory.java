@@ -63,7 +63,7 @@ public class PaymentClientFallbackFactory
             }
 
             @Override
-            public PaymentDTO refundPaymentAsSystem(UUID paymentId, BigDecimal amount) {
+            public PaymentDTO refundPaymentAsSystem(UUID paymentId, BigDecimal amount, String reference) {
                 log.warn("payment-service call failed – refund of payment {} could not be made: {}",
                         paymentId, cause.getMessage(), cause);
                 throw new ServiceUnavailableException(

@@ -6,10 +6,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -35,6 +37,10 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     boolean existsByBookingReference(String bookingReference);
 
+    List<Booking> findByTripId(UUID tripId);
+
+    boolean existsByExchangedFromBookingIdAndStatus(UUID exchangedFromBookingId, BookingStatus status);
+
     @Query("SELECT b.id FROM Booking b WHERE b.userId = :userId")
     Page<UUID> findIdsByUserId(@Param("userId") UUID userId, Pageable pageable);
 
@@ -45,10 +51,24 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     long countByAirlineIdAndBookingDateBetween(UUID airlineId, LocalDateTime from, LocalDateTime to);
 
+    /** Sold bookings and their revenue per booking day and currency, from {@code from} on: one row per (day, currency). */
+    @Query("SELECT cast(b.bookingDate as LocalDate) AS bookingDay, b.fareCurrency AS currency, " +
+            "COUNT(b) AS bookings, SUM(b.totalAmount) AS total FROM Booking b " +
+            "WHERE b.airlineId = :airlineId AND b.bookingDate >= :from " +
+            "AND b.status IN (BookingStatus.CONFIRMED, BookingStatus.COMPLETED) " +
+            "GROUP BY cast(b.bookingDate as LocalDate), b.fareCurrency")
+    List<DailyTotal> sumSoldBookingsByDayAndCurrency(@Param("airlineId") UUID airlineId, @Param("from") LocalDateTime from);
+
+    /** Confirmed bookings whose departure date has passed become COMPLETED. */
+    @Modifying
+    @Query("UPDATE Booking b SET b.status = BookingStatus.COMPLETED, b.version = b.version + 1 " +
+            "WHERE b.status = BookingStatus.CONFIRMED AND b.fareTravelDate < :today")
+    int completeDepartedBefore(@Param("today") LocalDate today);
+
     @Query("SELECT b.fareCurrency AS currency, SUM(b.totalAmount) AS total FROM Booking b " +
             "WHERE b.airlineId = :airlineId AND b.bookingDate BETWEEN :from AND :to " +
-            "AND b.status = BookingStatus.CONFIRMED GROUP BY b.fareCurrency")
-    List<CurrencyTotal> sumConfirmedRevenueByCurrency(
+            "AND b.status IN (BookingStatus.CONFIRMED, BookingStatus.COMPLETED) GROUP BY b.fareCurrency")
+    List<CurrencyTotal> sumSoldRevenueByCurrency(
             @Param("airlineId") UUID airlineId,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);

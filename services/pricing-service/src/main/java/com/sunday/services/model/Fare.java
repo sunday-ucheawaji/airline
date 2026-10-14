@@ -63,14 +63,9 @@ public class Fare {
     @JdbcTypeCode(SqlTypes.CHAR)
     private UUID flightId;
 
-    // Cross-service ref: CabinClass is in seat-service
-    @Column(name = "cabin_class_id", nullable = false)
-    @JdbcTypeCode(SqlTypes.CHAR)
-    private UUID cabinClassId;
-
     /**
-     * Cabin class type the fare belongs to (ECONOMY, BUSINESS...). Matching key for search and the natural key.
-     * Stored here so flight search can filter fares by cabin type without a cross-service join.
+     * Cabin class type the fare belongs to (ECONOMY, BUSINESS...). Matching key for search, quote and the natural
+     * key. A type rather than seat-service's cabin class id, which belongs to one aircraft and changes on a swap.
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "cabin_class", nullable = false, length = 20)
@@ -142,10 +137,6 @@ public class Fare {
 
     @Embedded
     @Builder.Default
-    private FlexibilityBenefits flexibilityBenefits = new FlexibilityBenefits();
-
-    @Embedded
-    @Builder.Default
     private PremiumServiceBenefits premiumServiceBenefits = new PremiumServiceBenefits();
 
     // Audit
@@ -162,7 +153,6 @@ public class Fare {
         if (this.seatBenefits == null) this.seatBenefits = new SeatBenefits();
         if (this.boardingBenefits == null) this.boardingBenefits = new BoardingBenefits();
         if (this.inFlightBenefits == null) this.inFlightBenefits = new InFlightBenefits();
-        if (this.flexibilityBenefits == null) this.flexibilityBenefits = new FlexibilityBenefits();
         if (this.premiumServiceBenefits == null) this.premiumServiceBenefits = new PremiumServiceBenefits();
         recalculateTotal();
     }

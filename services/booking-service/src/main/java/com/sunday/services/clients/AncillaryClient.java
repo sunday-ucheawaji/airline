@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import java.util.UUID;
 import com.sunday.common_lib.payload.response.FlightCabinAncillaryResponse;
 import com.sunday.common_lib.payload.response.FlightMealResponse;
@@ -15,6 +16,8 @@ public interface AncillaryClient {
     @PostMapping("/api/flight-cabin-ancillaries/price/total")
     BigDecimal calculateAncillariesPrice(
             @RequestParam("flightId") UUID flightId,
+            @RequestParam("cabinClass") CabinClassType cabinClass,
+            @RequestParam("passengers") int passengers,
             @RequestBody List<UUID> flightCabinAncillaryIds);
 
     @GetMapping("/api/flight-cabin-ancillaries/all")
@@ -28,6 +31,7 @@ public interface AncillaryClient {
     @PostMapping("/api/flight-meals/price/total")
     BigDecimal calculateMealPrice(
             @RequestParam("flightId") UUID flightId,
+            @RequestParam("passengers") int passengers,
             @RequestBody List<UUID> requests);
 
 }

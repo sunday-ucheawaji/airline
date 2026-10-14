@@ -30,9 +30,6 @@ public class FareRequest {
     @NotNull(message = "Flight ID is required")
     private UUID flightId;
 
-    @NotNull(message = "Cabin class ID is required")
-    private UUID cabinClassId;
-
     @NotNull(message = "Cabin class is required")
     private CabinClassType cabinClass;
 
@@ -93,11 +90,6 @@ public class FareRequest {
     private Boolean inFlightInternet;
     private Boolean inFlightEntertainment;
     private Boolean complimentaryBeverages;
-
-    // Flexibility benefits
-    private Boolean freeDateChange;
-    private Boolean partialRefund;
-    private Boolean fullRefund;
 
     // Premium service benefits
     private Boolean loungeAccess;

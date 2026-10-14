@@ -2,6 +2,7 @@ package com.sunday.services.event.publisher;
 
 import java.util.UUID;
 import com.sunday.common_lib.dto.UserDTO;
+import com.sunday.common_lib.event.ExtrasConfirmedEvent;
 import com.sunday.common_lib.event.BookingCancelledEvent;
 import com.sunday.common_lib.event.BookingConfirmedEvent;
 import com.sunday.common_lib.event.PassengerNotificationData;
@@ -13,6 +14,7 @@ import com.sunday.common_lib.payload.response.FlightInstanceResponse;
 import com.sunday.common_lib.event.PaymentCompletedEvent;
 import com.sunday.services.config.BookingPaymentProperties;
 import com.sunday.services.model.Booking;
+import com.sunday.services.model.ExtrasOrder;
 import com.sunday.services.model.Passenger;
 import com.sunday.services.model.Ticket;
 import lombok.RequiredArgsConstructor;
@@ -166,6 +168,20 @@ public class BookingEventProducer {
     public void sendBookingCancelled(Booking booking, String reason) {
         sendBookingCancelled(booking.getId(), booking.getBookingReference(), booking.getSeatInstanceIds(),
                 resolveContactEmail(booking), resolveContactPhone(booking), reason);
+    }
+
+    public void sendExtrasConfirmed(Booking booking, ExtrasOrder order) {
+        publishAfterCommit(ExtrasConfirmedEvent.TOPIC, booking.getBookingReference(), ExtrasConfirmedEvent.builder()
+                .orderId(order.getId())
+                .bookingId(booking.getId())
+                .bookingReference(booking.getBookingReference())
+                .currency(order.getCurrency())
+                .totalAmount(order.getTotalAmount())
+                .ancillaryCount(order.getAncillaryIds().size())
+                .mealCount(order.getMealIds().size())
+                .contactEmail(resolveContactEmail(booking))
+                .contactPhone(resolveContactPhone(booking))
+                .build());
     }
 
     public void sendSeatsReleased(UUID bookingId, String bookingReference, List<UUID> seatInstanceIds) {

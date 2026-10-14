@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /** Internal seat-service endpoints: a booking's own seats are held and shown without a caller airline permission. */
@@ -23,6 +24,9 @@ public interface SeatClient {
 
     @PostMapping("/internal/seat-instances/confirm")
     SeatConfirmResponse confirmSeats(@RequestBody SeatConfirmRequest request);
+
+    @PostMapping("/internal/seat-instances/price/total")
+    BigDecimal calculateSeatPrice(@RequestBody List<UUID> seatInstanceIds);
 
     @GetMapping("/internal/seat-instances/all")
     List<SeatInstanceResponse> getAllByIds(@RequestParam List<UUID> Ids);

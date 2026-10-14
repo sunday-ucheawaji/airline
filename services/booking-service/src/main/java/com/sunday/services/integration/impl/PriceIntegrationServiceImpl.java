@@ -2,6 +2,7 @@ package com.sunday.services.integration.impl;
 
 import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.enums.PassengerType;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
 import com.sunday.common_lib.exception.ServiceUnavailableException;
@@ -22,10 +23,11 @@ public class PriceIntegrationServiceImpl implements PricingIntegrationService {
     private final PricingClient pricingClient;
 
     @Override
-    public FareQuoteResponse quoteFare(UUID fareId, UUID flightId, CabinClassType cabinClass, LocalDate departureDate) {
+    public FareQuoteResponse quoteFare(UUID fareId, UUID flightId, CabinClassType cabinClass, PassengerType passengerType,
+                                        LocalDate departureDate) {
         FareQuoteResponse quote;
         try {
-            quote = pricingClient.quoteFare(fareId, flightId, cabinClass, departureDate);
+            quote = pricingClient.quoteFare(fareId, flightId, cabinClass, passengerType, departureDate);
         } catch (FeignException.Conflict e) {
             throw new ConflictException(ErrorMessageUtil.FARE_UNAVAILABLE_FOR_DEPARTURE);
         } catch (FeignException.NotFound e) {

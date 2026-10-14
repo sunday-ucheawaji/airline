@@ -1,5 +1,6 @@
 package com.sunday.services.clients;
 
+import com.sunday.common_lib.enums.CabinClassType;
 import java.util.UUID;
 import com.sunday.common_lib.payload.response.FlightCabinAncillaryResponse;
 import com.sunday.common_lib.payload.response.FlightMealResponse;
@@ -29,7 +30,8 @@ public class AncillaryClientFallbackFactory implements FallbackFactory<Ancillary
         return new AncillaryClient() {
 
             @Override
-            public BigDecimal calculateAncillariesPrice(UUID flightId, List<UUID> flightCabinAncillaryIds) {
+            public BigDecimal calculateAncillariesPrice(UUID flightId, CabinClassType cabinClass, int passengers,
+                                                        List<UUID> flightCabinAncillaryIds) {
                 throw priceFailure("ancillaries", cause);
             }
 
@@ -44,7 +46,7 @@ public class AncillaryClientFallbackFactory implements FallbackFactory<Ancillary
             }
 
             @Override
-            public BigDecimal calculateMealPrice(UUID flightId, List<UUID> requests) {
+            public BigDecimal calculateMealPrice(UUID flightId, int passengers, List<UUID> requests) {
                 throw priceFailure("meals", cause);
             }
         };

@@ -53,21 +53,21 @@ public class BaggagePolicyMapper {
                 .build();
     }
 
+    /** Full replace: a field left out of the request is cleared or reset to its create default. */
     public static void updateEntity(BaggagePolicyRequest request, BaggagePolicy existing, UUID userId) {
         if (request == null || existing == null) return;
         existing.setUpdatedBy(userId);
-        if (request.getName() != null) existing.setName(request.getName());
-        if (request.getDescription() != null) existing.setDescription(request.getDescription());
-        if (request.getCabinBaggageMaxWeight() != null) existing.setCabinBaggageMaxWeight(request.getCabinBaggageMaxWeight());
-        if (request.getCabinBaggagePieces() != null) existing.setCabinBaggagePieces(request.getCabinBaggagePieces());
-        if (request.getCabinBaggageWeightPerPiece() != null) existing.setCabinBaggageWeightPerPiece(request.getCabinBaggageWeightPerPiece());
-        if (request.getCabinBaggageMaxDimension() != null) existing.setCabinBaggageMaxDimension(request.getCabinBaggageMaxDimension());
-        if (request.getCheckInBaggageMaxWeight() != null) existing.setCheckInBaggageMaxWeight(request.getCheckInBaggageMaxWeight());
-        if (request.getCheckInBaggagePieces() != null) existing.setCheckInBaggagePieces(request.getCheckInBaggagePieces());
-        if (request.getCheckInBaggageWeightPerPiece() != null) existing.setCheckInBaggageWeightPerPiece(request.getCheckInBaggageWeightPerPiece());
-        if (request.getFreeCheckedBagsAllowance() != null) existing.setFreeCheckedBagsAllowance(request.getFreeCheckedBagsAllowance());
-        if (request.getPriorityBaggage() != null) existing.setPriorityBaggage(request.getPriorityBaggage());
-        if (request.getExtraBaggageAllowance() != null) existing.setExtraBaggageAllowance(request.getExtraBaggageAllowance());
-
+        existing.setName(request.getName());
+        existing.setDescription(request.getDescription());
+        existing.setCabinBaggageMaxWeight(request.getCabinBaggageMaxWeight());
+        existing.setCabinBaggagePieces(request.getCabinBaggagePieces() != null ? request.getCabinBaggagePieces() : 1);
+        existing.setCabinBaggageWeightPerPiece(request.getCabinBaggageWeightPerPiece());
+        existing.setCabinBaggageMaxDimension(request.getCabinBaggageMaxDimension());
+        existing.setCheckInBaggageMaxWeight(request.getCheckInBaggageMaxWeight());
+        existing.setCheckInBaggagePieces(request.getCheckInBaggagePieces() != null ? request.getCheckInBaggagePieces() : 1);
+        existing.setCheckInBaggageWeightPerPiece(request.getCheckInBaggageWeightPerPiece());
+        existing.setFreeCheckedBagsAllowance(request.getFreeCheckedBagsAllowance() != null ? request.getFreeCheckedBagsAllowance() : 0);
+        existing.setPriorityBaggage(request.getPriorityBaggage() != null ? request.getPriorityBaggage() : false);
+        existing.setExtraBaggageAllowance(request.getExtraBaggageAllowance() != null ? request.getExtraBaggageAllowance() : false);
     }
 }

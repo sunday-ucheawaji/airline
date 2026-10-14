@@ -2,6 +2,7 @@ package com.sunday.services.clients;
 
 import java.util.UUID;
 import com.sunday.common_lib.enums.CabinClassType;
+import com.sunday.common_lib.enums.PassengerType;
 import com.sunday.common_lib.payload.response.FareQuoteResponse;
 import com.sunday.common_lib.payload.response.FareResponse;
 import feign.FeignException;
@@ -38,7 +39,8 @@ public class PricingClientFallbackFactory implements FallbackFactory<PricingClie
             }
 
             @Override
-            public FareQuoteResponse quoteFare(UUID id, UUID flightId, CabinClassType cabinClass, LocalDate departureDate) {
+            public FareQuoteResponse quoteFare(UUID id, UUID flightId, CabinClassType cabinClass, PassengerType passengerType,
+                                               LocalDate departureDate) {
                 if (cause instanceof FeignException.Conflict conflict) {
                     throw conflict;
                 }

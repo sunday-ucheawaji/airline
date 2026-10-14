@@ -2,6 +2,7 @@ package com.sunday.services.service.impl;
 
 import java.util.UUID;
 import com.sunday.common_lib.constants.PricingPermissions;
+import com.sunday.common_lib.enums.FareStatus;
 import com.sunday.common_lib.exception.BadRequestException;
 import com.sunday.common_lib.exception.ConflictException;
 import com.sunday.common_lib.exception.ResourceNotFoundException;
@@ -23,7 +24,6 @@ import com.sunday.common_lib.util.CacheUtil;
 import com.sunday.services.config.FareCacheEvictor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -168,6 +168,7 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
     public BaggagePolicyResponse updateBaggagePolicy(UUID userId, UUID id, BaggagePolicyRequest request) {
         BaggagePolicy existing = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, existing.getAirlineId(), PricingPermissions.FARE_MANAGE);
+        requireNotPublished(existing.getFare());
         BaggagePolicyMapper.updateEntity(request, existing, userId);
         BaggagePolicyResponse saved = BaggagePolicyMapper.toResponse(baggagePolicyRepository.save(existing));
         fareCacheEvictor.evict(existing.getFare().getId());
@@ -178,8 +179,11 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
     public void deleteBaggagePolicy(UUID userId, UUID id) {
         BaggagePolicy policy = findOrThrow(id);
         pricingIntegrationService.requirePermission(userId, policy.getAirlineId(), PricingPermissions.FARE_MANAGE);
+        Fare fare = policy.getFare();
+        requireNotPublished(fare);
+        fare.setBaggagePolicy(null);
         baggagePolicyRepository.delete(policy);
-        fareCacheEvictor.evict(policy.getFare().getId());
+        fareCacheEvictor.evict(fare.getId());
     }
 
     private record IndexedRequest(int index, BaggagePolicyRequest request) {}
@@ -191,6 +195,12 @@ public class BaggagePolicyServiceImpl implements BaggagePolicyService {
 
     private static SkippedRequest skip(int index, BaggagePolicyRequest request, String reason) {
         return SkippedRequest.builder().index(index).request(request).reason(reason).build();
+    }
+
+    private static void requireNotPublished(Fare fare) {
+        if (fare.getStatus() == FareStatus.PUBLISHED) {
+            throw new ConflictException(String.format(ErrorMessageUtil.FARE_LOCKED_WHILE_PUBLISHED, fare.getId()));
+        }
     }
 
     private BaggagePolicy findOrThrow(UUID id) {

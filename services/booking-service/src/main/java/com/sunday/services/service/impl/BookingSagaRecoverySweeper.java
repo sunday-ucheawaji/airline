@@ -7,6 +7,8 @@ import com.sunday.services.model.Booking;
 import com.sunday.services.model.BookingSaga;
 import com.sunday.services.model.SagaStatus;
 import com.sunday.services.repository.BookingRepository;
+import com.sunday.services.repository.ExtrasOrderRepository;
+import com.sunday.services.repository.TripRepository;
 import com.sunday.services.repository.BookingSagaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,8 @@ public class BookingSagaRecoverySweeper {
     private final BookingSagaRepository bookingSagaRepository;
     private final BookingRepository bookingRepository;
     private final BookingEventProducer bookingEventProducer;
+    private final TripRepository tripRepository;
+    private final ExtrasOrderRepository extrasOrderRepository;
 
     @Value("${booking.saga.stale-after-minutes:10}")
     private long staleAfterMinutes;
@@ -38,6 +42,10 @@ public class BookingSagaRecoverySweeper {
     public void sweep() {
         sweepNeverCreated();
         sweepNeverConfirmed();
+        int expired = extrasOrderRepository.cancelUnpaidBefore(LocalDateTime.now().minusMinutes(paymentTimeoutMinutes));
+        if (expired > 0) {
+            log.info("Cancelled {} extras order(s) never paid", expired);
+        }
     }
 
     private void sweepNeverCreated() {
@@ -66,6 +74,14 @@ public class BookingSagaRecoverySweeper {
                 booking.setStatus(BookingStatus.CANCELLED);
                 bookingRepository.save(booking);
                 bookingEventProducer.sendBookingCancelled(booking, ErrorMessageUtil.BOOKING_CANCELLED_PAYMENT_TIMEOUT);
+                if (booking.getTripId() != null) {
+                    tripRepository.findById(booking.getTripId())
+                            .filter(trip -> trip.getStatus() == BookingStatus.PENDING)
+                            .ifPresent(trip -> {
+                                trip.setStatus(BookingStatus.CANCELLED);
+                                tripRepository.save(trip);
+                            });
+                }
                 saga.setStatus(SagaStatus.CANCELLED);
                 saga.setLastError("Payment never confirmed or failed; swept after " + paymentTimeoutMinutes + "m");
             } else {
